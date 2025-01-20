@@ -1,0 +1,19 @@
+import React from "react";
+
+interface ImageResultProps {
+  query: string;
+}
+
+const ImageResult: React.FC<ImageResultProps> = ({ query }) => {
+  return (
+    <div className="w-full bg-white p-6 rounded-lg shadow-md">
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">Image Results</h2>
+      <p className="text-gray-500">This is a placeholder for image results for query: "{query}"</p>
+      <div className="mt-4 h-48 bg-gray-200 rounded-lg flex items-center justify-center">
+        <span className="text-gray-400">Image results will appear here.</span>
+      </div>
+    </div>
+  );
+};
+
+export default ImageResult;
