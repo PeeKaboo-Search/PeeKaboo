@@ -31,17 +31,15 @@ const Page: React.FC = () => {
 
   // Animation Variants
   const fadeInUp = {
-    initial: { opacity: 0, y: 20, scale: 0.98 },
+    initial: { opacity: 0, y: 20 },
     animate: { 
       opacity: 1, 
       y: 0, 
-      scale: 1, 
       transition: { duration: 0.8, ease: [0.6, 0.05, 0.01, 0.9] } 
     },
     exit: { 
       opacity: 0, 
       y: -20, 
-      scale: 0.98, 
       transition: { duration: 0.6, ease: [0.6, 0.05, 0.01, 0.9] } 
     }
   };
@@ -64,15 +62,13 @@ const Page: React.FC = () => {
   };
 
   const logoVariants = {
-    initial: { scale: 0.95, opacity: 0, y: -10 },
+    initial: { opacity: 0, y: -10 },
     animate: { 
-      scale: 1, 
       opacity: 1, 
       y: 0, 
       transition: { duration: 0.8, ease: [0.6, 0.05, 0.01, 0.9] } 
     },
     exit: { 
-      scale: 0.98, 
       opacity: 0, 
       y: -10, 
       transition: { duration: 0.6, ease: [0.6, 0.05, 0.01, 0.9] } 
@@ -80,12 +76,7 @@ const Page: React.FC = () => {
   };
 
   return (
-    <motion.div
-      className="min-h-screen bg-gray-100 flex flex-col items-center justify-center"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8, ease: [0.6, 0.05, 0.01, 0.9] }} 
-    >
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
       {/* Logo Section */}
       <AnimatePresence mode="wait">
         {!submittedQuery && (
@@ -222,7 +213,7 @@ const Page: React.FC = () => {
 
       {/* Floating Bot Component - Conditionally Rendered */}
       {submittedQuery && !isSearching && <FloatingBot />}
-    </motion.div>
+    </div>
   );
 };
 
