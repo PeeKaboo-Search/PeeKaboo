@@ -23,8 +23,7 @@ const Page: React.FC = () => {
     e.preventDefault();
     if (query.trim() !== "") {
       setIsSearching(true);
-      await new Promise((resolve) => setTimeout(resolve, 800)); // Simulate async delay
-      setSubmittedQuery(query);
+      setSubmittedQuery(query); // Set the submitted query
       setIsSearching(false);
     }
   };
@@ -186,8 +185,17 @@ const Page: React.FC = () => {
               exit="exit"
               className="w-full max-w-8xl mt-10 space-y-6 px-8" 
             >
+              {/* Image Results */}
+              <motion.div
+                variants={fadeInUp}
+                layout
+                className="overflow-hidden rounded-xl shadow-md" 
+              >
+                <ImageResult query={submittedQuery} />
+              </motion.div>
+
+              {/* Other Components */}
               {[
-                <ImageResult key="image" query={submittedQuery} />,
                 <GoogleAnalytics key="google" query={submittedQuery} />,
                 <RedditAnalytics key="reddit" query={submittedQuery} />,
                 <YoutubeAnalysis key="youtube" query={submittedQuery} />,
