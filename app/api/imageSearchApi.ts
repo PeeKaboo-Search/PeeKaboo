@@ -1,8 +1,8 @@
 export const searchImages = async (query: string): Promise<any[] | null> => {
     try {
       const searchQuery = `${query} advertisement`;
-      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
-      const searchEngineId = process.env.NEXT_PUBLIC_GOOGLE_SEARCH_ENGINE_ID;
+      const apiKey = process.env.vNEXT_PUBLIC_GOOGLE_API_KEY;
+      const searchEngineId = process.env.vNEXT_PUBLIC_GOOGLE_SEARCH_ENGINE_ID;
   
       if (!apiKey || !searchEngineId) {
         console.error('Missing API key or Search Engine ID');

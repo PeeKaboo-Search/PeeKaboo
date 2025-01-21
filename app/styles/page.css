@@ -1,0 +1,46 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+  }
+  
+  .min-h-screen {
+    min-height: 100vh;
+  }
+  
+  .bg-gray-100 {
+    background-color: #f3f4f6;
+  }
+  
+  .text-gray-600 {
+    color: #4b5563;
+  }
+  
+  .text-blue-600 {
+    color: #2563eb;
+  }
+  
+  .shadow-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .rounded-xl {
+    border-radius: 0.75rem;
+  }
+  
+  .placeholder-gray-400::placeholder {
+    color: #9ca3af;
+  }
+  
+  .bg-white {
+    background-color: white;
+  }
+  
+  .focus\:outline-none:focus {
+    outline: none;
+  }
+  
+  .transition-all {
+    transition: all 0.3s ease;
+  }
+  

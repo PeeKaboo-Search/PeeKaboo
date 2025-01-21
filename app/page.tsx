@@ -1,18 +1,26 @@
 "use client";
+
 import React, { useState, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import FloatingBot from "./components/ui/FloatingBot"; // Import the bot component
+import FloatingBot from "app/components/ui/FloatingBot";
+import {
+  fadeInUp,
+  staggerChildren,
+  searchBarVariants,
+  logoVariants,
+} from "app/styles/animations-page"; // Importing animations
+import "app/styles/page.css"; // Importing general styles
 
 // Lazy load components
-const ImageResult = lazy(() => import("./components/ui/ImageResult"));
-const GoogleAnalytics = lazy(() => import("./components/ui/GoogleAnalytics"));
-const RedditAnalytics = lazy(() => import("./components/ui/RedditAnalytics"));
-const YoutubeAnalysis = lazy(() => import("./components/ui/YoutubeAnalysis"));
-const TrendAnalysis = lazy(() => import("./components/ui/TrendAnalysis"));
-const SentimentAnalysis = lazy(() => import("./components/ui/SentimentAnalysis"));
-const NewsResults = lazy(() => import("./components/ui/NewsResults"));
-const Summary = lazy(() => import("./components/ui/Summary"));
-const StoryBoard = lazy(() => import("./components/ui/StoryBoard"));
+const ImageResult = lazy(() => import("app/components/ui/ImageResult"));
+const GoogleAnalytics = lazy(() => import("app/components/ui/GoogleAnalytics"));
+const RedditAnalytics = lazy(() => import("app/components/ui/RedditAnalytics"));
+const YoutubeAnalysis = lazy(() => import("app/components/ui/YoutubeAnalysis"));
+const TrendAnalysis = lazy(() => import("app/components/ui/TrendAnalysis"));
+const SentimentAnalysis = lazy(() => import("app/components/ui/SentimentAnalysis"));
+const NewsResults = lazy(() => import("app/components/ui/NewsResults"));
+const Summary = lazy(() => import("app/components/ui/Summary"));
+const StoryBoard = lazy(() => import("app/components/ui/StoryBoard"));
 
 const Page: React.FC = () => {
   const [query, setQuery] = useState<string>("");
@@ -28,52 +36,6 @@ const Page: React.FC = () => {
     }
   };
 
-  // Animation Variants
-  const fadeInUp = {
-    initial: { opacity: 0, y: 20 },
-    animate: { 
-      opacity: 1, 
-      y: 0, 
-      transition: { duration: 0.8, ease: [0.6, 0.05, 0.01, 0.9] } 
-    },
-    exit: { 
-      opacity: 0, 
-      y: -20, 
-      transition: { duration: 0.6, ease: [0.6, 0.05, 0.01, 0.9] } 
-    }
-  };
-
-  const staggerChildren = {
-    animate: {
-      transition: { staggerChildren: 0.2, delayChildren: 0.3 } 
-    }
-  };
-
-  const searchBarVariants = {
-    focused: { 
-      scale: 1.02, 
-      transition: { duration: 0.6, ease: [0.6, 0.05, 0.01, 0.9] } 
-    },
-    unfocused: { 
-      scale: 1, 
-      transition: { duration: 0.6, ease: [0.6, 0.05, 0.01, 0.9] } 
-    }
-  };
-
-  const logoVariants = {
-    initial: { opacity: 0, y: -10 },
-    animate: { 
-      opacity: 1, 
-      y: 0, 
-      transition: { duration: 0.8, ease: [0.6, 0.05, 0.01, 0.9] } 
-    },
-    exit: { 
-      opacity: 0, 
-      y: -10, 
-      transition: { duration: 0.6, ease: [0.6, 0.05, 0.01, 0.9] } 
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
       {/* Logo Section */}
@@ -84,20 +46,20 @@ const Page: React.FC = () => {
             initial="initial"
             animate="animate"
             exit="exit"
-            className="mb-6 text-4xl font-light text-blue-600 tracking-wide" 
+            className="mb-6 text-4xl font-light text-blue-600 tracking-wide"
           >
             <motion.span
               animate={{
                 background: [
                   "rgba(59, 130, 246, 0.05)",
                   "rgba(59, 130, 246, 0)",
-                  "rgba(59, 130, 246, 0.05)"
-                ]
+                  "rgba(59, 130, 246, 0.05)",
+                ],
               }}
               transition={{
-                duration: 4, 
+                duration: 4,
                 repeat: Infinity,
-                ease: "easeInOut"
+                ease: "easeInOut",
               }}
               className="px-6 py-3 rounded-xl"
             >
@@ -110,12 +72,12 @@ const Page: React.FC = () => {
       {/* Search Bar Section */}
       <motion.div
         layout
-        className={`w-full flex justify-center ${submittedQuery ? "mt-6" : "mt-0"}`} 
-        transition={{ duration: 0.6, ease: [0.6, 0.05, 0.01, 0.9] }} 
+        className={`w-full flex justify-center ${submittedQuery ? "mt-6" : "mt-0"}`}
+        transition={{ duration: 0.6, ease: [0.6, 0.05, 0.01, 0.9] }}
       >
         <form onSubmit={handleSearch} className="flex w-full max-w-4xl">
           <motion.div
-            className="flex flex-grow shadow-lg rounded-xl overflow-hidden" 
+            className="flex flex-grow shadow-lg rounded-xl overflow-hidden"
             variants={searchBarVariants}
             animate={isSearching ? "focused" : "unfocused"}
           >
@@ -124,14 +86,14 @@ const Page: React.FC = () => {
               placeholder="Enter your query here..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full px-6 py-4 border-0 focus:outline-none text-lg text-gray-700 bg-white transition-all duration-500 placeholder-gray-400" 
+              className="w-full px-6 py-4 border-0 focus:outline-none text-lg text-gray-700 bg-white placeholder-gray-400"
             />
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
               transition={{ duration: 0.3 }}
               type="submit"
-              className="px-10 py-4 bg-blue-500 text-white font-medium text-lg tracking-wide focus:outline-none transition-colors duration-500 hover:bg-blue-600" 
+              className="px-10 py-4 bg-blue-500 text-white font-medium text-lg tracking-wide focus:outline-none hover:bg-blue-600"
             >
               {isSearching ? (
                 <motion.div
@@ -157,15 +119,15 @@ const Page: React.FC = () => {
             initial="initial"
             animate="animate"
             exit="exit"
-            className="mt-6 text-gray-600 text-xl font-light tracking-wide" 
+            className="mt-6 text-gray-600 text-xl font-light tracking-wide"
           >
             Showing results for:{" "}
             <motion.span
               initial={{ color: "#3B82F6" }}
               animate={{
-                color: ["#3B82F6", "#2563EB", "#3B82F6"]
+                color: ["#3B82F6", "#2563EB", "#3B82F6"],
               }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }} 
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
               className="font-normal"
             >
               {submittedQuery}
@@ -183,43 +145,28 @@ const Page: React.FC = () => {
               initial="initial"
               animate="animate"
               exit="exit"
-              className="w-full max-w-8xl mt-10 space-y-6 px-8" 
+              className="w-full max-w-8xl mt-10 space-y-6 px-8"
             >
-              {/* Image Results */}
-              <motion.div
-                variants={fadeInUp}
-                layout
-                className="overflow-hidden rounded-xl shadow-md" 
-              >
-                <ImageResult query={submittedQuery} />
-              </motion.div>
-
-              {/* Other Components */}
-              {[
-                <GoogleAnalytics key="google" query={submittedQuery} />,
-                <RedditAnalytics key="reddit" query={submittedQuery} />,
-                <YoutubeAnalysis key="youtube" query={submittedQuery} />,
-                <TrendAnalysis key="trends" query={submittedQuery} />,
-                <SentimentAnalysis key="sentiment" query={submittedQuery} />,
-                <NewsResults key="news" query={submittedQuery} />,
-                <Summary key="summary" query={submittedQuery} />,
-                <StoryBoard key="storyboard" query={submittedQuery} />
-              ].map((component, index) => (
-                <motion.div
-                  key={index}
-                  variants={fadeInUp}
-                  layout
-                  className="overflow-hidden rounded-xl shadow-md" 
-                >
-                  {component}
-                </motion.div>
-              ))}
+              {/* Display all components */}
+              {/*{[ImageResult, GoogleAnalytics, RedditAnalytics, YoutubeAnalysis, TrendAnalysis, SentimentAnalysis, NewsResults, Summary, StoryBoard]*/}
+              {[RedditAnalytics, YoutubeAnalysis, TrendAnalysis, SentimentAnalysis, NewsResults, Summary, StoryBoard].map(
+                (Component, index) => (
+                  <motion.div
+                    key={index}
+                    variants={fadeInUp}
+                    layout
+                    className="overflow-hidden rounded-xl shadow-md"
+                  >
+                    <Component query={submittedQuery} />
+                  </motion.div>
+                )
+              )}
             </motion.div>
           )}
         </AnimatePresence>
       </Suspense>
 
-      {/* Floating Bot Component - Conditionally Rendered */}
+      {/* Floating Bot */}
       {submittedQuery && !isSearching && <FloatingBot />}
     </div>
   );
