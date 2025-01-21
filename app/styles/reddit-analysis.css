@@ -1,0 +1,84 @@
+.sentiment-meter {
+    width: 100%;
+    height: 24px;
+    background: #f0f0f0;
+    border-radius: 12px;
+    position: relative;
+    margin: 20px 0;
+  }
+  
+  .sentiment-bar {
+    height: 100%;
+    border-radius: 12px;
+    background: linear-gradient(90deg, #ff4d4d 0%, #ffff4d 50%, #4dff4d 100%);
+    transition: width 0.3s ease;
+  }
+  
+  .sentiment-label {
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-weight: 600;
+  }
+  
+  .discussion-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin: 16px 0;
+    padding: 16px;
+    display: flex;
+    gap: 16px;
+    background: white;
+  }
+  
+  .sentiment-indicator {
+    width: 8px;
+    border-radius: 4px;
+  }
+  
+  .sentiment-indicator.positive { background-color: #4dff4d; }
+  .sentiment-indicator.neutral { background-color: #ffff4d; }
+  .sentiment-indicator.negative { background-color: #ff4d4d; }
+  
+  .discussion-content {
+    flex: 1;
+  }
+  
+  .discussion-content h4 {
+    margin: 0 0 8px 0;
+    font-size: 1.1em;
+    font-weight: 600;
+  }
+  
+  .metrics {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+    color: #666;
+    font-size: 0.9em;
+  }
+  
+  .themes-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0;
+  }
+  
+  .theme-tag {
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 0.9em;
+    font-weight: 500;
+  }
+  
+  .theme-tag.positive { background-color: #e6ffe6; color: #006600; }
+  .theme-tag.neutral { background-color: #fffff0; color: #666600; }
+  .theme-tag.negative { background-color: #ffe6e6; color: #660000; }
+  
+  mark {
+    background-color: #fff3cd;
+    padding: 0 4px;
+    border-radius: 2px;
+  }

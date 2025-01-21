@@ -31,7 +31,7 @@ export class RedditAnalysisService {
   private static async getRedditToken(): Promise<string> {
     try {
       const auth = Buffer.from(
-        `${process.env.NEXT_PUBLIC_REDDIT_CLIENT_ID}:${process.env.NEXT_PUBLIC_REDDIT_CLIENT_SECRET}`
+        `${process.env.lNEXT_PUBLIC_REDDIT_CLIENT_ID}:${process.env.lNEXT_PUBLIC_REDDIT_CLIENT_SECRET}`
       ).toString('base64');
 
       const response = await fetch('https://www.reddit.com/api/v1/access_token', {
@@ -48,10 +48,6 @@ export class RedditAnalysisService {
       }
 
       const data = await response.json();
-      if (!data.access_token) {
-        throw new Error('No access token received from Reddit');
-      }
-
       return data.access_token;
     } catch (error) {
       console.error('Error getting Reddit token:', error);
@@ -64,9 +60,12 @@ export class RedditAnalysisService {
     const posts: RedditPost[] = [];
 
     try {
-      for (const subreddit of subreddits) {
+      // Only fetch from two most relevant subreddits to limit data
+      const relevantSubreddits = subreddits.slice(0, 2);
+
+      for (const subreddit of relevantSubreddits) {
         const response = await fetch(
-          `${this.REDDIT_API_URL}/r/${subreddit}/search?q=${encodeURIComponent(query)}&limit=10&sort=relevance&t=year`,
+          `${this.REDDIT_API_URL}/r/${subreddit}/search?q=${encodeURIComponent(query)}&limit=5&sort=relevance&t=year`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -75,17 +74,16 @@ export class RedditAnalysisService {
           }
         );
 
-        if (!response.ok) {
-          console.warn(`Failed to fetch from r/${subreddit}: ${response.status}`);
-          continue; // Skip this subreddit if request fails
-        }
+        if (!response.ok) continue;
 
         const data: RedditApiResponse = await response.json();
         
-        // Verify the response structure
         if (data?.data?.children && Array.isArray(data.data.children)) {
-          const validPosts = data.data.children
+          // Get only top 3 posts with most engagement
+          const topPosts = data.data.children
             .filter(child => child?.data && typeof child.data === 'object')
+            .sort((a, b) => (b.data.ups + b.data.num_comments) - (a.data.ups + a.data.num_comments))
+            .slice(0, 3)
             .map(child => ({
               title: child.data.title || 'No Title',
               subreddit: child.data.subreddit || subreddit,
@@ -94,23 +92,11 @@ export class RedditAnalysisService {
               body: child.data.selftext || '',
             }));
 
-          posts.push(...validPosts);
+          posts.push(...topPosts);
         }
       }
 
-      // If no posts were found, return a mock post to prevent empty analysis
-      if (posts.length === 0) {
-        posts.push({
-          title: `Discussion about ${query}`,
-          subreddit: 'general',
-          upvotes: 0,
-          comments: 0,
-          body: `No recent discussions found about ${query}`,
-        });
-      }
-
       return posts;
-
     } catch (error) {
       console.error('Error fetching Reddit posts:', error);
       throw new Error('Failed to fetch Reddit posts');
@@ -119,30 +105,46 @@ export class RedditAnalysisService {
 
   public static async analyzeRedditData(query: string): Promise<AnalysisResult> {
     try {
-      // Fetch real Reddit data
       const token = await this.getRedditToken();
       const redditPosts = await this.fetchRedditPosts(query, token);
 
-      // Prepare context for Groq analysis
       const context = `
-        Analyze the following Reddit posts about ${query} from a marketing perspective.
-        Focus on:
-        1. Customer Pain Points (<pain-point> tags)
-        2. Market Opportunities (<opportunity> tags)
-        3. Sentiment Analysis (<sentiment> tags)
-        4. Feature Requests (<feature-request> tags)
-        5. Competitive Analysis (<competitor-insight> tags)
-        
-        Format the response using semantic HTML tags for proper visualization.
-        If the data set is empty or limited, provide general market analysis based on the query topic.
+        Analyze these Reddit posts about ${query} and provide a visually structured HTML response with the following sections:
+
+        1. Overall Sentiment Analysis:
+           Create a visual sentiment meter using HTML/CSS showing:
+           <div class="sentiment-meter">
+             <div class="sentiment-bar" style="width: [0-100]%"></div>
+             <div class="sentiment-label">[Negative/Neutral/Positive]</div>
+           </div>
+
+        2. Key Discussions:
+           <div class="discussion-card">
+             <div class="sentiment-indicator [positive/neutral/negative]"></div>
+             <div class="discussion-content">
+               <h4>Topic</h4>
+               <p>Key points with highlighted <mark>important phrases</mark></p>
+               <div class="metrics">
+                 <span class="engagement">👥 [number] participants</span>
+                 <span class="sentiment-score">😊 [sentiment score]</span>
+               </div>
+             </div>
+           </div>
+
+        3. Common Themes:
+           <div class="themes-container">
+             <div class="theme-tag [positive/neutral/negative]">[theme]</div>
+           </div>
+
+        Format everything using these predefined classes for visual styling.
+        Focus on making the output visually informative with clear sentiment indicators.
       `;
 
-      // Get analysis from Groq
       const response = await fetch(this.GROQ_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_GROQ_API_KEY}`,
+          'Authorization': `Bearer ${process.env.lNEXT_PUBLIC_GROQ_API_KEY}`,
         },
         body: JSON.stringify({
           model: "mixtral-8x7b-32768",
@@ -167,7 +169,7 @@ export class RedditAnalysisService {
         success: true,
         data: {
           analysis,
-          rawPosts: redditPosts,
+          rawPosts: redditPosts.slice(0, 3), // Only return top 3 posts
           timestamp: new Date().toISOString(),
         }
       };
