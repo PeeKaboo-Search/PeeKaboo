@@ -57,7 +57,7 @@ const NewsResult: React.FC<NewsResultProps> = ({ query }) => {
       } finally {
         setLoading(false);
       }
-    };
+    }; 
 
     fetchNews();
   }, [query]);
