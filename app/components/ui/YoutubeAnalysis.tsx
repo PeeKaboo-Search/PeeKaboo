@@ -1,20 +1,17 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Eye, ThumbsUp, MessageSquare, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import { YouTubeVideo, VideoStatistics, ContentAnalysis, ErrorState } from 'app/types/youtube';
-import { searchYouTubeVideos, getVideoStatistics, analyzeVideoContent } from 'app/api/youtube';
-import styles from 'app/styles/YouTube.module.css';
+import { YouTubeVideo, VideoStatistics, ErrorState } from 'app/types/youtube';
+import { searchYouTubeVideos, getVideoStatistics } from '@/app/api/youtube';
+import { Button } from '@/app/components/ui/button';
+import { Card, CardContent } from '@/app/components/ui/card';
 
-interface YouTubeAnalysisProps {
-  query: string;
-}
-
-const YouTubeAnalysis: React.FC<YouTubeAnalysisProps> = ({ query }) => {
+const YouTubeVideos: React.FC<{ query: string }> = ({ query }) => {
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [statistics, setStatistics] = useState<Record<string, VideoStatistics>>({});
-  const [analysis, setAnalysis] = useState<ContentAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ErrorState | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+  const [nextPageToken, setNextPageToken] = useState<string | undefined>();
   
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -32,21 +29,24 @@ const YouTubeAnalysis: React.FC<YouTubeAnalysisProps> = ({ query }) => {
     gridRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
   };
 
-  const analyzeVideo = useCallback(async (video: YouTubeVideo) => {
+  const loadMoreVideos = async () => {
+    if (!nextPageToken) return;
     try {
-      setLoading(true);
-      const analysis = await analyzeVideoContent(video);
-      setAnalysis(analysis);
-      setSelectedVideo(video.id.videoId);
+      const data = await searchYouTubeVideos(query, nextPageToken);
+      const newVideos = [...videos, ...data.items];
+      setVideos(newVideos);
+      setNextPageToken(data.nextPageToken);
+
+      const newVideoIds = data.items.map(video => video.id.videoId);
+      const newStats = await getVideoStatistics(newVideoIds);
+      setStatistics(prev => ({ ...prev, ...newStats }));
     } catch (err) {
       setError({
-        message: err instanceof Error ? err.message : 'Failed to analyze video',
-        code: 'ANALYSIS_ERROR'
+        message: err instanceof Error ? err.message : 'Failed to load more videos',
+        code: 'LOAD_MORE_ERROR'
       });
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -54,20 +54,13 @@ const YouTubeAnalysis: React.FC<YouTubeAnalysisProps> = ({ query }) => {
         setLoading(true);
         setError(null);
 
-        // Fetch videos
-        const fetchedVideos = await searchYouTubeVideos(query);
-        
-        // Fetch statistics
-        const videoIds = fetchedVideos.map(video => video.id.videoId);
-        const stats = await getVideoStatistics(videoIds);
-        
-        setVideos(fetchedVideos);
-        setStatistics(stats);
+        const data = await searchYouTubeVideos(query);
+        setVideos(data.items);
+        setNextPageToken(data.nextPageToken);
 
-        // Analyze first video
-        if (fetchedVideos.length > 0) {
-          await analyzeVideo(fetchedVideos[0]);
-        }
+        const videoIds = data.items.map(video => video.id.videoId);
+        const stats = await getVideoStatistics(videoIds);
+        setStatistics(stats);
       } catch (err) {
         setError({
           message: err instanceof Error ? err.message : 'Failed to fetch data',
@@ -81,135 +74,97 @@ const YouTubeAnalysis: React.FC<YouTubeAnalysisProps> = ({ query }) => {
     if (query) {
       fetchData();
     }
-  }, [query, analyzeVideo]);
+  }, [query]);
 
   if (loading && !videos.length) {
     return (
-      <div className={styles.loadingContainer}>
-        <Loader2 className={styles.loadingSpinner} size={40} />
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="animate-spin" size={40} />
       </div>
     );
   }
 
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <h2 className={styles.title}>YouTube Analysis</h2>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">YouTube Videos</h2>
       </div>
 
       {error && (
-        <div className={styles.errorContainer}>
-          <p className={styles.errorMessage}>{error.message}</p>
+        <div className="p-4 bg-red-50 text-red-700 rounded-lg">
+          <p>{error.message}</p>
         </div>
       )}
 
-      <div className={styles.videoSection}>
-        <div className={styles.sliderContainer}>
-          <button
-            onClick={() => scroll('left')}
-            className={`${styles.sliderButton} ${styles.prevButton}`}
-            aria-label="Previous videos"
-          >
-            <ChevronLeft size={24} />
-          </button>
+      <div className="relative">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => scroll('left')}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
 
-          <div ref={gridRef} className={styles.videoGrid}>
-            {videos.map((video) => (
-              <div
-                key={video.id.videoId}
-                className={styles.videoCard}
-                onClick={() => analyzeVideo(video)}
-              >
-                <div className={styles.thumbnail}>
-                  <img
-                    src={video.snippet.thumbnails.medium.url}
-                    alt={video.snippet.title}
-                    className={styles.thumbnailImage}
-                  />
-                </div>
-                <div className={styles.videoInfo}>
-                  <h3 className={styles.videoTitle}>{video.snippet.title}</h3>
-                  <p className={styles.channelName}>{video.snippet.channelTitle}</p>
-                  <div className={styles.stats}>
-                    <div className={styles.stat}>
-                      <Eye size={16} />
-                      <span>{formatNumber(statistics[video.id.videoId]?.viewCount || '0')}</span>
+        <div 
+          ref={gridRef}
+          className="flex gap-4 overflow-x-auto snap-x snap-mandatory py-4 px-8 scrollbar-hide"
+        >
+          {videos.map((video) => (
+            <Card
+              key={video.id.videoId}
+              className={`flex-shrink-0 w-72 cursor-pointer snap-start transition-shadow hover:shadow-lg
+                ${selectedVideo === video.id.videoId ? 'ring-2 ring-primary' : ''}`}
+              onClick={() => setSelectedVideo(video.id.videoId)}
+            >
+              <CardContent className="p-0">
+                <img
+                  src={video.snippet.thumbnails.medium.url}
+                  alt={video.snippet.title}
+                  className="w-full h-40 object-cover"
+                />
+                <div className="p-4">
+                  <h3 className="font-semibold line-clamp-2">{video.snippet.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{video.snippet.channelTitle}</p>
+                  <div className="flex gap-4 mt-2">
+                    <div className="flex items-center gap-1">
+                      <Eye className="h-4 w-4" />
+                      <span className="text-sm">{formatNumber(statistics[video.id.videoId]?.viewCount || '0')}</span>
                     </div>
-                    <div className={styles.stat}>
-                      <ThumbsUp size={16} />
-                      <span>{formatNumber(statistics[video.id.videoId]?.likeCount || '0')}</span>
+                    <div className="flex items-center gap-1">
+                      <ThumbsUp className="h-4 w-4" />
+                      <span className="text-sm">{formatNumber(statistics[video.id.videoId]?.likeCount || '0')}</span>
                     </div>
-                    <div className={styles.stat}>
-                      <MessageSquare size={16} />
-                      <span>{formatNumber(statistics[video.id.videoId]?.commentCount || '0')}</span>
+                    <div className="flex items-center gap-1">
+                      <MessageSquare className="h-4 w-4" />
+                      <span className="text-sm">{formatNumber(statistics[video.id.videoId]?.commentCount || '0')}</span>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-
-          <button
-            onClick={() => scroll('right')}
-            className={`${styles.sliderButton} ${styles.nextButton}`}
-            aria-label="Next videos"
-          >
-            <ChevronRight size={24} />
-          </button>
+              </CardContent>
+            </Card>
+          ))}
         </div>
+
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => scroll('right')}
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
 
-      {loading && selectedVideo ? (
-        <div className={styles.loadingContainer}>
-          <Loader2 className={styles.loadingSpinner} size={40} />
+      {nextPageToken && (
+        <div className="flex justify-center">
+          <Button onClick={loadMoreVideos} variant="outline">
+            Load More Videos
+          </Button>
         </div>
-      ) : analysis ? (
-        <div className={styles.analysisSection}>
-          <h3 className={styles.analysisHeader}>Content Analysis</h3>
-          
-          <div className={styles.quotesSection}>
-            <h4 className={styles.sentimentHeader}>Notable Quotes</h4>
-            {analysis.quotes.map((quote, index) => (
-              <div key={index} className={styles.quote}>
-                "{quote}"
-              </div>
-            ))}
-          </div>
-
-          <div className={styles.sentimentGrid}>
-            <div className={styles.sentimentSection}>
-              <h4 className={styles.sentimentHeader}>Positive Aspects</h4>
-              {analysis.sentiment.positive.map((point, index) => (
-                <div key={index} className={styles.positiveItem}>
-                  {point}
-                </div>
-              ))}
-            </div>
-
-            <div className={styles.sentimentSection}>
-              <h4 className={styles.sentimentHeader}>Critical Points</h4>
-              {analysis.sentiment.negative.map((point, index) => (
-                <div key={index} className={styles.negativeItem}>
-                  {point}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className={styles.keywordSection}>
-            <h4 className={styles.sentimentHeader}>Key Topics</h4>
-            <div className={styles.keywordList}>
-              {analysis.keywords.map((keyword, index) => (
-                <span key={index} className={styles.keyword}>
-                  {keyword}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : null}
+      )}
     </div>
   );
 };
 
-export default YouTubeAnalysis;
+export default YouTubeVideos;

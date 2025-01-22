@@ -1,49 +1,51 @@
-import { NextApiRequest, NextApiResponse } from "next";
-import axios from "axios";
+import type { NextApiRequest, NextApiResponse } from 'next';
 
-// Ensure the NewsAPI key is available
-const NEWS_API_KEY = process.env.NEXT_PUBLIC_NEWS_API_KEY as string;
-
-if (!NEWS_API_KEY) {
-  throw new Error("NEWS_API_KEY is missing. Please add it to your .env file.");
+interface TavilyResponse {
+  results: Array<{
+    title: string;
+    url: string;
+    content: string;
+    published_date: string;
+    source: string;
+  }>;
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method not allowed' });
   }
 
   const { query } = req.body;
 
-  if (!query || typeof query !== "string") {
-    return res.status(400).json({ error: "Query parameter is required and must be a string." });
+  if (!query) {
+    return res.status(400).json({ message: 'Query is required' });
   }
 
   try {
-    // Fetch news data from NewsAPI
-    const newsResponse = await axios.get(`https://newsapi.org/v2/everything`, {
-      params: {
-        q: query,
-        apiKey: NEWS_API_KEY,
+    const response = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.TAVILY_API_KEY}`
       },
+      body: JSON.stringify({
+        query: query,
+        max_results: 10,
+        search_depth: "news"
+      })
     });
 
-    const newsData = newsResponse.data;
+    if (!response.ok) {
+      throw new Error('Failed to fetch from Tavily API');
+    }
 
-    // Prepare structured data for display
-    const structuredData = {
-      articles: newsData.articles.map((article: any) => ({
-        title: article.title,
-        description: article.description,
-        url: article.url,
-        source: article.source.name,
-      })),
-    };
-
-    // Return structured data as JSON
-    res.status(200).json(structuredData);
+    const data: TavilyResponse = await response.json();
+    res.status(200).json(data);
   } catch (error) {
-    console.error("Error fetching news data:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error('News API Error:', error);
+    res.status(500).json({ message: 'Failed to fetch news' });
   }
 }

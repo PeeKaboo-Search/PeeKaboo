@@ -149,7 +149,7 @@ const Page: React.FC = () => {
             >
               {/* Display all components */}
               {/*{[ImageResult, GoogleAnalytics, RedditAnalytics, YoutubeAnalysis, TrendAnalysis, SentimentAnalysis, NewsResults, Summary, StoryBoard]*/}
-              {[YoutubeAnalysis, TrendAnalysis, SentimentAnalysis, NewsResults, Summary, StoryBoard].map(
+              {[SentimentAnalysis, NewsResults, Summary, StoryBoard].map(
                 (Component, index) => (
                   <motion.div
                     key={index}
