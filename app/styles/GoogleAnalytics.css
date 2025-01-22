@@ -1,0 +1,201 @@
+/* Modern Color Palette */
+:root {
+  /* Undersaturated rainbow palette */
+  --indigo-glow: #7c7eff;
+  --rose-dream: #ff7c98;
+  --mint-whisper: #7cffd0;
+  --lavender-mist: #b57cff;
+  --coral-soft: #ff9d7c;
+  --ocean-depth: #7cd5ff;
+  
+  /* UI Colors */
+  --dark-depth: #0a0a0c;
+  --card-surface: #141417;
+  --hover-glow: #1c1c21;
+  --border-subtle: #2a2a30;
+  --text-primary: #ffffff;
+  --text-secondary: #a0a0b0;
+  
+  /* Fonts */
+  --display-font: 'SF Pro Display', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --body-font: 'SF Pro Text', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Base Styles */
+body {
+  font-family: var(--body-font);
+  color: var(--text-primary);
+  background-color: var(--dark-depth);
+  margin: 0;
+  padding: 0;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Container */
+.analytics-container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 32px auto;
+  padding: 24px;
+}
+
+/* Header */
+.analytics-header {
+  margin-bottom: 40px;
+}
+
+.analytics-header h1 {
+  font-family: var(--display-font);
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--indigo-glow), var(--ocean-depth));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+}
+
+/* Section Styles */
+.analytics-section {
+  margin-bottom: 40px;
+}
+
+.analytics-section h2 {
+  font-family: var(--display-font);
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Cards Grid */
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+/* Card Styles */
+.analytics-card {
+  background-color: var(--card-surface);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid var(--border-subtle);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.analytics-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--indigo-glow);
+  box-shadow: 0 8px 32px rgba(124, 126, 255, 0.08);
+}
+
+.analytics-card h3 {
+  font-family: var(--display-font);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+.analytics-card p {
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+/* Progress Bars */
+.analytics-progress {
+  height: 6px;
+  background-color: var(--hover-glow);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 16px 0;
+}
+
+.analytics-progress div {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+
+/* Progress Bar Colors */
+.trends .analytics-progress div {
+  background: linear-gradient(90deg, var(--indigo-glow), var(--ocean-depth));
+}
+
+.competitors .analytics-progress div {
+  background: linear-gradient(90deg, var(--rose-dream), var(--coral-soft));
+}
+
+.opportunities .analytics-progress div {
+  background: linear-gradient(90deg, var(--mint-whisper), var(--lavender-mist));
+}
+
+/* Icons */
+.icon {
+  width: 24px;
+  height: 24px;
+  opacity: 0.9;
+}
+
+/* Loader Animation */
+.analytics-loader {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 32px;
+}
+
+.analytics-loader__item {
+  height: 8px;
+  background: linear-gradient(90deg, var(--card-surface) 0%, var(--hover-glow) 50%, var(--card-surface) 100%);
+  border-radius: 4px;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Error State */
+.analytics-error {
+  background-color: var(--card-surface);
+  border: 1px solid var(--rose-dream);
+  color: var(--rose-dream);
+  padding: 16px;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .analytics-container {
+    padding: 16px;
+    margin: 16px auto;
+  }
+  
+  .analytics-header h1 {
+    font-size: 2rem;
+  }
+  
+  .analytics-section h2 {
+    font-size: 1.5rem;
+  }
+  
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+}

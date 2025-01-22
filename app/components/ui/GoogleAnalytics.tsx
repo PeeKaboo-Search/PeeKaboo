@@ -1,10 +1,35 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { fetchGoogleResults, GoogleResult, AnalyticsSummary } from "app/api/googleAnalyticsApi";
-import { Card, CardHeader, CardTitle, CardContent } from "app/components/ui/card";
-import { Alert, AlertDescription } from "app/components/ui/alert";
-import { Progress } from "app/components/ui/progress";
-import { TrendingUp, Award, Lightbulb } from "lucide-react";
+import { fetchGoogleResults } from "app/api/googleAnalyticsApi";
+import { Alert } from "@/app/components/ui/alert";
+import { TrendingUp, Award, Lightbulb, Activity } from "lucide-react";
+import { Progress } from "@/app/components/ui/progress";
+import "app/styles/GoogleAnalytics.css";
+
+interface Trend {
+  title: string;
+  description: string;
+  percentage: number;
+}
+
+interface Competitor {
+  name: string;
+  strength: string;
+  score: number;
+}
+
+interface AnalyticsSummary {
+  overview: string;
+  trends: Trend[];
+  competitors: Competitor[];
+  opportunities: string[];
+}
+
+interface GoogleResult {
+  title: string;
+  link: string;
+  snippet: string;
+}
 
 interface GoogleAnalyticsProps {
   query: string;
@@ -13,7 +38,7 @@ interface GoogleAnalyticsProps {
 const GoogleAnalytics: React.FC<GoogleAnalyticsProps> = ({ query }) => {
   const [results, setResults] = useState<GoogleResult[]>([]);
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -26,14 +51,13 @@ const GoogleAnalytics: React.FC<GoogleAnalyticsProps> = ({ query }) => {
 
       try {
         setLoading(true);
-        const data = await fetchGoogleResults(query);
-        
-        if (data) {
-          setResults(data.results);
-          setSummary(data.summary);
+        const response = await fetchGoogleResults(query);
+        if (response) {
+          setResults(response.results);
+          setSummary(response.summary);
           setError(null);
         } else {
-          setError("No results found for this query");
+          setError("No results found");
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to fetch data");
@@ -47,120 +71,118 @@ const GoogleAnalytics: React.FC<GoogleAnalyticsProps> = ({ query }) => {
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
-                <div className="h-4 bg-gray-200 rounded w-1/2" />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="analytics-loader">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="analytics-loader__item" />
+        ))}
+      </div>
     );
   }
 
-  return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Market Analysis: {query}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : summary ? (
-          <div className="space-y-8">
-            {/* Overview Section */}
-            <div className="prose max-w-none">
-              <div dangerouslySetInnerHTML={{ __html: summary.overview }} />
-            </div>
+  if (error) {
+    return <Alert className="analytics-error">{error}</Alert>;
+  }
 
-            {/* Trends Section */}
-            <div>
-              <h3 className="text-lg font-bold flex items-center gap-2 mb-4">
-                <TrendingUp className="w-5 h-5" />
-                Market Trends
-              </h3>
-              <div className="space-y-4">
-                {summary.trends.map((trend, index) => (
-                  <div key={index} className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-lg mb-2">{trend.title}</h4>
-                    <div dangerouslySetInnerHTML={{ __html: trend.description }} />
-                    <Progress value={trend.percentage} className="mt-2" />
-                    <span className="text-sm text-gray-500 mt-1">
-                      Trend Strength: {trend.percentage}%
-                    </span>
-                  </div>
-                ))}
-              </div>
+  const renderTrendsSection = () => (
+    <section className="analytics-section trends">
+      <h2>
+        <TrendingUp className="icon" />
+        Market Trends
+      </h2>
+      <div className="analytics-grid">
+        {summary?.trends.map((trend, index) => (
+          <div key={index} className="analytics-card">
+            <h3>{trend.title}</h3>
+            <p>{trend.description}</p>
+            <div className="analytics-progress">
+              <Progress value={trend.percentage} />
             </div>
-
-            {/* Competitors Section */}
-            <div>
-              <h3 className="text-lg font-bold flex items-center gap-2 mb-4">
-                <Award className="w-5 h-5" />
-                Competitor Analysis
-              </h3>
-              <div className="grid gap-4 md:grid-cols-3">
-                {summary.competitors.map((competitor, index) => (
-                  <div key={index} className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-semibold mb-2">{competitor.name}</h4>
-                    <div dangerouslySetInnerHTML={{ __html: competitor.strength }} />
-                    <Progress value={competitor.score} className="mt-2" />
-                    <span className="text-sm text-gray-500 mt-1">
-                      Market Presence: {competitor.score}%
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Opportunities Section */}
-            <div>
-              <h3 className="text-lg font-bold flex items-center gap-2 mb-4">
-                <Lightbulb className="w-5 h-5" />
-                Market Opportunities
-              </h3>
-              <div className="grid gap-4 md:grid-cols-3">
-                {summary.opportunities.map((opportunity, index) => (
-                  <div 
-                    key={index}
-                    className="bg-gray-50 p-4 rounded-lg"
-                  >
-                    <div dangerouslySetInnerHTML={{ __html: opportunity }} />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Search Results Section */}
-            <div className="mt-8">
-              <h3 className="text-lg font-bold mb-4">Source Data</h3>
-              <div className="space-y-4">
-                {results.map((result, index) => (
-                  <a
-                    key={index}
-                    href={result.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    <h4 className="text-blue-600 font-medium mb-1">
-                      {result.title}
-                    </h4>
-                    <p className="text-gray-600 text-sm">{result.snippet}</p>
-                  </a>
-                ))}
-              </div>
-            </div>
+            <span className="analytics-percentage">{trend.percentage}%</span>
           </div>
-        ) : null}
-      </CardContent>
-    </Card>
+        ))}
+      </div>
+    </section>
+  );
+
+  const renderCompetitorsSection = () => (
+    <section className="analytics-section competitors">
+      <h2>
+        <Award className="icon" />
+        Competitor Analysis
+      </h2>
+      <div className="analytics-grid">
+        {summary?.competitors.map((competitor, index) => (
+          <div key={index} className="analytics-card">
+            <h3>{competitor.name}</h3>
+            <p>{competitor.strength}</p>
+            <div className="analytics-progress">
+              <Progress value={competitor.score} />
+            </div>
+            <span className="analytics-percentage">{competitor.score}%</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+
+  const renderOpportunitiesSection = () => (
+    <section className="analytics-section opportunities">
+      <h2>
+        <Lightbulb className="icon" />
+        Market Opportunities
+      </h2>
+      <div className="analytics-grid">
+        {summary?.opportunities.map((opportunity, index) => (
+          <div key={index} className="analytics-card">
+            <p>{opportunity}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+
+  const renderSourceDataSection = () => (
+    <section className="analytics-section">
+      <h2>
+        <Activity className="icon" />
+        Source Data
+      </h2>
+      <div className="analytics-grid">
+        {results.map((result, index) => (
+          <a
+            key={index}
+            href={result.link}
+            className="analytics-card"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <h3>{result.title}</h3>
+            <p>{result.snippet}</p>
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+
+  return (
+    <div className="analytics-container">
+      <header className="analytics-header">
+        <h1>Analytics Dashboard</h1>
+        <p className="text-secondary">Analysis for: {query}</p>
+      </header>
+
+      {summary && (
+        <div className="analytics-content">
+          <section className="analytics-overview">
+            <div dangerouslySetInnerHTML={{ __html: summary.overview }} />
+          </section>
+          {renderTrendsSection()}
+          {renderCompetitorsSection()}
+          {renderOpportunitiesSection()}
+          {renderSourceDataSection()}
+        </div>
+      )}
+    </div>
   );
 };
 

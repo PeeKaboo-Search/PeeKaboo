@@ -23,9 +23,9 @@ export const fetchGoogleResults = async (
   query: string
 ): Promise<{ results: GoogleResult[]; summary: AnalyticsSummary } | null> => {
   try {
-    const searchApiKey = process.env.lNEXT_PUBLIC_GOOGLE_API_KEY;
-    const searchEngineId = process.env.lNEXT_PUBLIC_GOOGLE_SEARCH_ENGINE_ID;
-    const groqApiKey = process.env.lNEXT_PUBLIC_GGROQ_API_KEY;
+    const searchApiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
+    const searchEngineId = process.env.NEXT_PUBLIC_GOOGLE_SEARCH_ENGINE_ID;
+    const groqApiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
 
     if (!searchApiKey || !searchEngineId || !groqApiKey) {
       throw new Error("API keys are missing. Check environment variables.");
