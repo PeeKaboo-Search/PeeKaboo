@@ -3,15 +3,10 @@
 import React, { useState, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import FloatingBot from "app/components/ui/FloatingBot";
-import {
-  fadeInUp,
-  staggerChildren,
-  searchBarVariants,
-  logoVariants,
-} from "app/styles/animations-page"; // Importing animations
-import "app/styles/page.css"; // Importing general styles
+import { searchAnimations } from "app/styles/animation/search-animation";
+import "app/styles/page.css";
 
-// Lazy load components
+// Lazy loaded components
 const ImageResult = lazy(() => import("app/components/ui/ImageResult"));
 const GoogleAnalytics = lazy(() => import("app/components/ui/GoogleAnalytics"));
 const RedditAnalytics = lazy(() => import("app/components/ui/RedditAnalytics"));
@@ -31,54 +26,39 @@ const Page: React.FC = () => {
     e.preventDefault();
     if (query.trim() !== "") {
       setIsSearching(true);
-      setSubmittedQuery(query); // Set the submitted query
+      setSubmittedQuery(query);
       setIsSearching(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
+    <div className="search-container">
       {/* Logo Section */}
       <AnimatePresence mode="wait">
         {!submittedQuery && (
           <motion.div
-            variants={logoVariants}
+            variants={searchAnimations.logo}
             initial="initial"
             animate="animate"
             exit="exit"
-            className="mb-6 text-4xl font-light text-blue-600 tracking-wide"
+            className="logo-wrapper"
           >
-            <motion.span
-              animate={{
-                background: [
-                  "rgba(59, 130, 246, 0.05)",
-                  "rgba(59, 130, 246, 0)",
-                  "rgba(59, 130, 246, 0.05)",
-                ],
-              }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              className="px-6 py-3 rounded-xl"
-            >
+            <motion.span className="logo-text">
               PeeKaboo
             </motion.span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Search Bar Section */}
+      {/* Search Section */}
       <motion.div
         layout
-        className={`w-full flex justify-center ${submittedQuery ? "mt-6" : "mt-0"}`}
-        transition={{ duration: 0.6, ease: [0.6, 0.05, 0.01, 0.9] }}
+        className={`search-section ${submittedQuery ? 'search-section--submitted' : ''}`}
       >
-        <form onSubmit={handleSearch} className="flex w-full max-w-4xl">
+        <form onSubmit={handleSearch} className="search-form">
           <motion.div
-            className="flex flex-grow shadow-lg rounded-xl overflow-hidden"
-            variants={searchBarVariants}
+            className="search-bar-wrapper"
+            variants={searchAnimations.searchBar}
             animate={isSearching ? "focused" : "unfocused"}
           >
             <input
@@ -86,20 +66,19 @@ const Page: React.FC = () => {
               placeholder="Enter your query here..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full px-6 py-4 border-0 focus:outline-none text-lg text-gray-700 bg-white placeholder-gray-400"
+              className="search-input"
             />
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
-              transition={{ duration: 0.3 }}
               type="submit"
-              className="px-10 py-4 bg-blue-500 text-white font-medium text-lg tracking-wide focus:outline-none hover:bg-blue-600"
+              className="search-button"
             >
               {isSearching ? (
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                  className="text-xl"
+                  className="search-loader"
                 >
                   ○
                 </motion.div>
@@ -111,56 +90,47 @@ const Page: React.FC = () => {
         </form>
       </motion.div>
 
-      {/* Display Query */}
+      {/* Query Display */}
       <AnimatePresence mode="wait">
         {submittedQuery && (
           <motion.div
-            variants={fadeInUp}
+            variants={searchAnimations.fadeUp}
             initial="initial"
             animate="animate"
             exit="exit"
-            className="mt-6 text-gray-600 text-xl font-light tracking-wide"
+            className="query-display"
           >
             Showing results for:{" "}
-            <motion.span
-              initial={{ color: "#3B82F6" }}
-              animate={{
-                color: ["#3B82F6", "#2563EB", "#3B82F6"],
-              }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-              className="font-normal"
-            >
+            <motion.span className="query-text">
               {submittedQuery}
             </motion.span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Analysis Components */}
-      <Suspense fallback={<div className="text-center py-8">Loading results...</div>}>
+      {/* Results Section */}
+      <Suspense fallback={<div className="results-loader">Loading results...</div>}>
         <AnimatePresence mode="wait">
           {submittedQuery && (
             <motion.div
-              variants={staggerChildren}
+              variants={searchAnimations.stagger}
               initial="initial"
               animate="animate"
               exit="exit"
-              className="w-full max-w-8xl mt-10 space-y-6 px-8"
+              className="results-container"
             >
-              {/* Display all components */}
-              {/*{[ImageResult, GoogleAnalytics, RedditAnalytics, YoutubeAnalysis, TrendAnalysis, SentimentAnalysis, NewsResults, Summary, StoryBoard]*/}
-              {[SentimentAnalysis, NewsResults, Summary, StoryBoard].map(
-                (Component, index) => (
+              {[ImageResult, GoogleAnalytics, RedditAnalytics, YoutubeAnalysis, 
+                TrendAnalysis, SentimentAnalysis, NewsResults, Summary, StoryBoard]
+                .map((Component, index) => (
                   <motion.div
                     key={index}
-                    variants={fadeInUp}
+                    variants={searchAnimations.fadeUp}
                     layout
-                    className="overflow-hidden rounded-xl shadow-md"
+                    className="result-card"
                   >
                     <Component query={submittedQuery} />
                   </motion.div>
-                )
-              )}
+                ))}
             </motion.div>
           )}
         </AnimatePresence>
