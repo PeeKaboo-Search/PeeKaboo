@@ -1,177 +1,68 @@
-'use client';
-
-import React, { useState, useCallback } from 'react';
-
-interface Trend {
-  title: string;
-  description: string;
-  percentage: number;
-}
-
-interface Competitor {
-  name: string;
-  strength: string;
-  score: number;
-}
-
-interface AnalyticsSummary {
-  overview: string;
-  trends: Trend[];
-  competitors: Competitor[];
-  opportunities: string[];
-}
+import React, { useEffect, useState } from "react";
 
 interface SummaryProps {
-  query?: string;
+  query: string;
 }
 
-const Summary: React.FC<SummaryProps> = ({ query = '' }) => {
-  const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+const Summary: React.FC<SummaryProps> = ({ query }) => {
+  const [summary, setSummary] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchSummary = useCallback(async () => {
-    if (!query) return;
+  useEffect(() => {
+    const fetchSummary = async () => {
+      const context = "Explain to me this product in marketing language and terms. Give me like a detailed market analysis.";
+      const apiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
 
-    setIsLoading(true);
-    setError(null);
-    setSummary(null);
-
-    try {
-      const response = await fetch('/api/summary', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query }),
-      });
-
-      const responseText = await response.text();
-
-      if (!response.ok) {
-        throw new Error(responseText || 'Failed to fetch summary');
+      if (!apiKey) {
+        setError("API key is missing. Check your .env file.");
+        return;
       }
 
-      // Attempt to parse the response
-      let parsedData;
       try {
-        parsedData = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error('JSON Parsing Error:', responseText);
-        throw new Error('Failed to parse server response');
-      }
+        // Introduce a 5-second delay
+        await new Promise((resolve) => setTimeout(resolve, 5000));
 
-      // Validate the parsed data structure
-      if (!parsedData || typeof parsedData !== 'object') {
-        throw new Error('Invalid response format');
-      }
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: "mixtral-8x7b-32768",
+            messages: [
+              { role: "system", content: context },
+              { role: "user", content: query },
+            ],
+            temperature: 0.7,
+            max_tokens: 3000,
+          }),
+        });
 
-      // Ensure all required fields exist
-      if (!parsedData.overview || 
-          !Array.isArray(parsedData.trends) || 
-          !Array.isArray(parsedData.competitors) || 
-          !Array.isArray(parsedData.opportunities)) {
-        throw new Error('Incomplete analysis data');
-      }
+        const data = await response.json();
 
-      setSummary(parsedData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
-    } finally {
-      setIsLoading(false);
-    }
+        if (data.choices && data.choices[0]) {
+          setSummary(data.choices[0].message.content);
+        } else {
+          setError("Failed to retrieve a valid summary.");
+        }
+      } catch (err) {
+        setError("An error occurred while fetching the summary.");
+      }
+    };
+
+    fetchSummary();
   }, [query]);
 
   return (
     <div className="w-full bg-white p-6 rounded-lg shadow-md">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">Market Analysis</h2>
-      
-      {isLoading ? (
-        <div className="mt-4 h-48 bg-gray-200 rounded-lg flex items-center justify-center">
-          <span className="text-gray-400">Generating market analysis... Please wait.</span>
-        </div>
-      ) : error ? (
-        <div className="mt-4 text-red-500">
-          <h3 className="font-semibold">Error Generating Analysis</h3>
-          <p>{error}</p>
-          <button 
-            onClick={fetchSummary} 
-            className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Retry Analysis
-          </button>
-        </div>
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">Summary</h2>
+      {error ? (
+        <p className="text-red-500">{error}</p>
       ) : summary ? (
-        <div>
-          <div 
-            className="text-gray-700 mb-4" 
-            dangerouslySetInnerHTML={{ __html: summary.overview }}
-          />
-
-          {summary.trends.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">Key Market Trends</h3>
-              <ul className="space-y-2">
-                {summary.trends.map((trend, index) => (
-                  <li key={index} className="bg-gray-100 p-3 rounded-md">
-                    <div className="flex justify-between items-center mb-1">
-                      <h4 className="font-medium text-gray-900">{trend.title}</h4>
-                      <span className="text-sm text-gray-600">{trend.percentage}%</span>
-                    </div>
-                    <div 
-                      className="text-gray-700 text-sm" 
-                      dangerouslySetInnerHTML={{ __html: trend.description }}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {summary.competitors.length > 0 && (
-            <div className="mt-4">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">Competitor Analysis</h3>
-              <ul className="space-y-2">
-                {summary.competitors.map((competitor, index) => (
-                  <li key={index} className="bg-gray-100 p-3 rounded-md">
-                    <div className="flex justify-between items-center mb-1">
-                      <h4 className="font-medium text-gray-900">{competitor.name}</h4>
-                      <span className="text-sm text-gray-600">Score: {competitor.score}/100</span>
-                    </div>
-                    <div 
-                      className="text-gray-700 text-sm" 
-                      dangerouslySetInnerHTML={{ __html: competitor.strength }}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {summary.opportunities.length > 0 && (
-            <div className="mt-4">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">Market Opportunities</h3>
-              <ul className="list-disc list-inside space-y-1">
-                {summary.opportunities.map((opportunity, index) => (
-                  <li 
-                    key={index} 
-                    className="text-gray-700" 
-                    dangerouslySetInnerHTML={{ __html: opportunity }}
-                  />
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
+        <p className="text-gray-800">{summary}</p>
       ) : (
-        <div className="mt-4 h-48 bg-gray-200 rounded-lg flex items-center justify-center">
-          <button 
-            onClick={fetchSummary} 
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Generate Market Analysis
-          </button>
-        </div>
+        <p className="text-gray-400">Generating your tailored marketing summary...</p>
       )}
     </div>
   );
