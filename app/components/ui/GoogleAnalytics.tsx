@@ -1,7 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { fetchGoogleResults } from "app/api/googleAnalyticsApi";
-import { Alert } from "@/app/components/ui/alert";
 import { TrendingUp, Award, Lightbulb, Activity } from "lucide-react";
 import { Progress } from "@/app/components/ui/progress";
 import "app/styles/GoogleAnalytics.css";
@@ -80,24 +79,26 @@ const GoogleAnalytics: React.FC<GoogleAnalyticsProps> = ({ query }) => {
   }
 
   if (error) {
-    return <Alert className="analytics-error">{error}</Alert>;
+    return <div className="analytics-error">{error}</div>;
   }
 
   const renderTrendsSection = () => (
     <section className="analytics-section trends">
       <h2>
-        <TrendingUp className="icon" />
+        <TrendingUp className="section-icon" />
         Market Trends
       </h2>
       <div className="analytics-grid">
         {summary?.trends.map((trend, index) => (
-          <div key={index} className="analytics-card">
-            <h3>{trend.title}</h3>
-            <p>{trend.description}</p>
-            <div className="analytics-progress">
-              <Progress value={trend.percentage} />
+          <div key={index} className="analytics-card glass-card">
+            <div>
+              <h3 dangerouslySetInnerHTML={{ __html: trend.title }} />
+              <p dangerouslySetInnerHTML={{ __html: trend.description }} />
             </div>
-            <span className="analytics-percentage">{trend.percentage}%</span>
+            <div className="analytics-progress-container">
+              <Progress value={trend.percentage} className="custom-progress" />
+              <span className="analytics-percentage">{trend.percentage}%</span>
+            </div>
           </div>
         ))}
       </div>
@@ -107,18 +108,20 @@ const GoogleAnalytics: React.FC<GoogleAnalyticsProps> = ({ query }) => {
   const renderCompetitorsSection = () => (
     <section className="analytics-section competitors">
       <h2>
-        <Award className="icon" />
+        <Award className="section-icon" />
         Competitor Analysis
       </h2>
       <div className="analytics-grid">
         {summary?.competitors.map((competitor, index) => (
-          <div key={index} className="analytics-card">
-            <h3>{competitor.name}</h3>
-            <p>{competitor.strength}</p>
-            <div className="analytics-progress">
-              <Progress value={competitor.score} />
+          <div key={index} className="analytics-card glass-card">
+            <div>
+              <h3 dangerouslySetInnerHTML={{ __html: competitor.name }} />
+              <p dangerouslySetInnerHTML={{ __html: competitor.strength }} />
             </div>
-            <span className="analytics-percentage">{competitor.score}%</span>
+            <div className="analytics-progress-container">
+              <Progress value={competitor.score} className="custom-progress" />
+              <span className="analytics-percentage">{competitor.score}%</span>
+            </div>
           </div>
         ))}
       </div>
@@ -128,13 +131,13 @@ const GoogleAnalytics: React.FC<GoogleAnalyticsProps> = ({ query }) => {
   const renderOpportunitiesSection = () => (
     <section className="analytics-section opportunities">
       <h2>
-        <Lightbulb className="icon" />
+        <Lightbulb className="section-icon" />
         Market Opportunities
       </h2>
       <div className="analytics-grid">
         {summary?.opportunities.map((opportunity, index) => (
-          <div key={index} className="analytics-card">
-            <p>{opportunity}</p>
+          <div key={index} className="analytics-card glass-card">
+            <p dangerouslySetInnerHTML={{ __html: opportunity }} />
           </div>
         ))}
       </div>
@@ -142,9 +145,9 @@ const GoogleAnalytics: React.FC<GoogleAnalyticsProps> = ({ query }) => {
   );
 
   const renderSourceDataSection = () => (
-    <section className="analytics-section">
+    <section className="analytics-section source-data">
       <h2>
-        <Activity className="icon" />
+        <Activity className="section-icon" />
         Source Data
       </h2>
       <div className="analytics-grid">
@@ -152,12 +155,12 @@ const GoogleAnalytics: React.FC<GoogleAnalyticsProps> = ({ query }) => {
           <a
             key={index}
             href={result.link}
-            className="analytics-card"
+            className="analytics-card glass-card"
             target="_blank"
             rel="noopener noreferrer"
           >
-            <h3>{result.title}</h3>
-            <p>{result.snippet}</p>
+            <h3 dangerouslySetInnerHTML={{ __html: result.title }} />
+            <p dangerouslySetInnerHTML={{ __html: result.snippet }} />
           </a>
         ))}
       </div>
@@ -168,7 +171,7 @@ const GoogleAnalytics: React.FC<GoogleAnalyticsProps> = ({ query }) => {
     <div className="analytics-container">
       <header className="analytics-header">
         <h1>Analytics Dashboard</h1>
-        <p className="text-secondary">Analysis for: {query}</p>
+        <p className="query-text">Analysis for: {query}</p>
       </header>
 
       {summary && (

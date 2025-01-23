@@ -144,7 +144,7 @@ body {
 
 .results-container {
   width: 100%;
-  max-width: 90rem;
+  max-width: 120rem;
   margin: 3rem auto;
   display: flex;
   flex-direction: column;

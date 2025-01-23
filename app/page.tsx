@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import FloatingBot from "app/components/ui/FloatingBot";
 import { searchAnimations } from "app/styles/animation/search-animation";
 import "app/styles/page.css";
+import RainbowCursor from "app/components/ui/RainbowCursor";
 
 // Lazy loaded components
 const ImageResult = lazy(() => import("app/components/ui/ImageResult"));
@@ -28,12 +29,15 @@ const Page: React.FC = () => {
     if (query.trim() !== "") {
       setIsSearching(true);
       setSubmittedQuery(query);
-      setIsSearching(false);
+      setTimeout(() => setIsSearching(false), 1000); // Simulate a search delay
     }
   };
 
   return (
     <div className="search-container">
+      {/* Rainbow Cursor */}
+      <RainbowCursor blur={10} pulseSpeed={0.05} pulseMin={0.7} pulseMax={1.3} />
+
       {/* Logo Section */}
       <AnimatePresence mode="wait">
         {!submittedQuery && (
@@ -44,9 +48,7 @@ const Page: React.FC = () => {
             exit="exit"
             className="logo-wrapper"
           >
-            <motion.span className="logo-text">
-              PeeKaboo
-            </motion.span>
+            <motion.span className="logo-text">PeeKaboo</motion.span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -54,7 +56,7 @@ const Page: React.FC = () => {
       {/* Search Section */}
       <motion.div
         layout
-        className={`search-section ${submittedQuery ? 'search-section--submitted' : ''}`}
+        className={`search-section ${submittedQuery ? "search-section--submitted" : ""}`}
       >
         <form onSubmit={handleSearch} className="search-form">
           <motion.div
@@ -101,10 +103,7 @@ const Page: React.FC = () => {
             exit="exit"
             className="query-display"
           >
-            Showing results for:{" "}
-            <motion.span className="query-text">
-              {submittedQuery}
-            </motion.span>
+            Showing results for: <motion.span className="query-text">{submittedQuery}</motion.span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -120,19 +119,16 @@ const Page: React.FC = () => {
               exit="exit"
               className="results-container"
             >
-              {/* {[ImageResult, GoogleAnalytics, RedditAnalytics, YoutubeAnalysis, 
-                TrendAnalysis, SentimentAnalysis, NewsResults, Summary,AdsAnalytics, StoryBoard] */}
-              {[SentimentAnalysis ]
-                .map((Component, index) => (
-                  <motion.div
-                    key={index}
-                    variants={searchAnimations.fadeUp}
-                    layout
-                    className="result-card"
-                  >
-                    <Component query={submittedQuery} />
-                  </motion.div>
-                ))}
+              {[GoogleAnalytics].map((Component, index) => (
+                <motion.div
+                  key={index}
+                  variants={searchAnimations.fadeUp}
+                  layout
+                  className="result-card"
+                >
+                  <Component query={submittedQuery} />
+                </motion.div>
+              ))}
             </motion.div>
           )}
         </AnimatePresence>
