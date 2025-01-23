@@ -39,6 +39,8 @@ body {
 .analytics-header {
   text-align: left;
   margin-bottom: 2.5rem;
+  position: relative;
+  z-index: 2;  /* Elevate text */
 }
 
 .analytics-header h1 {
@@ -48,11 +50,15 @@ body {
   letter-spacing: -0.03em;
   color: var(--color-primary-blue);
   margin-bottom: 0.5rem;
+  position: relative;
+  z-index: 2;  /* Elevate text */
 }
 
 .query-text {
   color: rgba(255,255,255,0.6);
   font-size: 1rem;
+  position: relative;
+  z-index: 2;  /* Elevate text */
 }
 
 /* Overview Styling */
@@ -61,36 +67,35 @@ body {
   margin-bottom: 2rem;
   color: rgba(255,255,255,0.8);
   font-size: 1.1rem;
+  position: relative;
+  z-index: 2;  /* Elevate text */
 }
 
 /* Section Headings with Vibrant Colors */
-.trends .analytics-section h2 {
-  color: var(--color-trends-blue);
-}
-
-.competitors .analytics-section h2 {
-  color: var(--color-competitors-rose);
-}
-
-.opportunities .analytics-section h2 {
-  color: var(--color-opportunities-green);
-}
-
+.trends .analytics-section h2,
+.competitors .analytics-section h2,
+.opportunities .analytics-section h2,
 .source-data .analytics-section h2 {
-  color: var(--color-source-purple);
+  position: relative;
+  z-index: 2;  /* Elevate text */
 }
+
+.trends .analytics-section h2 { color: var(--color-trends-blue); }
+.competitors .analytics-section h2 { color: var(--color-competitors-rose); }
+.opportunities .analytics-section h2 { color: var(--color-opportunities-green); }
+.source-data .analytics-section h2 { color: var(--color-source-purple); }
 
 /* Enhanced Glass Morphism Cards */
 .glass-card {
   background: var(--glass-background);
-  backdrop-filter: blur(25px) saturate(400%);  /* Increased blur and saturation */
-  -webkit-backdrop-filter: blur(30px) saturate(80%);  /* Safari support */
+  backdrop-filter: blur(25px) saturate(400%);
+  -webkit-backdrop-filter: blur(30px) saturate(80%);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   position: relative;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.15);  /* Subtle shadow for depth */
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
 }
 
 .glass-card:hover {
@@ -119,6 +124,8 @@ body {
   font-weight: 600;
   margin-bottom: 1.5rem;
   gap: 0.75rem;
+  position: relative;
+  z-index: 2;  /* Elevate text */
 }
 
 .section-icon {
@@ -126,21 +133,10 @@ body {
   stroke-width: 2px;
 }
 
-.trends .section-icon {
-  color: var(--color-trends-blue);
-}
-
-.competitors .section-icon {
-  color: var(--color-competitors-rose);
-}
-
-.opportunities .section-icon {
-  color: var(--color-opportunities-green);
-}
-
-.source-data .section-icon {
-  color: var(--color-source-purple);
-}
+.trends .section-icon { color: var(--color-trends-blue); }
+.competitors .section-icon { color: var(--color-competitors-rose); }
+.opportunities .section-icon { color: var(--color-opportunities-green); }
+.source-data .section-icon { color: var(--color-source-purple); }
 
 .analytics-card {
   display: flex;
@@ -148,19 +144,24 @@ body {
   justify-content: space-between;
   padding: 1.5rem;
   gap: 1rem;
-  background: rgba(255,255,255,0.05);  /* Very subtle background */
+  background: rgba(255,255,255,0.05);
   border-radius: 12px;
+  position: relative;
 }
 
 .analytics-card h3 {
   font-size: 1.25rem;
   color: white;
   font-weight: 600;
+  position: relative;
+  z-index: 2;  /* Elevate text */
 }
 
 .analytics-card p {
   color: rgba(255,255,255,0.7);
   font-size: 0.95rem;
+  position: relative;
+  z-index: 2;  /* Elevate text */
 }
 
 .analytics-progress-container {
@@ -175,27 +176,18 @@ body {
   background: rgba(255,255,255,0.1);
 }
 
-.trends .custom-progress div {
-  background-color: var(--color-trends-blue);
-}
-
-.competitors .custom-progress div {
-  background-color: var(--color-competitors-rose);
-}
-
-.opportunities .custom-progress div {
-  background-color: var(--color-opportunities-green);
-}
-
-.source-data .custom-progress div {
-  background-color: var(--color-source-purple);
-}
+.trends .custom-progress div { background-color: var(--color-trends-blue); }
+.competitors .custom-progress div { background-color: var(--color-competitors-rose); }
+.opportunities .custom-progress div { background-color: var(--color-opportunities-green); }
+.source-data .custom-progress div { background-color: var(--color-source-purple); }
 
 .analytics-percentage {
   color: rgba(255,255,255,0.6);
   font-size: 0.875rem;
   min-width: 40px;
   text-align: right;
+  position: relative;
+  z-index: 2;  /* Elevate text */
 }
 
 @media (max-width: 768px) {

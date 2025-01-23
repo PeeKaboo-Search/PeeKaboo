@@ -16,6 +16,7 @@ const ImageResult: React.FC<ImageResultProps> = ({ query, className = "" }) => {
   const [images, setImages] = useState<ImageResult[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchImages = async () => {
@@ -47,17 +48,20 @@ const ImageResult: React.FC<ImageResultProps> = ({ query, className = "" }) => {
 
   return (
     <div className={`images-container ${className}`}>
-      <h3 className="images-title">Image Results</h3>
       {loading ? (
         <div className="loading-container">
           <div className="loading-spinner" />
-          <p>Loading images...</p>
         </div>
       ) : images.length > 0 ? (
         <div className="images-slider">
           <div className="images-track">
             {images.map((image, index) => (
-              <div key={index} className="image-card">
+              <div 
+                key={index} 
+                className="image-card"
+                onMouseEnter={() => setHoveredIndex(index)}
+                onMouseLeave={() => setHoveredIndex(null)}
+              >
                 <div className="image-wrapper">
                   <img
                     src={image.link}
@@ -65,15 +69,17 @@ const ImageResult: React.FC<ImageResultProps> = ({ query, className = "" }) => {
                     loading="lazy"
                   />
                 </div>
-                <div className="image-title">
-                  {image.title || `Image ${index + 1}`}
-                </div>
+                {hoveredIndex === index && (
+                  <div className="image-title-hover">
+                    {image.title || `Image ${index + 1}`}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
       ) : (
-        <p className="no-results">No results found for "{query}".</p>
+        <div className="no-results">No results found for "{query}".</div>
       )}
     </div>
   );

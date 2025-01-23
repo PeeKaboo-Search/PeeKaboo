@@ -6,12 +6,12 @@
   --text-primary: #FFFFFF;
   --text-secondary: #A0A0A0;
   --accent-primary: #2563EB;
-  --accent-hover: #1D4ED8;
+  --accent-hover: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff);
   --card-bg: #151515;
   --card-border: #222222;
   --input-bg: #1A1A1A;
   --button-bg: #2563EB;
-  --button-hover: #1D4ED8;
+  --button-hover:  linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff);
   --shadow-color: rgba(0, 0, 0, 0.5);
 }
 
