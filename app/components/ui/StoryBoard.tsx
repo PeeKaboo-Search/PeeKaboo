@@ -23,7 +23,7 @@ export default function MediaGallery({ query }: MediaGalleryProps) {
     setLoading(true);
     setError(null);
 
-    try {
+    try { 
       // Step 1: Generate ad concepts
       const prompts = await generateAdConcepts(query);
       
