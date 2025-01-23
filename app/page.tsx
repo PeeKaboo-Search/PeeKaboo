@@ -16,6 +16,7 @@ const SentimentAnalysis = lazy(() => import("app/components/ui/SentimentAnalysis
 const NewsResults = lazy(() => import("app/components/ui/NewsResults"));
 const Summary = lazy(() => import("app/components/ui/Summary"));
 const StoryBoard = lazy(() => import("app/components/ui/StoryBoard"));
+const AdsAnalytics = lazy(() => import("app/components/ui/AdsAnalytics"));
 
 const Page: React.FC = () => {
   const [query, setQuery] = useState<string>("");
@@ -119,8 +120,9 @@ const Page: React.FC = () => {
               exit="exit"
               className="results-container"
             >
-              {[ImageResult, GoogleAnalytics, RedditAnalytics, YoutubeAnalysis, 
-                TrendAnalysis, SentimentAnalysis, NewsResults, Summary, StoryBoard]
+              {/* {[ImageResult, GoogleAnalytics, RedditAnalytics, YoutubeAnalysis, 
+                TrendAnalysis, SentimentAnalysis, NewsResults, Summary,AdsAnalytics, StoryBoard] */}
+              {[StoryBoard]
                 .map((Component, index) => (
                   <motion.div
                     key={index}
