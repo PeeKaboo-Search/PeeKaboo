@@ -122,7 +122,7 @@ const Page: React.FC = () => {
             >
               {/* {[ImageResult, GoogleAnalytics, RedditAnalytics, YoutubeAnalysis, 
                 TrendAnalysis, SentimentAnalysis, NewsResults, Summary,AdsAnalytics, StoryBoard] */}
-              {[StoryBoard]
+              {[GoogleAnalytics, Summary]
                 .map((Component, index) => (
                   <motion.div
                     key={index}
