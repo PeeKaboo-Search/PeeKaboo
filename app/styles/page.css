@@ -6,12 +6,12 @@
   --text-primary: #FFFFFF;
   --text-secondary: #A0A0A0;
   --accent-primary: #2563EB;
-  --accent-hover: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff);
+  --accent-hover: #4A4A4A; /* Changed to a gray tone */
   --card-bg: #151515;
   --card-border: #222222;
   --input-bg: #1A1A1A;
   --button-bg: #2563EB;
-  --button-hover:  linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff);
+  --button-hover: #4A4A4A; /* Changed to a gray tone */
   --shadow-color: rgba(0, 0, 0, 0.5);
 }
 
@@ -52,10 +52,10 @@ body {
   letter-spacing: 0.1em;
   background: linear-gradient(
     135deg,
-    rgba(37, 99, 235, 0.1),
-    rgba(37, 99, 235, 0)
-  );
-  text-shadow: 0 0 20px rgba(37, 99, 235, 0.5);
+    rgba(74, 74, 74, 0.1),
+    rgba(74, 74, 74, 0)
+  ); /* Adjusted to gray tone */
+  text-shadow: 0 0 20px rgba(74, 74, 74, 0.5); /* Adjusted */
 }
 
 .search-section {
@@ -83,7 +83,7 @@ body {
 }
 
 .search-bar-wrapper:hover {
-  border-color: var(--accent-primary);
+  border-color: var(--accent-hover);
   box-shadow: 0 12px 40px var(--shadow-color);
 }
 
@@ -166,7 +166,7 @@ body {
 
 .result-card:hover {
   transform: translateY(-4px);
-  border-color: var(--accent-primary);
+  border-color: var(--accent-hover);
   box-shadow: 0 12px 48px var(--shadow-color);
 }
 
@@ -228,7 +228,7 @@ body {
 /* Animations */
 @keyframes glow {
   0% { box-shadow: 0 8px 32px var(--shadow-color); }
-  50% { box-shadow: 0 8px 48px rgba(37, 99, 235, 0.3); }
+  50% { box-shadow: 0 8px 48px rgba(74, 74, 74, 0.3); } /* Adjusted to gray */
   100% { box-shadow: 0 8px 32px var(--shadow-color); }
 }
 
