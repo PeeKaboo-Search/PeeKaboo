@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Eye, ThumbsUp, MessageSquare, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Eye, ThumbsUp, MessageSquare, Loader2 } from 'lucide-react';
 import { YouTubeVideo, VideoStatistics, ErrorState } from 'app/types/youtube';
 import { searchYouTubeVideos, getVideoStatistics } from '@/app/api/youtube';
 import { Button } from '@/app/components/ui/button';
@@ -13,7 +13,12 @@ const YouTubeVideos: React.FC<{ query: string }> = ({ query }) => {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [nextPageToken, setNextPageToken] = useState<string | undefined>();
   
-  const gridRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [startX, setStartX] = useState<number>(0);
+  const [scrollLeft, setScrollLeft] = useState<number>(0);
+  
+  const videosSliderRef = useRef<HTMLDivElement>(null);
+  const videosTrackRef = useRef<HTMLDivElement>(null);
 
   const formatNumber = (num: string) => {
     const n = parseInt(num);
@@ -23,10 +28,43 @@ const YouTubeVideos: React.FC<{ query: string }> = ({ query }) => {
     return n.toString();
   };
 
-  const scroll = (direction: 'left' | 'right') => {
-    if (!gridRef.current) return;
-    const scrollAmount = direction === 'left' ? -400 : 400;
-    gridRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!videosSliderRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - videosSliderRef.current.offsetLeft);
+    setScrollLeft(videosSliderRef.current.scrollLeft);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+    if (videosTrackRef.current) {
+      videosTrackRef.current.style.transform = "translateX(0px)";
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!videosSliderRef.current || !videosTrackRef.current) return;
+    if (isDragging) {
+      e.preventDefault();
+      const x = e.pageX - videosSliderRef.current.offsetLeft;
+      const walk = (x - startX) * 2; // Multiplied by 2 to increase scrolling speed
+      videosSliderRef.current.scrollLeft = scrollLeft - walk;
+    } else {
+      // Hover-based preview scrolling
+      const slider = videosSliderRef.current;
+      const track = videosTrackRef.current;
+      const sliderWidth = slider.offsetWidth;
+      const trackWidth = track.scrollWidth;
+      const maxScroll = trackWidth - sliderWidth;
+      const mouseX = e.clientX - slider.getBoundingClientRect().left;
+      const percentage = mouseX / sliderWidth;
+      const scrollAmount = percentage * maxScroll;
+      track.style.transform = `translateX(-${scrollAmount}px)`;
+    }
   };
 
   const loadMoreVideos = async () => {
@@ -85,9 +123,10 @@ const YouTubeVideos: React.FC<{ query: string }> = ({ query }) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="youtube-videos-container space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">YouTube Videos</h2>
+        <p className="text-sm text-muted-foreground">Scroll, drag, or hover to explore</p>
       </div>
 
       {error && (
@@ -96,24 +135,22 @@ const YouTubeVideos: React.FC<{ query: string }> = ({ query }) => {
         </div>
       )}
 
-      <div className="relative">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => scroll('left')}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-
+      <div 
+        className="youtube-videos-slider"
+        ref={videosSliderRef}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        onMouseMove={handleMouseMove}
+      >
         <div 
-          ref={gridRef}
-          className="flex gap-4 overflow-x-auto snap-x snap-mandatory py-4 px-8 scrollbar-hide"
+          className="youtube-videos-track flex gap-4 py-4 px-8"
+          ref={videosTrackRef}
         >
           {videos.map((video) => (
             <Card
-              key={video.id.videoId}
-              className={`flex-shrink-0 w-72 cursor-pointer snap-start transition-shadow hover:shadow-lg
+              key={`youtube-video-${video.id.videoId}`}
+              className={`youtube-video-card flex-shrink-0 w-72 cursor-pointer snap-start transition-shadow hover:shadow-lg
                 ${selectedVideo === video.id.videoId ? 'ring-2 ring-primary' : ''}`}
               onClick={() => setSelectedVideo(video.id.videoId)}
             >
@@ -145,24 +182,7 @@ const YouTubeVideos: React.FC<{ query: string }> = ({ query }) => {
             </Card>
           ))}
         </div>
-
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => scroll('right')}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
       </div>
-
-      {nextPageToken && (
-        <div className="flex justify-center">
-          <Button onClick={loadMoreVideos} variant="outline">
-            Load More Videos
-          </Button>
-        </div>
-      )}
     </div>
   );
 };

@@ -1,81 +1,149 @@
-.youtubeContainer {
-    @apply bg-gray-900 rounded-xl p-6 text-white;
-  }
+:root {
+  /* Color Palette */
+  --color-primary-blue: #3B82F6;
+  --color-accent-purple: #7C3AED;
   
-  .header {
-    @apply mb-6 px-4;
-  }
+  /* Dark Mode Foundations */
+  --background-deep: #0a0a0c;
+  --background-surface: #141417;
+  --background-elevated: #1e1e24;
   
-  .title {
-    @apply text-2xl font-semibold mb-2;
-  }
+  /* Glass Effects */
+  --glass-background: rgba(22, 22, 28, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.1);
   
-  .slider {
-    @apply relative w-full;
+  /* Typography */
+  --font-display: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  --font-body: 'Inter', 'SF Pro Text', system-ui, sans-serif;
+}
+
+.youtube-videos-container {
+  background-color: var(--background-deep);
+  color: white;
+  font-family: var(--font-body);
+  padding: 2rem;
+  position: relative;
+  z-index: 0;
+}
+
+.youtube-videos-container h2 {
+  font-family: var(--font-display);
+  color: var(--color-primary-blue);
+  position: relative;
+  z-index: 2;
+}
+
+.youtube-videos-slider {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+}
+
+.youtube-videos-track {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 0;
+  position: relative;
+  z-index: 0;
+}
+
+.youtube-video-card {
+  background: var(--glass-background);
+  backdrop-filter: blur(25px) saturate(180%);
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  flex-shrink: 0;
+  width: 18rem;
+  cursor: pointer;
+}
+
+.youtube-video-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+}
+
+.youtube-video-card img {
+  width: 100%;
+  height: 10rem;
+  object-fit: cover;
+  position: relative;
+  z-index: 2;
+}
+
+.youtube-video-card .card-content {
+  padding: 1rem;
+  position: relative;
+  z-index: 2;
+}
+
+.youtube-video-card h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 0.5rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.youtube-video-card .channel-title {
+  color: rgba(255,255,255,0.7);
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.youtube-video-card .video-stats {
+  display: flex;
+  gap: 1rem;
+  color: rgba(255,255,255,0.6);
+  font-size: 0.8rem;
+}
+
+.youtube-video-card .video-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.youtube-load-more-btn {
+  background: var(--glass-background);
+  backdrop-filter: blur(25px) saturate(180%);
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.youtube-load-more-btn:hover {
+  background: rgba(255,255,255,0.1);
+  transform: translateY(-3px);
+}
+
+/* Custom Scrollbar */
+.youtube-videos-slider::-webkit-scrollbar {
+  height: 8px;
+  background: rgba(255,255,255,0.1);
+}
+
+.youtube-videos-slider::-webkit-scrollbar-thumb {
+  background: var(--color-primary-blue);
+  border-radius: 4px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .youtube-videos-track {
+    gap: 0.5rem;
   }
-  
-  .videoGrid {
-    @apply flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory;
-    scrollbar-width: thin;
-    scrollbar-color: theme('colors.gray.600') theme('colors.gray.900');
+
+  .youtube-video-card {
+    width: 16rem;
   }
-  
-  .videoGrid::-webkit-scrollbar {
-    @apply h-2;
-  }
-  
-  .videoGrid::-webkit-scrollbar-track {
-    @apply bg-gray-900 rounded-full;
-  }
-  
-  .videoGrid::-webkit-scrollbar-thumb {
-    @apply bg-gray-600 rounded-full;
-  }
-  
-  .videoCard {
-    @apply flex-none w-80 bg-gray-800 rounded-lg overflow-hidden snap-start transition-transform hover:-translate-y-1;
-  }
-  
-  .thumbnail {
-    @apply relative w-full h-48 overflow-hidden cursor-pointer;
-  }
-  
-  .thumbnailImage {
-    @apply w-full h-full object-cover transition-transform hover:scale-105;
-  }
-  
-  .content {
-    @apply p-4;
-  }
-  
-  .videoTitle {
-    @apply text-lg font-semibold mb-2 line-clamp-2;
-  }
-  
-  .stats {
-    @apply flex gap-4 text-sm text-gray-400;
-  }
-  
-  .stat {
-    @apply flex items-center gap-2;
-  }
-  
-  .analysisSection {
-    @apply mt-8;
-  }
-  
-  .quoteCard {
-    @apply bg-gray-800 p-4 rounded-lg mb-4;
-  }
-  
-  .sentimentCard {
-    @apply p-4 rounded-lg mb-4;
-  }
-  
-  .positiveCard {
-    @apply bg-green-900/50;
-  }
-  
-  .negativeCard {
-    @apply bg-red-900/50;
-  }
+}

@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-yellow: #fbc304;
+  --color-pink: #f30c7c;
+  --color-purple: #6b23eb;
+  --color-coral: #f44e65;
+  --background: #0a0a0a;
+  --foreground: #ffffff;
+}
+
+@layer base {
+  body {
+    @apply bg-[var(--background)] text-[var(--foreground)];
+  }
+}
+
+.search-gradient {
+  background: linear-gradient(90deg, 
+    var(--color-yellow) 0%,
+    var(--color-pink) 25%,
+    var(--color-purple) 50%,
+    var(--color-coral) 75%,
+    var(--color-yellow) 100%
+  );
+  background-size: 200% auto;
+  animation: gradient 15s linear infinite;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.search-border {
+  border: 2px solid transparent;
+  border-radius: 9999px;
+  background-clip: padding-box;
+  position: relative;
+}
+
+.search-border::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  bottom: -2px;
+  left: -2px;
+  z-index: -1;
+  border-radius: 9999px;
+  background: linear-gradient(45deg,
+    var(--color-yellow),
+    var(--color-pink),
+    var(--color-purple),
+    var(--color-coral)
+  );
+  animation: rotate 3s linear infinite;
+}
+
+@keyframes rotate {
+  100% {
+    transform: rotate(360deg);
+  }
+}
