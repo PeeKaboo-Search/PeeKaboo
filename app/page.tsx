@@ -118,8 +118,8 @@ const Page: React.FC = () => {
               animate="animate"
               exit="exit"
               className="results-container"
-            >
-              {[ImageResult, GoogleAnalytics, RedditAnalytics, YoutubeAnalysis, TrendAnalysis, AdsAnalytics, SentimentAnalysis, NewsResults, Summary, StoryBoard].map((Component, index) => (
+            > {/* ImageResult, GoogleAnalytics, RedditAnalytics, YoutubeAnalysis, TrendAnalysis, AdsAnalytics, SentimentAnalysis, NewsResults, Summary, StoryBoard */}
+              {[AdsAnalytics, SentimentAnalysis, NewsResults,   StoryBoard].map((Component, index) => (
                 <motion.div
                   key={index}
                   variants={searchAnimations.fadeUp}
