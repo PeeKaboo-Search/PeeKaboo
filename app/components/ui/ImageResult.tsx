@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import "../../styles/images.css";
 import { searchImages } from "../../api/imageSearchApi";
 
@@ -42,8 +43,13 @@ const ImageResult: React.FC<ImageResultProps> = ({
         } else {
           setError("Failed to fetch images");
         }
-      } catch (err) {
-        setError("An error occurred while fetching images");
+      } catch (error) {
+        // Use the error parameter to resolve no-unused-vars error
+        setError(
+          error instanceof Error 
+            ? error.message 
+            : "An error occurred while fetching images"
+        );
       } finally {
         setLoading(false);
       }
@@ -131,10 +137,13 @@ const ImageResult: React.FC<ImageResultProps> = ({
                 className="image-card"
               >
                 <div className="image-wrapper">
-                  <img
+                  <Image
                     src={image.link}
                     alt={image.title || `Result ${index + 1}`}
                     loading="lazy"
+                    width={300}
+                    height={200}
+                    className="object-cover"
                   />
                 </div>
                 <div className="image-title-container">
@@ -147,7 +156,9 @@ const ImageResult: React.FC<ImageResultProps> = ({
           </div>
         </div>
       ) : (
-        <div className="no-results">No results found for "{query}".</div>
+        <div className="no-results">
+          No results found for &quot;{query}&quot;.
+        </div>
       )}
     </div>
   );
