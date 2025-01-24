@@ -3,7 +3,7 @@ import { YouTubeVideo, VideoStatistics,
          YouTubeSearchResponse, YouTubeStatisticsResponse } from '../types/youtube';
 
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
-const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+const YOUTUBE_API_KEY = process.env.lNEXT_PUBLIC_YOUTUBE_API_KEY;
 
 class ApiError extends Error {
   code: string;

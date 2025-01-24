@@ -1,7 +1,7 @@
 import { GroqResponse, MarketAnalysisData, HistoricTrendDataset } from '@/app/types';
 
 const CONFIG = {
-  GROQ_API_KEY: process.env.lNEXT_PUBLIC_GROQ_API_KEY as string
+  GROQ_API_KEY: process.env.NEXT_PUBLIC_GROQ_API_KEY as string
 };
 
 interface ChartDatasets {

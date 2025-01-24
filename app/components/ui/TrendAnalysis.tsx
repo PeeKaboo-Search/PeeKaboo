@@ -12,6 +12,7 @@ import {
   ArcElement,
 } from 'chart.js';
 import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
+import { Loader2 } from 'lucide-react';
 import { fetchMarketAnalysisData, chartColors, MarketAnalysisAPIError } from '@/app/api/trendAnalysis';
 
 // Register ChartJS components
@@ -26,6 +27,46 @@ ChartJS.register(
   Tooltip,
   Legend
 );
+
+// Custom chart options for glassmorphism effect
+const getChartOptions = (title: string) => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    title: { 
+      display: true, 
+      text: title,
+      color: 'rgba(255,255,255,0.8)',
+      font: {
+        size: 16,
+        weight: 'bold' as const
+      }
+    },
+    legend: { 
+      labels: {
+        color: 'rgba(255,255,255,0.7)'
+      }
+    }
+  },
+  scales: {
+    x: {
+      grid: {
+        color: 'rgba(255,255,255,0.1)'
+      },
+      ticks: {
+        color: 'rgba(255,255,255,0.7)'
+      }
+    },
+    y: {
+      grid: {
+        color: 'rgba(255,255,255,0.1)'
+      },
+      ticks: {
+        color: 'rgba(255,255,255,0.7)'
+      }
+    }
+  }
+});
 
 interface TrendAnalysisProps {
   query: string;
@@ -53,30 +94,42 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ query }) => {
     loadAnalysisData();
   }, [query]);
 
+  const glassMorphismStyle = {
+    background: 'rgba(22, 22, 28, 0.6)',
+    backdropFilter: 'blur(25px)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '16px',
+    boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+    padding: '1.5rem',
+    position: 'relative' as const,
+    zIndex: 2
+  };
+
   if (loading) {
     return (
-      <div className="w-full bg-white p-6 rounded-lg shadow-md">
-        <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="space-y-3">
-            <div className="h-60 bg-gray-200 rounded"></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="h-40 bg-gray-200 rounded"></div>
-              <div className="h-40 bg-gray-200 rounded"></div>
-            </div>
-          </div>
-        </div>
+      <div 
+        style={{
+          ...glassMorphismStyle,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh'
+        }}
+      >
+        <Loader2 className="animate-spin text-white" size={40} />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="w-full bg-white p-6 rounded-lg shadow-md">
-        <div className="text-red-500 flex items-center justify-center">
-          <span className="mr-2">⚠️</span>
-          <p>{error}</p>
-        </div>
+      <div 
+        style={{
+          ...glassMorphismStyle,
+          color: 'rgba(255,0,0,0.7)'
+        }}
+      >
+        <p>{error}</p>
       </div>
     );
   }
@@ -85,68 +138,101 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ query }) => {
     return null;
   }
 
+  // Type-safe color mapping with fallback
+  const mapColors = (colors: string | string[]) => {
+    // If colors is a single string, convert to array
+    const colorArray = Array.isArray(colors) ? colors : [colors];
+    return colorArray.map(color => `${color}80`);
+  };
+
   return (
-    <div className="w-full bg-white p-6 rounded-lg shadow-md">
-      <h3 className="text-xl font-semibold mb-6">Market Analysis Dashboard</h3>
+    <div 
+      style={{
+        ...glassMorphismStyle,
+        width: '100%',
+        color: 'white'
+      }}
+    >
+      <h3 className="text-2xl font-bold mb-6 text-white">Market Analysis Dashboard</h3>
       
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* Historic Trend Chart */}
-        <div className="h-96">
+        <div 
+          style={{
+            ...glassMorphismStyle,
+            height: '24rem',
+            marginBottom: '1.5rem'
+          }}
+        >
           <Line
             data={{
               labels: analysisData.historicTrend.labels,
               datasets: analysisData.historicTrend.datasets.map((dataset: any) => ({
                 ...dataset,
                 borderColor: chartColors.line,
-                tension: 0.1
+                backgroundColor: 'rgba(59, 130, 246, 0.2)', // Soft blue background
+                tension: 0.1,
+                borderWidth: 2
               }))
             }}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                title: { display: true, text: analysisData.historicTrend.title }
-              }
-            }}
+            options={getChartOptions(analysisData.historicTrend.title)}
           />
         </div>
 
         {/* Market Share and Sentiment Charts Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="h-64">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div 
+            style={{
+              ...glassMorphismStyle,
+              height: '20rem'
+            }}
+          >
             <Pie
               data={{
                 labels: analysisData.marketShare.labels,
                 datasets: [{
                   data: analysisData.marketShare.data,
-                  backgroundColor: chartColors.pie
+                  backgroundColor: mapColors(chartColors.pie)
                 }]
               }}
               options={{
-                responsive: true,
-                maintainAspectRatio: false,
+                ...getChartOptions(analysisData.marketShare.title),
                 plugins: {
-                  title: { display: true, text: analysisData.marketShare.title },
-                  legend: { position: 'right' }
+                  ...getChartOptions(analysisData.marketShare.title).plugins,
+                  legend: { 
+                    position: 'right',
+                    labels: {
+                      color: 'rgba(255,255,255,0.7)'
+                    }
+                  }
                 }
               }}
             />
           </div>
-          <div className="h-64">
+          <div 
+            style={{
+              ...glassMorphismStyle,
+              height: '20rem'
+            }}
+          >
             <Doughnut
               data={{
                 labels: analysisData.sentiment.labels,
                 datasets: [{
                   data: analysisData.sentiment.data,
-                  backgroundColor: chartColors.pie.slice(0, 3)
+                  backgroundColor: mapColors(chartColors.pie.slice(0, 3))
                 }]
               }}
               options={{
-                responsive: true,
-                maintainAspectRatio: false,
+                ...getChartOptions(analysisData.sentiment.title),
                 plugins: {
-                  title: { display: true, text: analysisData.sentiment.title },
-                  legend: { position: 'right' }
+                  ...getChartOptions(analysisData.sentiment.title).plugins,
+                  legend: { 
+                    position: 'right',
+                    labels: {
+                      color: 'rgba(255,255,255,0.7)'
+                    }
+                  }
                 }
               }}
             />
@@ -154,65 +240,65 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ query }) => {
         </div>
 
         {/* Regional Distribution Chart */}
-        <div className="h-64">
+        <div 
+          style={{
+            ...glassMorphismStyle,
+            height: '20rem'
+          }}
+        >
           <Bar
             data={{
               labels: analysisData.regional.labels,
               datasets: [{
                 label: 'Regional Distribution',
                 data: analysisData.regional.data,
-                backgroundColor: chartColors.bar
+                backgroundColor: mapColors(chartColors.bar),
+                borderWidth: 0
               }]
             }}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                title: { display: true, text: analysisData.regional.title }
-              }
-            }}
+            options={getChartOptions(analysisData.regional.title)}
           />
         </div>
 
         {/* Demographics Chart */}
-        <div className="h-64">
+        <div 
+          style={{
+            ...glassMorphismStyle,
+            height: '20rem'
+          }}
+        >
           <Bar
             data={{
               labels: analysisData.demographics.labels,
               datasets: [{
                 label: 'Age Distribution',
                 data: analysisData.demographics.data,
-                backgroundColor: chartColors.bar
+                backgroundColor: mapColors(chartColors.bar),
+                borderWidth: 0
               }]
             }}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                title: { display: true, text: analysisData.demographics.title }
-              }
-            }}
+            options={getChartOptions(analysisData.demographics.title)}
           />
         </div>
 
         {/* Price Distribution Chart */}
-        <div className="h-64">
+        <div 
+          style={{
+            ...glassMorphismStyle,
+            height: '20rem'
+          }}
+        >
           <Bar
             data={{
               labels: analysisData.priceDistribution.labels,
               datasets: [{
                 label: 'Price Distribution',
                 data: analysisData.priceDistribution.data,
-                backgroundColor: chartColors.bar
+                backgroundColor: mapColors(chartColors.bar),
+                borderWidth: 0
               }]
             }}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                title: { display: true, text: analysisData.priceDistribution.title }
-              }
-            }}
+            options={getChartOptions(analysisData.priceDistribution.title)}
           />
         </div>
       </div>
