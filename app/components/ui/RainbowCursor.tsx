@@ -69,7 +69,7 @@ const RainbowCursor: React.FC<RainbowCursorProps> = ({
   const contextRef = useRef<CanvasRenderingContext2D | null>(null);
   const cursorRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const particlesRef = useRef<Array<{ position: { x: number; y: number } }>>([]);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | null>(null);
   const cursorsInittedRef = useRef(false);
   const timeRef = useRef(0);
 
