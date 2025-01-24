@@ -1,10 +1,11 @@
-:root {
-    /* Vibrant Color Palette */
-    --color-primary-blue: #3B82F6;     /* Clean, modern blue */
+/* Scoped Root-Level Variables */
+.storyBoardContainer {
+    --color-primary-blue: #3B82F6; /* Clean, modern blue */
     --font-display: 'Inter', 'SF Pro Display', system-ui, sans-serif;
-  }
-  
-  .galleryContainer {
+}
+
+/* General Container for the Gallery */
+.storyBoardContainer .galleryContainer {
     width: 100%;
     max-width: 100%;
     padding: 2rem;
@@ -12,28 +13,30 @@
     background-color: transparent;
     position: relative;
     z-index: 2;
-  }
-  
-  .imagesHeader {
+}
+
+/* Header Section */
+.storyBoardContainer .imagesHeader {
     margin-bottom: 1.5rem;
     text-align: left;
-  }
-  
-  .imagesHeading {
+}
+
+.storyBoardContainer .imagesHeading {
     font-family: var(--font-display);
     font-size: 2.5rem;
     font-weight: 700;
     color: var(--color-primary-blue);
     letter-spacing: -0.03em;
     margin-bottom: 0.5rem;
-  }
-  
-  .imagesSubheading {
+}
+
+.storyBoardContainer .imagesSubheading {
     font-size: 1rem;
-    color: rgba(255,255,255,0.6);
-  }
-  
-  .imagesSlider {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* Image Slider Section */
+.storyBoardContainer .imagesSlider {
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -41,22 +44,22 @@
     padding: 0.5rem;
     position: relative;
     z-index: 2;
-  }
-  
-  /* Hide scrollbar for Chrome, Safari and Opera */
-  .imagesSlider::-webkit-scrollbar {
+}
+
+/* Hide scrollbar for Chrome, Safari, and Opera */
+.storyBoardContainer .imagesSlider::-webkit-scrollbar {
     display: none;
-  }
-  
-  .imagesTrack {
+}
+
+.storyBoardContainer .imagesTrack {
     display: flex;
     gap: 1.5rem;
     padding: 0.25rem;
     position: relative;
     z-index: 2;
-  }
-  
-  .imageSlide {
+}
+
+.storyBoardContainer .imageSlide {
     flex: 0 0 auto;
     width: 280px;
     background: rgba(22, 22, 28, 0.2); /* More transparent background */
@@ -64,78 +67,80 @@
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     z-index: 2;
     display: flex;
     flex-direction: column;
-  }
-  
-  .imageSlide:hover {
+}
+
+.storyBoardContainer .imageSlide:hover {
     transform: translateY(-8px);
-    box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
     backdrop-filter: blur(20px) saturate(250%);
     background: rgba(22, 22, 28, 0.3); /* Slightly less transparent on hover */
-  }
-  
-  .adImage {
+}
+
+.storyBoardContainer .adImage {
     width: 100%;
     height: 200px;
     object-fit: cover;
     position: relative;
     z-index: 2;
-  }
-  
-  .errorPlaceholder {
+}
+
+.storyBoardContainer .errorPlaceholder {
     width: 100%;
     height: 200px;
     background: rgba(22, 22, 28, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(255,255,255,0.6);
+    color: rgba(255, 255, 255, 0.6);
     position: relative;
     z-index: 2;
-  }
-  
-  .imageDetails {
+}
+
+/* Details Section */
+.storyBoardContainer .imageDetails {
     padding: 0.75rem;
     background: rgba(22, 22, 28, 0.2);
     backdrop-filter: blur(10px);
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-  }
-  
-  .imageCaption {
+}
+
+.storyBoardContainer .imageCaption {
     font-size: 1rem;
-    color: rgba(255,255,255,0.8);
+    color: rgba(255, 255, 255, 0.8);
     font-weight: 600;
     position: relative;
     z-index: 2;
-  }
-  
-  .promptText {
+}
+
+.storyBoardContainer .promptText {
     font-size: 0.95rem;
-    color: rgba(255,255,255,0.6);
+    color: rgba(255, 255, 255, 0.6);
     line-height: 1.4;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     position: relative;
     z-index: 2;
-  }
-  
-  .loading {
+}
+
+/* Loading and Error States */
+.storyBoardContainer .loading {
     text-align: center;
     padding: 20px;
-    color: rgba(255,255,255,0.6);
+    color: rgba(255, 255, 255, 0.6);
     position: relative;
     z-index: 2;
-  }
-  
-  .errorContainer {
+}
+
+.storyBoardContainer .errorContainer {
     text-align: center;
     padding: 20px;
     color: #ff4444;
@@ -143,9 +148,14 @@
     border-radius: 16px;
     position: relative;
     z-index: 2;
-  }
-  
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
+}
+
+/* Animations */
+.storyBoardContainer @keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
