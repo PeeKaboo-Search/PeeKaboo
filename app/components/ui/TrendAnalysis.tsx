@@ -10,13 +10,42 @@ import {
   Legend,
   BarElement,
   ArcElement,
+  ChartOptions,
+  ChartType,
 } from 'chart.js';
 import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
 import { Loader2 } from 'lucide-react';
 import { fetchMarketAnalysisData, MarketAnalysisAPIError } from '@/app/api/trendAnalysis';
 
+// Soft, light color palette types
+interface ChartColorScheme {
+  border: string;
+  background: string;
+}
+
+interface ChartColors {
+  line: ChartColorScheme[];
+  bar: string[];
+  pie: string[];
+}
+
+// Chart data interfaces
+interface ChartDataset {
+  label: string;
+  data: number[];
+  borderColor?: string;
+  backgroundColor?: string | string[];
+  borderWidth?: number;
+}
+
+interface ChartData {
+  labels: string[];
+  datasets: ChartDataset[];
+  title: string;
+}
+
 // Soft, light color palette
-const lightChartColors = {
+const lightChartColors: ChartColors = {
   line: [
     {
       border: 'rgba(102, 204, 255, 1)',     // Pastel Sky Blue
@@ -47,15 +76,45 @@ const lightChartColors = {
   ]
 };
 
+// Market Analysis Data Interface
+interface MarketAnalysisData {
+  historicTrend: ChartData;
+  marketShare: {
+    labels: string[];
+    data: number[];
+    title: string;
+  };
+  sentiment: {
+    labels: string[];
+    data: number[];
+    title: string;
+  };
+  regional: {
+    labels: string[];
+    data: number[];
+    title: string;
+  };
+  demographics: {
+    labels: string[];
+    data: number[];
+    title: string;
+  };
+  priceDistribution: {
+    labels: string[];
+    data: number[];
+    title: string;
+  };
+}
+
 // Glassmorphism style with slight modifications
-const glassMorphismStyle = {
+const glassMorphismStyle: React.CSSProperties = {
   background: 'rgba(22, 22, 28, 0.5)',
   backdropFilter: 'blur(30px)',
   border: '1px solid rgba(255,255,255,0.05)',
   borderRadius: '20px',
   boxShadow: '0 15px 35px rgba(0,0,0,0.1)',
   padding: '1.5rem',
-  position: 'relative' as const,
+  position: 'relative',
   zIndex: 2
 };
 
@@ -72,69 +131,71 @@ ChartJS.register(
   Legend
 );
 
-// Custom chart options with subtle styling
-const getChartOptions = (title: string) => ({
-  responsive: true,
-  maintainAspectRatio: false,
-  elements: {
-    point: {
-      radius: 4,
-      hoverRadius: 6,
-      backgroundColor: 'rgba(255,255,255,0.8)'
-    },
-    line: {
-      borderWidth: 2,
-      tension: 0.4  // Soft curve
-    }
-  },
-  plugins: {
-    title: { 
-      display: true, 
-      text: title,
-      color: 'rgba(255,255,255,0.9)',
-      font: {
-        size: 16,
-        weight: 'bold' as const
+// Custom chart options generator with type-safe configuration
+const getChartOptions = <T extends ChartType>(title: string): ChartOptions<T> => {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    elements: {
+      point: {
+        radius: 4,
+        hoverRadius: 6,
+        backgroundColor: 'rgba(255,255,255,0.8)'
+      },
+      line: {
+        borderWidth: 2,
+        tension: 0.4  // Soft curve
       }
     },
-    legend: { 
-      display: false
-    },
-    tooltip: {
-      backgroundColor: 'rgba(255,255,255,0.9)',
-      titleColor: 'rgba(0,0,0,0.8)',
-      bodyColor: 'rgba(0,0,0,0.7)'
-    }
-  },
-  scales: {
-    x: {
-      display: true,
-      grid: {
-        color: 'rgba(255,255,255,0.1)',
-        drawBorder: false
-      },
-      ticks: {
-        color: 'rgba(255,255,255,0.6)',
+    plugins: {
+      title: { 
+        display: true, 
+        text: title,
+        color: 'rgba(255,255,255,0.9)',
         font: {
-          size: 10
+          size: 16,
+          weight: 'bold' as const
+        }
+      },
+      legend: { 
+        display: false 
+      },
+      tooltip: {
+        backgroundColor: 'rgba(255,255,255,0.9)',
+        titleColor: 'rgba(0,0,0,0.8)',
+        bodyColor: 'rgba(0,0,0,0.7)'
+      }
+    },
+    scales: {
+      x: {
+        display: true,
+        grid: {
+          color: 'rgba(255,255,255,0.1)',
+          drawBorder: false
+        },
+        ticks: {
+          color: 'rgba(255,255,255,0.6)',
+          font: {
+            size: 10
+          }
+        }
+      },
+      y: {
+        display: true,
+        grid: {
+          color: 'rgba(255,255,255,0.1)',
+          drawBorder: false
+        },
+        ticks: {
+          color: 'rgba(255,255,255,0.6)',
+          font: {
+            size: 10
+          }
         }
       }
-    },
-    y: {
-      display: true,
-      grid: {
-        color: 'rgba(255,255,255,0.1)',
-        drawBorder: false
-      },
-      ticks: {
-        color: 'rgba(255,255,255,0.6)',
-        font: {
-          size: 10
-        }
-      }
     }
-  }
-});
+  } as ChartOptions<T>;
+};
 
 interface TrendAnalysisProps {
   query: string;
@@ -143,7 +204,7 @@ interface TrendAnalysisProps {
 const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ query }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [analysisData, setAnalysisData] = useState<any>(null);
+  const [analysisData, setAnalysisData] = useState<MarketAnalysisData | null>(null);
 
   useEffect(() => {
     const loadAnalysisData = async () => {
@@ -217,14 +278,14 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ query }) => {
           <Line
             data={{
               labels: analysisData.historicTrend.labels,
-              datasets: analysisData.historicTrend.datasets.map((dataset: any, index: number) => ({
+              datasets: analysisData.historicTrend.datasets.map((dataset, index) => ({
                 ...dataset,
                 borderColor: lightChartColors.line[index % lightChartColors.line.length].border,
                 backgroundColor: lightChartColors.line[index % lightChartColors.line.length].background,
                 borderWidth: 2
               }))
             }}
-            options={getChartOptions(analysisData.historicTrend.title)}
+            options={getChartOptions<'line'>(analysisData.historicTrend.title)}
           />
         </div>
 
@@ -246,9 +307,9 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ query }) => {
                 }]
               }}
               options={{
-                ...getChartOptions(analysisData.marketShare.title),
+                ...getChartOptions<'pie'>(analysisData.marketShare.title),
                 plugins: {
-                  ...getChartOptions(analysisData.marketShare.title).plugins,
+                  ...getChartOptions<'pie'>(analysisData.marketShare.title).plugins,
                   legend: { 
                     display: true,
                     position: 'right',
@@ -276,9 +337,9 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ query }) => {
                 }]
               }}
               options={{
-                ...getChartOptions(analysisData.sentiment.title),
+                ...getChartOptions<'doughnut'>(analysisData.sentiment.title),
                 plugins: {
-                  ...getChartOptions(analysisData.sentiment.title).plugins,
+                  ...getChartOptions<'doughnut'>(analysisData.sentiment.title).plugins,
                   legend: { 
                     display: true,
                     position: 'right',
@@ -309,7 +370,7 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ query }) => {
                 borderWidth: 0
               }]
             }}
-            options={getChartOptions(analysisData.regional.title)}
+            options={getChartOptions<'bar'>(analysisData.regional.title)}
           />
         </div>
 
@@ -330,7 +391,7 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ query }) => {
                 borderWidth: 0
               }]
             }}
-            options={getChartOptions(analysisData.demographics.title)}
+            options={getChartOptions<'bar'>(analysisData.demographics.title)}
           />
         </div>
 
@@ -351,7 +412,7 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ query }) => {
                 borderWidth: 0
               }]
             }}
-            options={getChartOptions(analysisData.priceDistribution.title)}
+            options={getChartOptions<'bar'>(analysisData.priceDistribution.title)}
           />
         </div>
       </div>

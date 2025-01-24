@@ -87,7 +87,7 @@ const SentimentAnalysis: React.FC<SentimentAnalysisProps> = ({ query }) => {
         </div>
       ) : (
         <>
-          <p className="text-gray-500 mb-6">Summary for query: "{query}"</p>
+          <p className="text-gray-500 mb-6">Summary for query: &ldquo;{query}&rdquo;</p>
 
           <div className="mb-6">
             <h3 className="text-lg font-medium text-gray-700 mb-2">Summary</h3>

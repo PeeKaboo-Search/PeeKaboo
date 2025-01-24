@@ -22,6 +22,7 @@ interface RedditAnalysisResponse {
 interface RedditAnalysisProps {
   query: string;
   className?: string;
+  postBodyMaxLength?: number;
 }
 
 interface AnalysisState {
@@ -93,7 +94,8 @@ const ThemesDisplay: React.FC<{ themes?: string[] }> = ({ themes = [] }) => {
 // Main Reddit Analytics Component
 const RedditAnalytics: React.FC<RedditAnalysisProps> = ({ 
   query, 
-  className = '' 
+  className = '', 
+  postBodyMaxLength = 200 
 }) => {
   const [analysisState, setAnalysisState] = useState<AnalysisState>({
     loading: true,
@@ -193,7 +195,7 @@ const RedditAnalytics: React.FC<RedditAnalysisProps> = ({
               className="post-card"
             >
               <header className="post-header">
-                <h3>{post.title}</h3>
+                <h3>{truncateText(post.title, 100)}</h3>
                 <span className="post-subreddit">
                   r/{post.subreddit}
                 </span>
@@ -210,11 +212,11 @@ const RedditAnalytics: React.FC<RedditAnalysisProps> = ({
                 </div>
               </div>
 
-              {/* Ensure body is visible with full text */}
+              {/* Ensure body is visible with truncated text */}
               {post.body && (
                 <div className="post-body-container">
                   <p className="post-body">
-                    {post.body}
+                    {truncateText(post.body, postBodyMaxLength)}
                   </p>
                 </div>
               )}

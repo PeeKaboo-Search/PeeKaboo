@@ -1,9 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Eye, ThumbsUp, MessageSquare, Loader2 } from 'lucide-react';
+import Image from 'next/image';
+import { Eye, ThumbsUp, MessageSquare, Loader2, ChevronRight } from 'lucide-react';
 import { YouTubeVideo, VideoStatistics, ErrorState } from 'app/types/youtube';
 import { searchYouTubeVideos, getVideoStatistics } from '@/app/api/youtube';
-import { Button } from '@/app/components/ui/button';
 import { Card, CardContent } from '@/app/components/ui/card';
+
+// Ensure VideoStatistics type is strict
+const ensureVideoStatistics = (stats: Partial<VideoStatistics>): VideoStatistics => ({
+  viewCount: stats.viewCount || '0',
+  likeCount: stats.likeCount || '0',
+  commentCount: stats.commentCount || '0'
+});
 
 const YouTubeVideos: React.FC<{ query: string }> = ({ query }) => {
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
@@ -51,10 +58,9 @@ const YouTubeVideos: React.FC<{ query: string }> = ({ query }) => {
     if (isDragging) {
       e.preventDefault();
       const x = e.pageX - videosSliderRef.current.offsetLeft;
-      const walk = (x - startX) * 2; // Multiplied by 2 to increase scrolling speed
+      const walk = (x - startX) * 2;
       videosSliderRef.current.scrollLeft = scrollLeft - walk;
     } else {
-      // Hover-based preview scrolling
       const slider = videosSliderRef.current;
       const track = videosTrackRef.current;
       const sliderWidth = slider.offsetWidth;
@@ -77,7 +83,15 @@ const YouTubeVideos: React.FC<{ query: string }> = ({ query }) => {
 
       const newVideoIds = data.items.map(video => video.id.videoId);
       const newStats = await getVideoStatistics(newVideoIds);
-      setStatistics(prev => ({ ...prev, ...newStats }));
+      
+      // Use functional update with type-safe conversion
+      setStatistics(prevStats => {
+        const updatedStats: Record<string, VideoStatistics> = { ...prevStats };
+        Object.entries(newStats).forEach(([key, value]) => {
+          updatedStats[key] = ensureVideoStatistics(value);
+        });
+        return updatedStats;
+      });
     } catch (err) {
       setError({
         message: err instanceof Error ? err.message : 'Failed to load more videos',
@@ -98,7 +112,14 @@ const YouTubeVideos: React.FC<{ query: string }> = ({ query }) => {
 
         const videoIds = data.items.map(video => video.id.videoId);
         const stats = await getVideoStatistics(videoIds);
-        setStatistics(stats);
+        
+        // Convert stats to strict VideoStatistics type
+        const processedStats: Record<string, VideoStatistics> = {};
+        Object.entries(stats).forEach(([key, value]) => {
+          processedStats[key] = ensureVideoStatistics(value);
+        });
+        
+        setStatistics(processedStats);
       } catch (err) {
         setError({
           message: err instanceof Error ? err.message : 'Failed to fetch data',
@@ -126,7 +147,18 @@ const YouTubeVideos: React.FC<{ query: string }> = ({ query }) => {
     <div className="youtube-videos-container space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">YouTube Videos</h2>
-        <p className="text-sm text-muted-foreground">Scroll, drag, or hover to explore</p>
+        <div className="flex items-center">
+          <p className="text-sm text-muted-foreground mr-2">Scroll, drag, or hover to explore</p>
+          {nextPageToken && (
+            <button
+              onClick={loadMoreVideos}
+              disabled={loading}
+              className="flex items-center text-sm text-primary hover:bg-primary/10 p-2 rounded-md transition-colors"
+            >
+              Load More <ChevronRight className="ml-1 h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -155,11 +187,15 @@ const YouTubeVideos: React.FC<{ query: string }> = ({ query }) => {
               onClick={() => setSelectedVideo(video.id.videoId)}
             >
               <CardContent className="p-0">
-                <img
-                  src={video.snippet.thumbnails.medium.url}
-                  alt={video.snippet.title}
-                  className="w-full h-40 object-cover"
-                />
+                <div className="relative w-full h-40">
+                  <Image
+                    src={video.snippet.thumbnails.medium.url}
+                    alt={video.snippet.title}
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    className="object-cover"
+                  />
+                </div>
                 <div className="p-4">
                   <h3 className="font-semibold line-clamp-2">{video.snippet.title}</h3>
                   <p className="text-sm text-muted-foreground mt-1">{video.snippet.channelTitle}</p>

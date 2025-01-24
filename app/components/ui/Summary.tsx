@@ -7,6 +7,7 @@ interface SummaryProps {
 const Summary: React.FC<SummaryProps> = ({ query }) => {
   const [summary, setSummary] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchSummary = async () => {
@@ -14,8 +15,14 @@ const Summary: React.FC<SummaryProps> = ({ query }) => {
         "Explain to me this product in marketing language and terms. Give me a detailed market analysis.";
       const apiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
 
+      // Reset state for new query
+      setSummary(null);
+      setError(null);
+      setIsLoading(true);
+
       if (!apiKey) {
         setError("API key is missing. Check your .env file.");
+        setIsLoading(false);
         return;
       }
 
@@ -43,6 +50,10 @@ const Summary: React.FC<SummaryProps> = ({ query }) => {
           }
         );
 
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
 
         if (data.choices && data.choices[0]) {
@@ -50,12 +61,17 @@ const Summary: React.FC<SummaryProps> = ({ query }) => {
         } else {
           setError("Failed to retrieve a valid summary.");
         }
-      } catch (err) {
-        setError("An error occurred while fetching the summary.");
+      } catch (error) {
+        // Properly use the error parameter
+        setError(error instanceof Error ? error.message : "An error occurred while fetching the summary.");
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    fetchSummary();
+    if (query) {
+      fetchSummary();
+    }
   }, [query]);
 
   return (
@@ -65,13 +81,13 @@ const Summary: React.FC<SummaryProps> = ({ query }) => {
       </h2>
       {error ? (
         <p className="text-[var(--color-competitors-rose)] font-medium">{error}</p>
-      ) : summary ? (
-        <p className="text-[rgba(255,255,255,0.8)]">{summary}</p>
-      ) : (
+      ) : isLoading ? (
         <p className="text-[rgba(255,255,255,0.6)]">
           Generating your tailored marketing summary...
         </p>
-      )}
+      ) : summary ? (
+        <p className="text-[rgba(255,255,255,0.8)]">{summary}</p>
+      ) : null}
     </div>
   );
 };
