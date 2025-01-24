@@ -13,7 +13,6 @@ const GoogleAnalytics = lazy(() => import("app/components/ui/GoogleAnalytics"));
 const RedditAnalytics = lazy(() => import("app/components/ui/RedditAnalytics"));
 const YoutubeAnalysis = lazy(() => import("app/components/ui/YoutubeAnalysis"));
 const TrendAnalysis = lazy(() => import("app/components/ui/TrendAnalysis"));
-const SentimentAnalysis = lazy(() => import("app/components/ui/SentimentAnalysis"));
 const NewsResults = lazy(() => import("app/components/ui/NewsResults"));
 const Summary = lazy(() => import("app/components/ui/Summary"));
 const StoryBoard = lazy(() => import("app/components/ui/StoryBoard"));
