@@ -19,6 +19,7 @@ interface RedditApiResponse {
         ups: number;
         num_comments: number;
         selftext: string;
+        url?: string;
       };
     }>;
   };
@@ -33,7 +34,6 @@ export class RedditAnalysisService {
       const auth = Buffer.from(
         `${process.env.lNEXT_PUBLIC_REDDIT_CLIENT_ID}:${process.env.lNEXT_PUBLIC_REDDIT_CLIENT_SECRET}`
       ).toString('base64');
-
       const response = await fetch('https://www.reddit.com/api/v1/access_token', {
         method: 'POST',
         headers: {
@@ -42,11 +42,9 @@ export class RedditAnalysisService {
         },
         body: 'grant_type=client_credentials',
       });
-
       if (!response.ok) {
         throw new Error(`Failed to get Reddit token: ${response.status}`);
       }
-
       const data = await response.json();
       return data.access_token;
     } catch (error) {
@@ -58,14 +56,11 @@ export class RedditAnalysisService {
   private static async fetchRedditPosts(query: string, token: string): Promise<RedditPost[]> {
     const subreddits = ['technology', 'products', 'business', 'marketing'];
     const posts: RedditPost[] = [];
-
     try {
-      // Only fetch from two most relevant subreddits to limit data
       const relevantSubreddits = subreddits.slice(0, 2);
-
       for (const subreddit of relevantSubreddits) {
         const response = await fetch(
-          `${this.REDDIT_API_URL}/r/${subreddit}/search?q=${encodeURIComponent(query)}&limit=5&sort=relevance&t=year`,
+          `${this.REDDIT_API_URL}/r/${subreddit}/search?q=${encodeURIComponent(query)}&limit=10&sort=relevance&t=year`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -73,29 +68,25 @@ export class RedditAnalysisService {
             },
           }
         );
-
         if (!response.ok) continue;
-
         const data: RedditApiResponse = await response.json();
         
         if (data?.data?.children && Array.isArray(data.data.children)) {
-          // Get only top 3 posts with most engagement
           const topPosts = data.data.children
-            .filter(child => child?.data && typeof child.data === 'object')
+            .filter(child => child?.data && typeof child.data === 'object' && child.data.selftext)
             .sort((a, b) => (b.data.ups + b.data.num_comments) - (a.data.ups + a.data.num_comments))
-            .slice(0, 3)
+            .slice(0, 5)  // Increased to 5 to provide more context
             .map(child => ({
               title: child.data.title || 'No Title',
               subreddit: child.data.subreddit || subreddit,
               upvotes: child.data.ups || 0,
               comments: child.data.num_comments || 0,
-              body: child.data.selftext || '',
+              body: this.truncateText(child.data.selftext, 500), // Increased body text length
+              url: child.data.url, // Added URL for potential additional context
             }));
-
           posts.push(...topPosts);
         }
       }
-
       return posts;
     } catch (error) {
       console.error('Error fetching Reddit posts:', error);
@@ -103,41 +94,82 @@ export class RedditAnalysisService {
     }
   }
 
+  // Utility method to truncate text safely
+  private static truncateText(text: string, maxLength: number): string {
+    if (!text) return '';
+    // Ensure we don't cut words mid-way
+    if (text.length <= maxLength) return text;
+    
+    const truncated = text.substring(0, maxLength);
+    return truncated.substring(0, Math.min(truncated.length, truncated.lastIndexOf(' '))) + '...';
+  }
+
   public static async analyzeRedditData(query: string): Promise<AnalysisResult> {
     try {
       const token = await this.getRedditToken();
       const redditPosts = await this.fetchRedditPosts(query, token);
-
+      
+      // Detailed context with HTML structure template for Groq
       const context = `
-        Analyze these Reddit posts about ${query} and provide a visually structured HTML response with the following sections:
+      Analyze these Reddit posts about ${query} using a structured HTML output. 
+      Follow these guidelines strictly:
 
-        1. Overall Sentiment Analysis:
-           Create a visual sentiment meter using HTML/CSS showing:
-           <div class="sentiment-meter">
-             <div class="sentiment-bar" style="width: [0-100]%"></div>
-             <div class="sentiment-label">[Negative/Neutral/Positive]</div>
-           </div>
+      1. REQUIRED HTML STRUCTURE:
+      <div class="reddit-analytics-container">
+        <!-- Sentiment Overview -->
+        <div class="analysis-overview">
+          <h2>Overall Analysis</h2>
+          <div class="sentiment-indicator-wrapper">
+            <div class="sentiment-indicator" style="background: linear-gradient(to right, 
+              var(--color-sentiment-negative) 0%, 
+              var(--color-sentiment-neutral) 50%, 
+              var(--color-sentiment-positive) 100%)">
+              <div class="sentiment-marker" style="left: [0-100]%"></div>
+            </div>
+          </div>
+          <div class="analysis-content">
+            [Summarize key insights, 2-3 sentences]
+          </div>
+        </div>
 
-        2. Key Discussions:
-           <div class="discussion-card">
-             <div class="sentiment-indicator [positive/neutral/negative]"></div>
-             <div class="discussion-content">
-               <h4>Topic</h4>
-               <p>Key points with highlighted <mark>important phrases</mark></p>
-               <div class="metrics">
-                 <span class="engagement">👥 [number] participants</span>
-                 <span class="sentiment-score">😊 [sentiment score]</span>
-               </div>
-             </div>
-           </div>
+        <!-- Themes Section -->
+        <div class="themes-grid">
+          <!-- Each theme as a chip -->
+          <div class="theme-chip [sentiment-class]">[Theme Name]</div>
+        </div>
 
-        3. Common Themes:
-           <div class="themes-container">
-             <div class="theme-tag [positive/neutral/negative]">[theme]</div>
-           </div>
+        <!-- Posts Section -->
+        <div class="posts-section">
+          <h2>Key Discussions</h2>
+          <div class="posts-grid">
+            <!-- Post Cards -->
+            <div class="post-card">
+              <div class="post-header">
+                <h3>[Post Title]</h3>
+                <span class="post-subreddit">[Subreddit Name]</span>
+              </div>
+              <div class="post-body">[Full Post Content]</div>
+              <div class="post-stats">
+                <div class="stat">
+                  <span>👍 [Upvotes]</span>
+                  <span>💬 [Comments]</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        Format everything using these predefined classes for visual styling.
-        Focus on making the output visually informative with clear sentiment indicators.
+        <div class="analysis-timestamp">
+          Analysis generated: [Current Timestamp]
+        </div>
+      </div>
+
+      ANALYSIS REQUIREMENTS:
+      - Use predefined CSS classes exactly as shown
+      - Sentiment Marker: Place at 0-100% based on overall sentiment
+      - Theme Chips: Add 'positive', 'neutral', or 'negative' class
+      - Provide concise, informative content
+      - Ensure readability and visual clarity
       `;
 
       const response = await fetch(this.GROQ_API_URL, {
@@ -153,7 +185,7 @@ export class RedditAnalysisService {
             { role: "user", content: JSON.stringify(redditPosts) }
           ],
           temperature: 0.7,
-          max_tokens: 3000,
+          max_tokens: 4000, // Increased to accommodate more detailed analysis
         })
       });
 
@@ -169,11 +201,10 @@ export class RedditAnalysisService {
         success: true,
         data: {
           analysis,
-          rawPosts: redditPosts.slice(0, 3), // Only return top 3 posts
+          rawPosts: redditPosts.slice(0, 3), // Matching the previous implementation
           timestamp: new Date().toISOString(),
         }
       };
-
     } catch (error) {
       console.error("Error in analyzeRedditData:", error);
       return {

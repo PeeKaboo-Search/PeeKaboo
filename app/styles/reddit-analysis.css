@@ -1,84 +1,240 @@
-.sentiment-meter {
-    width: 100%;
-    height: 24px;
-    background: #f0f0f0;
-    border-radius: 12px;
-    position: relative;
-    margin: 20px 0;
+/* Vibrant Glassy Color Design System */
+:root {
+  /* Enhanced Color Palette */
+  --color-primary-blue: #3B82F6;     /* Clean, modern blue */
+  --color-sentiment-negative: #EF4444; /* Vibrant red for negative sentiment */
+  --color-sentiment-positive: #16A34A; /* Bright green for positive sentiment */
+  --color-sentiment-neutral: #FBBF24;  /* Warm yellow for neutral sentiment */
+  --color-accent: #2563EB;           /* Deep blue for accents */
+  
+  /* Dark Mode Foundations */
+  --background-deep: #0a0a0c;        /* Deepest background */
+  --background-surface: #141417;     /* Base surface level */
+  --background-elevated: #1e1e24;    /* Elevated surface */
+  
+  /* Typography */
+  --font-display: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  --font-body: 'Inter', 'SF Pro Text', system-ui, sans-serif;
+  
+  /* Translucent Backgrounds */
+  --glass-background: rgba(22, 22, 28, 0.5);  /* Increased transparency */
+  --glass-border: rgba(255, 255, 255, 0.1);   /* Lighter border */
+}
+
+/* Global Reset and Base Styling */
+body {
+  background-color: var(--background-deep);
+  color: white;
+  font-family: var(--font-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+  padding: 0;
+}
+
+/* Universal Glass Card Style */
+.glass-card,
+.analysis-overview,
+.theme-chip,
+.post-card {
+  background: var(--glass-background);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 2;
+}
+
+.glass-card:hover,
+.analysis-overview:hover,
+.theme-chip:hover,
+.post-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+}
+
+/* Sentiment Indicator */
+.sentiment-indicator-wrapper {
+  width: 100%;
+  height: 8px;
+  border-radius: 20px;
+  overflow: hidden;
+  margin: 0.75rem 0;
+  position: relative;
+  z-index: 2;
+}
+
+.sentiment-indicator {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transition: all 0.3s ease;
+  background: linear-gradient(to right, 
+    var(--color-sentiment-negative) 0%, 
+    var(--color-sentiment-neutral) 50%, 
+    var(--color-sentiment-positive) 100%);
+}
+
+.sentiment-marker {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+}
+
+/* Themes Display */
+.themes-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.theme-chip {
+  padding: 0.5rem 1rem;
+  color: white;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.theme-chip:hover {
+  transform: translateY(-4px);
+}
+
+/* Sentiment-specific Theme Chips */
+.theme-chip.positive { 
+  border-color: var(--color-sentiment-positive);
+  color: var(--color-sentiment-positive);
+}
+
+.theme-chip.negative { 
+  border-color: var(--color-sentiment-negative);
+  color: var(--color-sentiment-negative);
+}
+
+.theme-chip.neutral { 
+  border-color: var(--color-sentiment-neutral);
+  color: var(--color-sentiment-neutral);
+}
+
+/* Analysis Overview */
+.analysis-overview {
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.analysis-overview h2,
+.posts-section h2 {
+  color: white;
+  margin-bottom: 1rem;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  position: relative;
+  z-index: 2;
+}
+
+.analysis-content {
+  color: white;
+  line-height: 1.7;
+  position: relative;
+  z-index: 2;
+}
+
+/* Posts Section */
+.posts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+/* Post Card */
+.post-card {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  position: relative;
+  z-index: 2;
+}
+
+.post-header h3 {
+  color: white;
+  margin: 0;
+  font-size: 1.2rem;
+  line-height: 1.3;
+  position: relative;
+  z-index: 2;
+}
+
+.post-subreddit {
+  color: var(--color-accent);
+  font-weight: 600;
+  font-size: 0.875rem;
+  position: relative;
+  z-index: 2;
+}
+
+/* Post Stats */
+.post-stats {
+  display: flex;
+  justify-content: space-between;
+  color: rgba(255,255,255,0.7);
+  margin-top: 0.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.stat span {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.post-body {
+  color: white;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  position: relative;
+  z-index: 2;
+}
+
+/* Analysis Timestamp */
+.analysis-timestamp {
+  text-align: right;
+  color: rgba(255,255,255,0.5);
+  font-size: 0.85rem;
+  margin-top: 1.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .posts-grid {
+    grid-template-columns: 1fr;
   }
-  
-  .sentiment-bar {
-    height: 100%;
-    border-radius: 12px;
-    background: linear-gradient(90deg, #ff4d4d 0%, #ffff4d 50%, #4dff4d 100%);
-    transition: width 0.3s ease;
-  }
-  
-  .sentiment-label {
-    position: absolute;
-    top: -25px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-weight: 600;
-  }
-  
-  .discussion-card {
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    margin: 16px 0;
-    padding: 16px;
-    display: flex;
-    gap: 16px;
-    background: white;
-  }
-  
-  .sentiment-indicator {
-    width: 8px;
-    border-radius: 4px;
-  }
-  
-  .sentiment-indicator.positive { background-color: #4dff4d; }
-  .sentiment-indicator.neutral { background-color: #ffff4d; }
-  .sentiment-indicator.negative { background-color: #ff4d4d; }
-  
-  .discussion-content {
-    flex: 1;
-  }
-  
-  .discussion-content h4 {
-    margin: 0 0 8px 0;
-    font-size: 1.1em;
-    font-weight: 600;
-  }
-  
-  .metrics {
-    display: flex;
-    gap: 16px;
-    margin-top: 12px;
-    color: #666;
-    font-size: 0.9em;
-  }
-  
-  .themes-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 16px 0;
-  }
-  
-  .theme-tag {
-    padding: 4px 12px;
-    border-radius: 16px;
-    font-size: 0.9em;
-    font-weight: 500;
-  }
-  
-  .theme-tag.positive { background-color: #e6ffe6; color: #006600; }
-  .theme-tag.neutral { background-color: #fffff0; color: #666600; }
-  .theme-tag.negative { background-color: #ffe6e6; color: #660000; }
-  
-  mark {
-    background-color: #fff3cd;
-    padding: 0 4px;
-    border-radius: 2px;
-  }
+}

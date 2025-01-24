@@ -1,5 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { RedditAnalysisService } from 'app/api/redditAnalysis';
+import { RedditPost } from 'app/types/index';
+import '@/app/styles/reddit-analysis.css';
+
+// Extended interfaces with improved type definitions
+interface ExtendedRedditPost extends RedditPost {
+  sentiment?: number;
+}
+
+interface RedditAnalysisResponse {
+  success: boolean;
+  data?: {
+    analysis: string;
+    themes?: string[];
+    rawPosts: ExtendedRedditPost[];
+    timestamp: string;
+  };
+  error?: string;
+}
 
 interface RedditAnalysisProps {
   query: string;
@@ -11,112 +29,206 @@ interface AnalysisState {
   error?: string;
   data?: {
     analysis: string;
-    rawPosts: Array<{
-      title: string;
-      subreddit: string;
-      upvotes: number;
-      comments: number;
-      body: string;
-    }>;
+    themes: string[];
+    rawPosts: ExtendedRedditPost[];
     timestamp: string;
   };
 }
 
-const RedditAnalysis: React.FC<RedditAnalysisProps> = ({ query, className = '' }) => {
-  const [analysisState, setAnalysisState] = useState<AnalysisState>({
-    loading: false,
-  });
+// Utility function to truncate text
+const truncateText = (text: string, maxLength: number = 200): string => {
+  if (!text) return '';
+  return text.length <= maxLength 
+    ? text 
+    : text.substring(0, maxLength) + '...';
+};
 
-  useEffect(() => {
-    const fetchAnalysis = async () => {
-      setAnalysisState({ loading: true });
-
-      try {
-        const result = await RedditAnalysisService.analyzeRedditData(query);
-
-        if (result.success && 'data' in result) {
-          setAnalysisState({
-            loading: false,
-            data: result.data,
-          });
-        } else {
-          setAnalysisState({
-            loading: false,
-            error: result.error,
-          });
-        }
-      } catch (error) {
-        setAnalysisState({
-          loading: false,
-          error: 'Failed to analyze Reddit data',
-        });
-      }
-    };
-
-    if (query) {
-      fetchAnalysis();
-    }
-  }, [query]);
-
-  if (analysisState.loading) {
-    return (
-      <div className={`p-6 bg-white rounded-lg shadow-md ${className}`}>
-        <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (analysisState.error) {
-    return (
-      <div className={`p-6 bg-white rounded-lg shadow-md ${className}`}>
-        <div className="text-red-500">Error: {analysisState.error}</div>
-      </div>
-    );
-  }
-
-  if (!analysisState.data) {
-    return null;
-  }
+// Sentiment Indicator Component
+const SentimentIndicator: React.FC<{ sentiment?: number }> = ({ sentiment = 0 }) => {
+  const normalizedSentiment = Math.max(-1, Math.min(1, sentiment));
+  const position = ((normalizedSentiment + 1) / 2) * 100;
 
   return (
-    <div className={`p-6 bg-white rounded-lg shadow-md ${className}`}>
-      <div className="space-y-6">
-        {/* Analysis Section */}
-        <div 
-          className="prose max-w-none"
-          dangerouslySetInnerHTML={{ __html: analysisState.data.analysis }}
+    <div className="sentiment-indicator-wrapper">
+      <div 
+        className="sentiment-indicator" 
+        style={{
+          background: `linear-gradient(to right, 
+            #FF6B6B ${position < 50 ? position : 50}%, 
+            #4ADE80 ${position > 50 ? position : 50}%)`
+        }}
+      >
+        <span 
+          className="sentiment-marker" 
+          style={{ 
+            left: `${position}%`,
+          }} 
         />
-
-        {/* Raw Data Section */}
-        <div className="mt-8">
-          <h3 className="text-lg font-semibold mb-4">Source Posts</h3>
-          <div className="space-y-4">
-            {analysisState.data.rawPosts.map((post, index) => (
-              <div 
-                key={index}
-                className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
-              >
-                <h4 className="font-medium text-lg">{post.title}</h4>
-                <div className="text-sm text-gray-500 mt-1">
-                  r/{post.subreddit} • {post.upvotes} upvotes • {post.comments} comments
-                </div>
-                {post.body && (
-                  <p className="mt-2 text-gray-700">{post.body}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="text-sm text-gray-500 mt-4">
-          Last updated: {new Date(analysisState.data.timestamp).toLocaleString()}
-        </div>
       </div>
     </div>
   );
 };
 
-export default RedditAnalysis;
+// Themes Display Component
+const ThemesDisplay: React.FC<{ themes?: string[] }> = ({ themes = [] }) => {
+  if (themes.length === 0) return null;
+
+  return (
+    <div className="themes-container">
+      <h3>Key Themes</h3>
+      <div className="themes-grid">
+        {themes.map((theme, index) => (
+          <div 
+            key={`theme-${index}`} 
+            className="theme-chip"
+          >
+            {theme}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Main Reddit Analytics Component
+const RedditAnalytics: React.FC<RedditAnalysisProps> = ({ 
+  query, 
+  className = '' 
+}) => {
+  const [analysisState, setAnalysisState] = useState<AnalysisState>({
+    loading: true,
+    data: undefined
+  });
+
+  useEffect(() => {
+    const fetchAnalysis = async () => {
+      if (!query) return;
+
+      setAnalysisState(prev => ({ ...prev, loading: true }));
+
+      try {
+        const result: RedditAnalysisResponse = await RedditAnalysisService.analyzeRedditData(query);
+        
+        if (result.success && result.data) {
+          setAnalysisState({
+            loading: false,
+            data: {
+              analysis: result.data.analysis || '',
+              themes: result.data.themes || [],
+              rawPosts: result.data.rawPosts || [],
+              timestamp: result.data.timestamp || new Date().toISOString()
+            }
+          });
+        } else {
+          setAnalysisState({
+            loading: false,
+            error: result.error || 'Unknown error occurred',
+            data: undefined
+          });
+        }
+      } catch (error) {
+        setAnalysisState({
+          loading: false,
+          error: error instanceof Error ? error.message : 'Failed to analyze Reddit data',
+          data: undefined
+        });
+      }
+    };
+
+    fetchAnalysis();
+  }, [query]);
+
+  // Loading State
+  if (analysisState.loading) {
+    return (
+      <div className={`reddit-analytics-loader ${className}`}>
+        <div className="loader-content">
+          <div className="spinner" />
+          <p>Analyzing Reddit data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error State
+  if (analysisState.error) {
+    return (
+      <div className={`reddit-analytics-error ${className}`}>
+        <div className="error-container">
+          <h2>Analysis Error</h2>
+          <p>{analysisState.error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Ensure data is defined before rendering
+  if (!analysisState.data) {
+    return null;
+  }
+
+  const { data } = analysisState;
+
+  return (
+    <div className="reddit-analytics-container">
+      {/* Analysis Overview */}
+      <section className="analysis-overview">
+        <h2>Reddit Analysis</h2>
+        <div 
+          className="analysis-content" 
+          dangerouslySetInnerHTML={{ __html: data.analysis }}
+        />
+      </section>
+
+      {/* Themes */}
+      <ThemesDisplay themes={data.themes} />
+
+      {/* Posts Section */}
+      <section className="posts-section">
+        <h2>Source Posts</h2>
+        <div className="posts-grid">
+          {data.rawPosts.map((post, index) => (
+            <article 
+              key={`post-${index}`} 
+              className="post-card"
+            >
+              <header className="post-header">
+                <h3>{post.title}</h3>
+                <span className="post-subreddit">
+                  r/{post.subreddit}
+                </span>
+              </header>
+
+              <SentimentIndicator sentiment={post.sentiment} />
+
+              <div className="post-stats">
+                <div className="stat upvotes">
+                  <span>↑ {post.upvotes}</span>
+                </div>
+                <div className="stat comments">
+                  <span>💬 {post.comments}</span>
+                </div>
+              </div>
+
+              {/* Ensure body is visible with full text */}
+              {post.body && (
+                <div className="post-body-container">
+                  <p className="post-body">
+                    {post.body}
+                  </p>
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* Timestamp */}
+      <div className="analysis-timestamp">
+        Last updated: {new Date(data.timestamp).toLocaleString()}
+      </div>
+    </div>
+  );
+};
+
+export default RedditAnalytics;

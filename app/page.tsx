@@ -119,7 +119,7 @@ const Page: React.FC = () => {
               exit="exit"
               className="results-container"
             >
-              {[ImageResult, GoogleAnalytics ].map((Component, index) => (
+              {[RedditAnalytics].map((Component, index) => (
                 <motion.div
                   key={index}
                   variants={searchAnimations.fadeUp}
