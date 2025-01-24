@@ -21,7 +21,7 @@ interface GroqApiResponse {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.lNEXT_PUBLIC_GROQ_API_KEY}`,
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_GROQ_API_KEY}`,
       },
       body: JSON.stringify({
         model: "mixtral-8x7b-32768",

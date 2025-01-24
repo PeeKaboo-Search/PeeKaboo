@@ -32,7 +32,7 @@ export class RedditAnalysisService {
   private static async getRedditToken(): Promise<string> {
     try {
       const auth = Buffer.from(
-        `${process.env.lNEXT_PUBLIC_REDDIT_CLIENT_ID}:${process.env.lNEXT_PUBLIC_REDDIT_CLIENT_SECRET}`
+        `${process.env.NEXT_PUBLIC_REDDIT_CLIENT_ID}:${process.env.NEXT_PUBLIC_REDDIT_CLIENT_SECRET}`
       ).toString('base64');
       const response = await fetch('https://www.reddit.com/api/v1/access_token', {
         method: 'POST',
@@ -176,7 +176,7 @@ export class RedditAnalysisService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.lNEXT_PUBLIC_GROQ_API_KEY}`,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_GROQ_API_KEY}`,
         },
         body: JSON.stringify({
           model: "mixtral-8x7b-32768",

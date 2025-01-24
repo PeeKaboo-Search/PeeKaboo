@@ -2,7 +2,7 @@
 
 import React, { useState, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import FloatingBot from "app/components/ui/FloatingBot";
+// import FloatingBot from "app/components/ui/FloatingBot";
 import { searchAnimations } from "app/styles/animation/search-animation";
 import "app/styles/page.css";
 import RainbowCursor from "app/components/ui/RainbowCursor";
@@ -119,7 +119,7 @@ const Page: React.FC = () => {
               exit="exit"
               className="results-container"
             > {/* ImageResult, GoogleAnalytics, RedditAnalytics, YoutubeAnalysis, TrendAnalysis, AdsAnalytics, SentimentAnalysis, NewsResults, Summary, StoryBoard */}
-              {[AdsAnalytics, SentimentAnalysis, NewsResults,   StoryBoard].map((Component, index) => (
+              {[ImageResult, GoogleAnalytics, RedditAnalytics, YoutubeAnalysis, TrendAnalysis, AdsAnalytics, NewsResults, Summary, StoryBoard].map((Component, index) => (
                 <motion.div
                   key={index}
                   variants={searchAnimations.fadeUp}
@@ -135,7 +135,7 @@ const Page: React.FC = () => {
       </Suspense>
 
       {/* Floating Bot */}
-      {submittedQuery && !isSearching && <FloatingBot />}
+      {/* {submittedQuery && !isSearching && <FloatingBot />} */}
     </div>
   );
 };

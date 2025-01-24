@@ -20,8 +20,8 @@ interface ApiResponse {
 }
 
 const fetchSentimentData = async (query: string): Promise<ApiResponse> => {
-  const apiUrl = process.env.NEXT_PUBLIC_GROQ_API_URL;
-  const apiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+  const apiUrl = process.env.lNEXT_PUBLIC_GROQ_API_URL;
+  const apiKey = process.env.lNEXT_PUBLIC_GROQ_API_KEY;
 
   if (!apiUrl || !apiKey) {
     throw new Error("API URL or API Key is missing in the environment variables.");
