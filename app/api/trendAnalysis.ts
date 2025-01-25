@@ -1,8 +1,17 @@
-import { GroqResponse, MarketAnalysisData, HistoricTrendDataset } from '@/app/types';
+import { GroqResponse } from '@/app/types';
 
 const CONFIG = {
   GROQ_API_KEY: process.env.NEXT_PUBLIC_TGROQ_API_KEY as string
 };
+
+// Use the interfaces directly instead of importing them
+interface MarketAnalysisData {
+  // Add any specific properties if needed, or remove if not used
+}
+
+interface HistoricTrendDataset {
+  // Add any specific properties if needed, or remove if not used
+}
 
 interface ChartDatasets {
   label: string;
