@@ -4,14 +4,17 @@ const CONFIG = {
   GROQ_API_KEY: process.env.NEXT_PUBLIC_TGROQ_API_KEY as string
 };
 
-// Use the interfaces directly instead of importing them
-interface MarketAnalysisData {
-  // Add any specific properties if needed, or remove if not used
-}
+// Replace empty interfaces with type aliases or remove them
+type MarketAnalysisData = {
+  // Kept as a placeholder type in case it's needed in future extensions
+  query?: string;
+};
 
-interface HistoricTrendDataset {
-  // Add any specific properties if needed, or remove if not used
-}
+type HistoricTrendDataset = {
+  // Kept as a placeholder type in case it's needed in future extensions
+  label?: string;
+  data?: number[];
+};
 
 interface ChartDatasets {
   label: string;
