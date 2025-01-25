@@ -1,4 +1,4 @@
-import { GroqResponse } from '@/app/types'; // Removed unused 'MarketAnalysisData' and 'HistoricTrendDataset'
+import { GroqResponse, MarketAnalysisData, HistoricTrendDataset } from '@/app/types';
 
 const CONFIG = {
   GROQ_API_KEY: process.env.NEXT_PUBLIC_TGROQ_API_KEY as string
@@ -120,7 +120,8 @@ export async function fetchMarketAnalysisData(query: string): Promise<MarketAnal
             content: `Generate market analysis visualization data for: ${query}`
           }
         ],
-        temperature: 0.7
+        temperature: 0.7,
+        response_format: { type: 'json_object' }
       })
     });
 
@@ -129,7 +130,7 @@ export async function fetchMarketAnalysisData(query: string): Promise<MarketAnal
     }
 
     const groqResponse: GroqResponse = await response.json();
-
+    
     if (!groqResponse.choices?.[0]?.message?.content) {
       throw new MarketAnalysisAPIError('Invalid response format from API');
     }

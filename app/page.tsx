@@ -1,8 +1,6 @@
 "use client";
-
 import React, { useState, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-// import FloatingBot from "app/components/ui/FloatingBot";
 import { searchAnimations } from "app/styles/animation/search-animation";
 import "app/styles/page.css";
 import RainbowCursor from "app/components/ui/RainbowCursor";
@@ -37,20 +35,15 @@ const Page: React.FC = () => {
       {/* Rainbow Cursor */}
       <RainbowCursor blur={10} pulseSpeed={0.05} pulseMin={0.7} pulseMax={1.3} />
 
-      {/* Logo Section */}
-      <AnimatePresence mode="wait">
-        {!submittedQuery && (
-          <motion.div
-            variants={searchAnimations.logo}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            className="logo-wrapper"
-          >
-            <motion.span className="logo-text">PeeKaboo</motion.span>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Logo */}
+      <motion.h1 
+        initial={{ opacity: 0, y: -50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="text-center text-5xl font-bold text-gray-800 mb-8 tracking-wide"
+      >
+        Peekaboo
+      </motion.h1>
 
       {/* Search Section */}
       <motion.div
@@ -117,7 +110,7 @@ const Page: React.FC = () => {
               animate="animate"
               exit="exit"
               className="results-container"
-            > {/* ImageResult, GoogleAnalytics, RedditAnalytics, YoutubeAnalysis, TrendAnalysis, AdsAnalytics, SentimentAnalysis, NewsResults, Summary, StoryBoard */}
+            >
               {[ImageResult, GoogleAnalytics, RedditAnalytics, YoutubeAnalysis, TrendAnalysis, AdsAnalytics, NewsResults, Summary, StoryBoard].map((Component, index) => (
                 <motion.div
                   key={index}
@@ -132,9 +125,6 @@ const Page: React.FC = () => {
           )}
         </AnimatePresence>
       </Suspense>
-
-      {/* Floating Bot */}
-      {/* {submittedQuery && !isSearching && <FloatingBot />} */}
     </div>
   );
 };
