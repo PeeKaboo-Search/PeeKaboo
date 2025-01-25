@@ -4,18 +4,6 @@ const CONFIG = {
   GROQ_API_KEY: process.env.NEXT_PUBLIC_TGROQ_API_KEY as string
 };
 
-// Replace empty interfaces with type aliases or remove them
-type MarketAnalysisData = {
-  // Kept as a placeholder type in case it's needed in future extensions
-  query?: string;
-};
-
-type HistoricTrendDataset = {
-  // Kept as a placeholder type in case it's needed in future extensions
-  label?: string;
-  data?: number[];
-};
-
 interface ChartDatasets {
   label: string;
   data: number[];
@@ -54,52 +42,49 @@ interface MarketAnalysisResponse {
   };
 }
 
-const SYSTEM_PROMPT = `Generate comprehensive market analysis data for visualization. Include:
-  1. Historic trend data
-  2. Market share distribution
-  3. User sentiment distribution
-  4. Regional distribution
-  5. Age group distribution
-  6. Price point distribution
-  
-  Format response as JSON with:
-  {
-    "historicTrend": {
-      "title": "string",
-      "labels": ["month1",...],
-      "datasets": [
-        {
-          "label": "string",
-          "data": [number,...]
-        }
-      ]
+const SYSTEM_PROMPT = JSON.stringify({
+  description: 'Generate comprehensive market analysis data for visualization',
+  requirements: [
+    'Historic trend data',
+    'Market share distribution',
+    'User sentiment distribution', 
+    'Regional distribution',
+    'Age group distribution',
+    'Price point distribution'
+  ],
+  responseFormat: {
+    historicTrend: {
+      title: 'string',
+      labels: ['month1'],
+      datasets: [{ label: 'string', data: [0] }]
     },
-    "marketShare": {
-      "title": "string",
-      "labels": ["company1",...],
-      "data": [number,...]
+    marketShare: {
+      title: 'string', 
+      labels: ['company1'],
+      data: [0]
     },
-    "sentiment": {
-      "title": "string",
-      "labels": ["Positive", "Neutral", "Negative"],
-      "data": [number,...]
+    sentiment: {
+      title: 'string',
+      labels: ['Positive', 'Neutral', 'Negative'],
+      data: [0]
     },
-    "regional": {
-      "title": "string",
-      "labels": ["region1",...],
-      "data": [number,...]
+    regional: {
+      title: 'string', 
+      labels: ['region1'],
+      data: [0]
     },
-    "demographics": {
-      "title": "string",
-      "labels": ["age1",...],
-      "data": [number,...]
+    demographics: {
+      title: 'string',
+      labels: ['age1'], 
+      data: [0]
     },
-    "priceDistribution": {
-      "title": "string",
-      "labels": ["range1",...],
-      "data": [number,...]
+    priceDistribution: {
+      title: 'string',
+      labels: ['range1'],
+      data: [0]
     }
-  }`;
+  }
+});
 
 export class MarketAnalysisAPIError extends Error {
   constructor(message: string) {
