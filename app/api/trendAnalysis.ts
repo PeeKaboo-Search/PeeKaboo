@@ -1,7 +1,7 @@
 import { GroqResponse } from '@/app/types'; // Removed unused 'MarketAnalysisData' and 'HistoricTrendDataset'
 
 const CONFIG = {
-  GROQ_API_KEY: process.env.NEXT_PUBLIC_GROQ_API_KEY as string
+  GROQ_API_KEY: process.env.NEXT_PUBLIC_TGROQ_API_KEY as string
 };
 
 interface ChartDatasets {

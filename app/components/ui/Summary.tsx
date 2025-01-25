@@ -13,7 +13,7 @@ const Summary: React.FC<SummaryProps> = ({ query }) => {
     const fetchSummary = async () => {
       const context =
         "Explain to me this product in marketing language and terms. Give me a detailed market analysis.";
-      const apiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+      const apiKey = process.env.NEXT_PUBLIC_SGROQ_API_KEY;
 
       // Reset state for new query
       setSummary(null);

@@ -3,21 +3,25 @@ import Image from "next/image";
 import "../../styles/images.css";
 import { searchImages } from "../../api/imageSearchApi";
 
+// Define more robust image interface
 interface ImageResult {
   link: string;
-  title: string;
+  title?: string;
+  thumbnail?: string;
 }
 
 interface ImageResultProps {
   query: string;
   className?: string;
   heading?: string;
+  limit?: number;
 }
 
 const ImageResult: React.FC<ImageResultProps> = ({ 
   query, 
   className = "", 
-  heading = "Explore Related Images" 
+  heading = "Explore Related Images",
+  limit = 10
 }) => {
   const [images, setImages] = useState<ImageResult[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -38,13 +42,17 @@ const ImageResult: React.FC<ImageResultProps> = ({
 
       try {
         const results = await searchImages(query);
-        if (results) {
-          setImages(results);
+        if (results && results.length > 0) {
+          // Limit the number of images and filter out invalid links
+          const validImages = results
+            .slice(0, limit)
+            .filter(img => img.link && isValidImageUrl(img.link));
+          
+          setImages(validImages);
         } else {
-          setError("Failed to fetch images");
+          setError("No images found");
         }
       } catch (error) {
-        // Use the error parameter to resolve no-unused-vars error
         setError(
           error instanceof Error 
             ? error.message 
@@ -56,7 +64,17 @@ const ImageResult: React.FC<ImageResultProps> = ({
     };
 
     fetchImages();
-  }, [query]);
+  }, [query, limit]);
+
+  // Utility function to validate image URLs
+  const isValidImageUrl = (url: string): boolean => {
+    try {
+      const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+      return validExtensions.some(ext => url.toLowerCase().includes(ext));
+    } catch {
+      return false;
+    }
+  };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!sliderRef.current) return;
@@ -81,13 +99,11 @@ const ImageResult: React.FC<ImageResultProps> = ({
     if (!sliderRef.current || !trackRef.current) return;
 
     if (isDragging) {
-      // Drag-based scrolling
       e.preventDefault();
       const x = e.pageX - sliderRef.current.offsetLeft;
-      const walk = (x - startX) * 2; // Multiplied by 2 to increase scrolling speed
+      const walk = (x - startX) * 2;
       sliderRef.current.scrollLeft = scrollLeft - walk;
     } else {
-      // Hover-based preview scrolling
       const slider = sliderRef.current;
       const track = trackRef.current;
 
@@ -102,6 +118,9 @@ const ImageResult: React.FC<ImageResultProps> = ({
       track.style.transform = `translateX(-${scrollAmount}px)`;
     }
   };
+
+  // Fallback image for broken links
+  const FallbackImage = "/path/to/fallback/image.png";
 
   if (error) {
     return <div className="error-message">{error}</div>;
@@ -138,12 +157,17 @@ const ImageResult: React.FC<ImageResultProps> = ({
               >
                 <div className="image-wrapper">
                   <Image
-                    src={image.link}
+                    src={image.link || image.thumbnail || FallbackImage}
                     alt={image.title || `Result ${index + 1}`}
                     loading="lazy"
                     width={300}
                     height={200}
                     className="object-cover"
+                    onError={(e) => {
+                      const imgElement = e.target as HTMLImageElement;
+                      imgElement.onerror = null;
+                      imgElement.src = FallbackImage;
+                    }}
                   />
                 </div>
                 <div className="image-title-container">
