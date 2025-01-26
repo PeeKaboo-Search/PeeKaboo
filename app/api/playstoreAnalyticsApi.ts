@@ -86,7 +86,7 @@ export const fetchPlayStoreAnalytics = async (query: string): Promise<AppAnalyti
     // Validate API keys
     const searchApiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
     const searchEngineId = process.env.NEXT_PUBLIC_GOOGLE_SEARCH_ENGINE_ID;
-    const groqApiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+    const groqApiKey = process.env.NEXT_PUBLIC_RGROQ_API_KEY;
 
     if (!searchApiKey || !searchEngineId || !groqApiKey) {
       throw new Error("Missing API keys. Configure environment variables.");
@@ -111,12 +111,12 @@ export const fetchPlayStoreAnalytics = async (query: string): Promise<AppAnalyti
       throw new Error(`Google Search API Error: ${searchResponse.status}`);
     }
 
-    const searchData = await searchResponse.json();
+    const searchData = await searchResponse.json() as { items?: Array<Record<string, string>> };
     
     // Extract and clean search results
     const searchResults: GoogleSearchResult[] = (searchData.items || [])
       .slice(0, 3)
-      .map((item: any) => ({
+      .map((item) => ({
         title: item.title || 'No Title',
         snippet: item.snippet || 'No Description',
         link: item.link || ''
@@ -179,24 +179,24 @@ IMPORTANT:
       throw new Error(`Groq API Error: ${groqResponse.status} - ${errorText}`);
     }
 
-    const groqData = await groqResponse.json();
-    const content = groqData.choices[0]?.message?.content;
+    const groqData = await groqResponse.json() as { choices?: Array<{ message?: { content?: string } }> };
+    const content = groqData.choices?.[0]?.message?.content;
 
     if (!content) {
       throw new Error('No content received from Groq API');
     }
 
     // Parse and validate the response
-    let parsedAnalytics;
+    let parsedAnalytics: unknown;
     try {
       parsedAnalytics = JSON.parse(content);
-    } catch (parseError) {
+    } catch {
       throw new Error('Invalid JSON response');
     }
 
     // Validate against schema
     const validationResult = AppAnalyticsSchema.safeParse({
-      ...parsedAnalytics,
+      ...(parsedAnalytics && typeof parsedAnalytics === 'object' ? parsedAnalytics : {}),
       appName: appName
     });
 
