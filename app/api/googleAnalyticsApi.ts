@@ -4,18 +4,22 @@ export interface GoogleResult {
   link: string;
 }
 
+export interface Trend {
+  title: string;
+  description: string;
+  percentage: number;
+}
+
+export interface Competitor {
+  name: string;
+  strength: string;
+  score: number;
+}
+
 export interface AnalyticsSummary {
   overview: string;
-  trends: {
-    title: string;
-    description: string;
-    percentage: number;
-  }[];
-  competitors: {
-    name: string;
-    strength: string;
-    score: number;
-  }[];
+  trends: Trend[];
+  competitors: Competitor[];
   opportunities: string[];
 }
 
@@ -39,9 +43,9 @@ export const fetchGoogleResults = async (
       throw new Error(`Google Search API error: ${searchResponse.status}`);
     }
 
-    const searchData = await searchResponse.json();
+    const searchData: { items: Array<{ title: string; snippet: string; link: string }> } = await searchResponse.json();
 
-    const results: GoogleResult[] = searchData.items.map((item: any) => ({
+    const results: GoogleResult[] = searchData.items.map(item => ({
       title: item.title || "No title available",
       snippet: item.snippet || "No snippet available",
       link: item.link || "#",
@@ -99,17 +103,11 @@ export const fetchGoogleResults = async (
       throw new Error(`Groq API error: ${summaryResponse.status}`);
     }
 
-    const summaryData = await summaryResponse.json();
+    const summaryData: { choices: Array<{ message: { content: string } }> } = await summaryResponse.json();
     const content = summaryData.choices[0].message.content;
 
     // Validate JSON before parsing
-    let summary: AnalyticsSummary;
-    try {
-      summary = JSON.parse(content);
-    } catch (jsonError) {
-      console.error("Invalid JSON response from Groq API:", content);
-      throw new Error("Failed to parse summary response as JSON.");
-    }
+    const summary: AnalyticsSummary = JSON.parse(content);
 
     return { results, summary };
   } catch (error) {

@@ -1,8 +1,6 @@
 "use client";
-
 import React, { useState, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-// import FloatingBot from "app/components/ui/FloatingBot";
 import { searchAnimations } from "app/styles/animation/search-animation";
 import "app/styles/page.css";
 import RainbowCursor from "app/components/ui/RainbowCursor";
@@ -13,11 +11,11 @@ const GoogleAnalytics = lazy(() => import("app/components/ui/GoogleAnalytics"));
 const RedditAnalytics = lazy(() => import("app/components/ui/RedditAnalytics"));
 const YoutubeAnalysis = lazy(() => import("app/components/ui/YoutubeAnalysis"));
 const TrendAnalysis = lazy(() => import("app/components/ui/TrendAnalysis"));
-const SentimentAnalysis = lazy(() => import("app/components/ui/SentimentAnalysis"));
 const NewsResults = lazy(() => import("app/components/ui/NewsResults"));
 const Summary = lazy(() => import("app/components/ui/Summary"));
 const StoryBoard = lazy(() => import("app/components/ui/StoryBoard"));
 const AdsAnalytics = lazy(() => import("app/components/ui/AdsAnalytics"));
+const PlayStoreAnalytics = lazy(() => import("app/components/ui/PlayStoreAnalytics"));
 
 const Page: React.FC = () => {
   const [query, setQuery] = useState<string>("");
@@ -38,20 +36,15 @@ const Page: React.FC = () => {
       {/* Rainbow Cursor */}
       <RainbowCursor blur={10} pulseSpeed={0.05} pulseMin={0.7} pulseMax={1.3} />
 
-      {/* Logo Section */}
-      <AnimatePresence mode="wait">
-        {!submittedQuery && (
-          <motion.div
-            variants={searchAnimations.logo}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            className="logo-wrapper"
-          >
-            <motion.span className="logo-text">PeeKaboo</motion.span>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Logo */}
+      <motion.h1 
+        initial={{ opacity: 0, y: -50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="text-center text-5xl font-bold text-gray-800 mb-8 tracking-wide"
+      >
+        Peekaboo
+      </motion.h1>
 
       {/* Search Section */}
       <motion.div
@@ -118,24 +111,36 @@ const Page: React.FC = () => {
               animate="animate"
               exit="exit"
               className="results-container"
-            > {/* ImageResult, GoogleAnalytics, RedditAnalytics, YoutubeAnalysis, TrendAnalysis, AdsAnalytics, SentimentAnalysis, NewsResults, Summary, StoryBoard */}
-              {[ImageResult, GoogleAnalytics, RedditAnalytics, YoutubeAnalysis, TrendAnalysis, AdsAnalytics, NewsResults, Summary, StoryBoard].map((Component, index) => (
+            >
+              {[
+                ImageResult, 
+                GoogleAnalytics, 
+                PlayStoreAnalytics,
+                RedditAnalytics, 
+                YoutubeAnalysis, 
+                TrendAnalysis, 
+                AdsAnalytics, 
+                NewsResults, 
+                Summary, 
+                StoryBoard
+              ].map((Component, index) => (
                 <motion.div
                   key={index}
                   variants={searchAnimations.fadeUp}
                   layout
                   className="result-card"
                 >
-                  <Component query={submittedQuery} />
+                  {Component === PlayStoreAnalytics ? (
+                    <Component query={submittedQuery} />
+                  ) : (
+                    <Component query={submittedQuery} />
+                  )}
                 </motion.div>
               ))}
             </motion.div>
           )}
         </AnimatePresence>
       </Suspense>
-
-      {/* Floating Bot */}
-      {/* {submittedQuery && !isSearching && <FloatingBot />} */}
     </div>
   );
 };

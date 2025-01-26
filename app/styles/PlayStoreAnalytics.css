@@ -1,0 +1,209 @@
+/* Vibrant Glassy Blue Design System for PlayStore Analytics */
+:root {
+    /* PlayStore Specific Color Palette */
+    --color-primary-blue: #1A73E8;   /* Vibrant Google Blue */
+    --color-positive-highlight: #4D9FEC; /* Lighter blue for positive insights */
+    --color-negative-complaint: #D32F2F; /* Vibrant red for complaints */
+    --color-feature-suggestion: #2C5FD2; /* Bright blue for suggestions */
+    
+    /* Dark Mode Foundations */
+    --background-deep: #0a0a0c;
+    --background-surface: #141417;
+    --background-elevated: #1e1e24;
+    
+    /* Typography */
+    --font-display: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+    --font-body: 'Inter', 'SF Pro Text', system-ui, sans-serif;
+    
+    /* Enhanced Translucent Backgrounds */
+    --glass-background: rgba(22, 22, 28, 0.5);
+    --glass-border: rgba(255, 255, 255, 0.1);
+  }
+  
+  body {
+    background-color: var(--background-deep);
+    color: white;
+    font-family: var(--font-body);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  
+  .analytics-container {
+    width: 100%;
+    max-width: 100%;
+    padding: 2rem;
+    margin: 0;
+    position: relative;
+    z-index: 0;
+  }
+  
+  .analytics-header {
+    text-align: left;
+    margin-bottom: 2.5rem;
+    position: relative;
+    z-index: 2;
+  }
+  
+  .analytics-header h1 {
+    font-family: var(--font-display);
+    font-size: 2.75rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: white;
+    margin-bottom: 0.5rem;
+    position: relative;
+    z-index: 2;
+  }
+  
+  .query-text {
+    color: white;
+    font-size: 1rem;
+    position: relative;
+    z-index: 2;
+  }
+  
+  /* Sections Styling */
+  .rating,
+  .insights,
+  .top-reviews {
+    margin-bottom: 2.5rem;
+    position: relative;
+    z-index: 0;
+  }
+  
+  /* Section Headings with Vibrant Colors */
+  .rating .section-icon { color: var(--color-primary-blue); }
+  .insights .section-icon { 
+    color: var(--color-feature-suggestion); 
+    opacity: 0.7;
+    stroke-width: 2px;
+  }
+  .top-reviews .section-icon { color: rgba(255,255,255,0.5); }
+  
+  .rating h2,
+  .insights h2,
+  .top-reviews h2 {
+    display: flex;
+    align-items: center;
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    gap: 0.75rem;
+    position: relative;
+    z-index: 2;
+    color: white;
+  }
+  
+  /* Glass Morphism Cards */
+  .glass-card {
+    background: var(--glass-background);
+    backdrop-filter: blur(25px) saturate(400%);
+    -webkit-backdrop-filter: blur(30px) saturate(80%);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    position: relative;
+    z-index: 0;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    padding: 1.5rem;
+  }
+  
+  .glass-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+    backdrop-filter: blur(30px) saturate(200%);
+    -webkit-backdrop-filter: blur(30px) saturate(200%);
+  }
+  
+  /* Insights Specific Styling */
+  .insights .analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .positive-highlights,
+  .negative-complaints,
+  .feature-suggestions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .positive-highlights h3 { color: white; }
+  .negative-complaints h3 { color: white; }
+  .feature-suggestions h3 { color: white; }
+  
+  .positive-highlights h3 svg { color: var(--color-positive-highlight); }
+  .negative-complaints h3 svg { color: var(--color-negative-complaint); }
+  .feature-suggestions h3 svg { color: var(--color-feature-suggestion); }
+  
+  /* Top Reviews Styling */
+  .top-reviews .analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .review-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 1.5rem;
+    position: relative;
+    z-index: 0;
+  }
+  
+  .review-card h3 {
+    font-size: 1.25rem;
+    color: white;
+    font-weight: 600;
+  }
+  
+  .review-card .review-rating {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  
+  .review-card .review-rating svg {
+    color: #FFD700;
+  }
+  
+  .review-card p {
+    color: white;
+    font-size: 0.95rem;
+  }
+  
+  .review-card .review-date {
+    color: white;
+    font-size: 0.8rem;
+  }
+  
+  /* Progress Bar for Ratings */
+  .rating-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .rating-bar .custom-progress {
+    flex-grow: 1;
+    height: 8px;
+    background: rgba(255,255,255,0.1);
+  }
+  
+  .rating-bar .custom-progress div {
+    background-color: var(--color-primary-blue);
+  }
+  
+  @media (max-width: 768px) {
+    .insights .analytics-grid,
+    .top-reviews .analytics-grid {
+      grid-template-columns: 1fr;
+    }
+  }

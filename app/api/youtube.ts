@@ -1,6 +1,64 @@
 import axios from 'axios';
-import { YouTubeVideo, VideoStatistics, 
-         YouTubeSearchResponse, YouTubeStatisticsResponse } from '../types/youtube';
+import { z } from 'zod';
+
+// Zod schemas to replace imported types and provide type safety
+const YouTubeVideoSnippetSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  thumbnails: z.object({
+    default: z.object({
+      url: z.string(),
+      width: z.number().optional(),
+      height: z.number().optional()
+    }),
+    medium: z.object({
+      url: z.string(),
+      width: z.number().optional(),
+      height: z.number().optional()
+    }),
+    high: z.object({
+      url: z.string(),
+      width: z.number().optional(),
+      height: z.number().optional()
+    })
+  }),
+  channelTitle: z.string(),
+  publishedAt: z.string()
+});
+
+const VideoStatisticsSchema = z.object({
+  viewCount: z.string(),
+  likeCount: z.string().optional(),
+  commentCount: z.string().optional()
+});
+
+const YouTubeSearchItemSchema = z.object({
+  id: z.object({
+    videoId: z.string()
+  }),
+  snippet: YouTubeVideoSnippetSchema
+});
+
+const YouTubeStatisticsItemSchema = z.object({
+  id: z.string(),
+  statistics: VideoStatisticsSchema
+});
+
+const YouTubeSearchResponseSchema = z.object({
+  items: z.array(YouTubeSearchItemSchema),
+  nextPageToken: z.string().optional(),
+  prevPageToken: z.string().optional()
+});
+
+const YouTubeStatisticsResponseSchema = z.object({
+  items: z.array(YouTubeStatisticsItemSchema)
+});
+
+// Type aliases to replace imported types and satisfy ESLint
+type YouTubeVideo = z.infer<typeof YouTubeSearchItemSchema>;
+type VideoStatistics = z.infer<typeof VideoStatisticsSchema>;
+type YouTubeSearchResponse = z.infer<typeof YouTubeSearchResponseSchema>;
+type YouTubeStatisticsResponse = z.infer<typeof YouTubeStatisticsResponseSchema>;
 
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
@@ -19,7 +77,7 @@ export async function searchYouTubeVideos(query: string, pageToken?: string): Pr
   }
 
   try {
-    const response = await axios.get<YouTubeSearchResponse>(`${YOUTUBE_API_BASE}/search`, {
+    const response = await axios.get(`${YOUTUBE_API_BASE}/search`, {
       params: {
         part: 'snippet',
         type: 'video',
@@ -30,7 +88,8 @@ export async function searchYouTubeVideos(query: string, pageToken?: string): Pr
       }
     });
 
-    return response.data;
+    // Validate the response
+    return YouTubeSearchResponseSchema.parse(response.data);
   } catch (error) {
     console.error('YouTube search error:', error);
     throw new ApiError(
@@ -46,7 +105,7 @@ export async function getVideoStatistics(videoIds: string[]): Promise<Record<str
   }
 
   try {
-    const response = await axios.get<YouTubeStatisticsResponse>(
+    const response = await axios.get(
       `${YOUTUBE_API_BASE}/videos`,
       {
         params: {
@@ -57,7 +116,10 @@ export async function getVideoStatistics(videoIds: string[]): Promise<Record<str
       }
     );
 
-    return response.data.items.reduce((acc, item) => {
+    // Validate the response
+    const validatedResponse = YouTubeStatisticsResponseSchema.parse(response.data);
+
+    return validatedResponse.items.reduce((acc, item) => {
       acc[item.id] = item.statistics;
       return acc;
     }, {} as Record<string, VideoStatistics>);
@@ -69,3 +131,11 @@ export async function getVideoStatistics(videoIds: string[]): Promise<Record<str
     );
   }
 }
+
+// Expose types to satisfy ESLint
+export type { 
+  YouTubeVideo, 
+  VideoStatistics, 
+  YouTubeSearchResponse, 
+  YouTubeStatisticsResponse 
+};

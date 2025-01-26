@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 
 interface RainbowCursorProps {
   element?: HTMLElement;
@@ -27,24 +27,19 @@ const RainbowCursor: React.FC<RainbowCursorProps> = ({
   pulseMin = 0.8,
   pulseMax = 1.2,
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const contextRef = useRef<CanvasRenderingContext2D | null>(null);
-  const cursorRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const particlesRef = useRef<Array<{ position: { x: number; y: number } }>>([]);
-  const animationFrameRef = useRef<number>();
-  const cursorsInittedRef = useRef(false);
-  const timeRef = useRef(0);
+  // Memoize the Particle class to prevent unnecessary re-creations
+  const Particle = useMemo(() => {
+    return class {
+      position: { x: number; y: number };
 
-  class Particle {
-    position: { x: number; y: number };
+      constructor(x: number, y: number) {
+        this.position = { x, y };
+      }
+    };
+  }, []);
 
-    constructor(x: number, y: number) {
-      this.position = { x, y };
-    }
-  }
-
-  // Helper function to interpolate between colors
-  const interpolateColors = (
+  // Memoize helper functions to prevent unnecessary re-creations
+  const interpolateColors = useCallback((
     color1: string,
     color2: string,
     factor: number
@@ -62,14 +57,21 @@ const RainbowCursor: React.FC<RainbowCursorProps> = ({
     const b = Math.round(b1 + (b2 - b1) * factor);
 
     return `rgb(${r}, ${g}, ${b})`;
-  };
+  }, []);
 
-  // Function to get dynamic size based on pulse
-  const getPulseSize = (baseSize: number, time: number): number => {
+  const getPulseSize = useCallback((baseSize: number, time: number): number => {
     const pulse = Math.sin(time * pulseSpeed);
     const scaleFactor = pulseMin + ((pulse + 1) * (pulseMax - pulseMin)) / 2;
     return baseSize * scaleFactor;
-  };
+  }, [pulseSpeed, pulseMin, pulseMax]);
+
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const contextRef = useRef<CanvasRenderingContext2D | null>(null);
+  const cursorRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const particlesRef = useRef<Array<{ position: { x: number; y: number } }>>([]);
+  const animationFrameRef = useRef<number | null>(null);
+  const cursorsInittedRef = useRef(false);
+  const timeRef = useRef(0);
 
   useEffect(() => {
     const hasWrapperEl = element !== undefined;
@@ -233,6 +235,9 @@ const RainbowCursor: React.FC<RainbowCursorProps> = ({
     pulseSpeed,
     pulseMin,
     pulseMax,
+    Particle,
+    interpolateColors,
+    getPulseSize,
   ]);
 
   return null;

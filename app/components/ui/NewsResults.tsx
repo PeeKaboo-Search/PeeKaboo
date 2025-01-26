@@ -84,7 +84,7 @@ const NewsResult: React.FC<NewsResultProps> = ({ query }) => {
   return (
     <div className="glass-card p-6">
       <h2 className="text-[1.75rem] font-semibold mb-4 text-[var(--color-primary-blue)]">
-        News Results for "<span className="text-white">{query}</span>"
+        News Results for &quot;<span className="text-white">{query}</span>&quot;
       </h2>
       <div className="space-y-6">
         {news.map((item, index) => (
@@ -111,7 +111,7 @@ const NewsResult: React.FC<NewsResultProps> = ({ query }) => {
         ))}
         {news.length === 0 && !loading && (
           <p className="text-[rgba(255,255,255,0.6)]">
-            No news found for "<span className="text-white">{query}</span>"
+            No news found for &quot;<span className="text-white">{query}</span>&quot;
           </p>
         )}
       </div>

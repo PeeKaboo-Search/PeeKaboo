@@ -59,6 +59,28 @@ const glassMorphismStyle = {
   zIndex: 2
 };
 
+// Define types for the analysis data
+interface AnalysisDataset {
+  label: string;
+  data: number[];
+}
+
+interface AnalysisSection {
+  title: string;
+  labels: string[];
+  data?: number[];
+  datasets?: AnalysisDataset[];
+}
+
+interface MarketAnalysisData {
+  historicTrend: AnalysisSection;
+  marketShare: AnalysisSection;
+  sentiment: AnalysisSection;
+  regional: AnalysisSection;
+  demographics: AnalysisSection;
+  priceDistribution: AnalysisSection;
+}
+
 // Register ChartJS components
 ChartJS.register(
   CategoryScale,
@@ -143,7 +165,7 @@ interface TrendAnalysisProps {
 const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ query }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [analysisData, setAnalysisData] = useState<any>(null);
+  const [analysisData, setAnalysisData] = useState<MarketAnalysisData | null>(null);
 
   useEffect(() => {
     const loadAnalysisData = async () => {
@@ -217,12 +239,12 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ query }) => {
           <Line
             data={{
               labels: analysisData.historicTrend.labels,
-              datasets: analysisData.historicTrend.datasets.map((dataset: any, index: number) => ({
+              datasets: analysisData.historicTrend.datasets?.map((dataset, index) => ({
                 ...dataset,
                 borderColor: lightChartColors.line[index % lightChartColors.line.length].border,
                 backgroundColor: lightChartColors.line[index % lightChartColors.line.length].background,
                 borderWidth: 2
-              }))
+              })) || []
             }}
             options={getChartOptions(analysisData.historicTrend.title)}
           />
@@ -240,7 +262,7 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ query }) => {
               data={{
                 labels: analysisData.marketShare.labels,
                 datasets: [{
-                  data: analysisData.marketShare.data,
+                  data: analysisData.marketShare.data || [],
                   backgroundColor: lightChartColors.pie,
                   borderWidth: 0
                 }]
@@ -270,7 +292,7 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ query }) => {
               data={{
                 labels: analysisData.sentiment.labels,
                 datasets: [{
-                  data: analysisData.sentiment.data,
+                  data: analysisData.sentiment.data || [],
                   backgroundColor: lightChartColors.pie.slice(0, 3),
                   borderWidth: 0
                 }]
@@ -304,7 +326,7 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ query }) => {
               labels: analysisData.regional.labels,
               datasets: [{
                 label: 'Regional Distribution',
-                data: analysisData.regional.data,
+                data: analysisData.regional.data || [],
                 backgroundColor: lightChartColors.bar,
                 borderWidth: 0
               }]
@@ -325,7 +347,7 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ query }) => {
               labels: analysisData.demographics.labels,
               datasets: [{
                 label: 'Age Distribution',
-                data: analysisData.demographics.data,
+                data: analysisData.demographics.data || [],
                 backgroundColor: lightChartColors.bar,
                 borderWidth: 0
               }]
@@ -346,7 +368,7 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ query }) => {
               labels: analysisData.priceDistribution.labels,
               datasets: [{
                 label: 'Price Distribution',
-                data: analysisData.priceDistribution.data,
+                data: analysisData.priceDistribution.data || [],
                 backgroundColor: lightChartColors.bar,
                 borderWidth: 0
               }]

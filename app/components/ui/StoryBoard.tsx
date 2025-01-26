@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from "react";
+import Image from 'next/image';
 import styles from '@/app/styles/StoryBoard.module.css';
 import { generateAdConcepts, generateImages } from '@/app/api/storyboard';
 
@@ -140,10 +141,13 @@ const MediaGallery: React.FC<MediaGalleryProps> = ({
                     Image generation failed
                   </div>
                 ) : (
-                  <img 
-                    src={img.url} 
+                  <Image 
+                    src={img.url || ''} 
                     alt={`Ad Concept ${index + 1}`} 
-                    className={styles.adImage} 
+                    className={styles.adImage}
+                    width={300}
+                    height={200}
+                    priority={index < 3}
                   />
                 )}
                 <div className={styles.imageDetails}>
@@ -159,7 +163,7 @@ const MediaGallery: React.FC<MediaGalleryProps> = ({
           </div>
         </div>
       ) : (
-        <div className="no-results">No ad concepts found for "{query}".</div>
+        <div className="no-results">No ad concepts found for &ldquo;{query}&rdquo;.</div>
       )}
     </div>
   );
