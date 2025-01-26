@@ -15,6 +15,7 @@ const NewsResults = lazy(() => import("app/components/ui/NewsResults"));
 const Summary = lazy(() => import("app/components/ui/Summary"));
 const StoryBoard = lazy(() => import("app/components/ui/StoryBoard"));
 const AdsAnalytics = lazy(() => import("app/components/ui/AdsAnalytics"));
+const PlayStoreAnalytics = lazy(() => import("app/components/ui/PlayStoreAnalytics"));
 
 const Page: React.FC = () => {
   const [query, setQuery] = useState<string>("");
@@ -111,14 +112,29 @@ const Page: React.FC = () => {
               exit="exit"
               className="results-container"
             >
-              {[ImageResult, GoogleAnalytics, RedditAnalytics, YoutubeAnalysis, TrendAnalysis, AdsAnalytics, NewsResults, Summary, StoryBoard].map((Component, index) => (
+              {[
+                ImageResult, 
+                GoogleAnalytics, 
+                PlayStoreAnalytics,
+                RedditAnalytics, 
+                YoutubeAnalysis, 
+                TrendAnalysis, 
+                AdsAnalytics, 
+                NewsResults, 
+                Summary, 
+                StoryBoard
+              ].map((Component, index) => (
                 <motion.div
                   key={index}
                   variants={searchAnimations.fadeUp}
                   layout
                   className="result-card"
                 >
-                  <Component query={submittedQuery} />
+                  {Component === PlayStoreAnalytics ? (
+                    <Component query={submittedQuery} />
+                  ) : (
+                    <Component query={submittedQuery} />
+                  )}
                 </motion.div>
               ))}
             </motion.div>
