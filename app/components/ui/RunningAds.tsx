@@ -1,150 +1,157 @@
-// components/FacebookAds/index.tsx
-'use client';
+import React, { useState, useEffect } from "react";
+import { searchMetaAds, MetaAdResult } from "@/app/api/facebookAds";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
+import { ScrollArea, ScrollBar } from "@/app/components/ui/scroll-area";
 
-import React from 'react';
-import { useState, useEffect } from 'react';
-
-type AdType = 'POLITICAL_AND_ISSUE_ADS' | 'HOUSING_ADS' | 'EMPLOYMENT_ADS' | 'FINANCIAL_PRODUCTS_AND_SERVICES_ADS' | 'ALL';
-
-interface FacebookAd {
-  id: string;
-  ad_creation_time: string;
-  ad_creative_body: string | null;
-  ad_creative_link_caption: string | null;
-  ad_creative_link_title: string | null;
-  ad_delivery_start_time: string;
-  ad_snapshot_url: string;
-  currency: string | null;
-  page_id: string;
-  page_name: string;
-  publisher_platforms: string[];
-  status: string;
-  funding_entity: string;
-}
-
-interface FacebookAdsResponse {
-  data: FacebookAd[];
-  paging?: {
-    cursors: {
-      before: string;
-      after: string;
-    };
-    next?: string;
-  };
-}
-
-interface Props {
-  pageId?: string;
-  adType?: AdType;
+interface MetaAdsProps {
+  query: string;
+  className?: string;
+  heading?: string;
   limit?: number;
-  searchTerms?: string;
 }
 
-function FacebookAds({ 
-  pageId, 
-  adType = 'ALL', 
-  limit = 25, 
-  searchTerms 
-}: Props) {
-  const [ads, setAds] = useState<FacebookAd[]>([]);
-  const [loading, setLoading] = useState(true);
+const MetaAds: React.FC<MetaAdsProps> = ({
+  query,
+  className = "",
+  heading = "Advertisement Search Results",
+  limit = 10,
+}) => {
+  const [ads, setAds] = useState<MetaAdResult[]>([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [nextPage, setNextPage] = useState<string | null>(null);
-
-  const fetchAds = async (after?: string) => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams({
-        ...(pageId && { pageId }),
-        adType,
-        limit: limit.toString(),
-        ...(searchTerms && { searchTerms }),
-        ...(after && { after })
-      });
-
-      const response = await fetch(`/api/facebook-ads?${params}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch ads');
-      }
-
-      const data: FacebookAdsResponse = await response.json();
-      
-      setAds(prev => after ? [...prev, ...data.data] : data.data);
-      setNextPage(data.paging?.cursors?.after || null);
-      setError(null);
-
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch ads');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    setAds([]);
-    setNextPage(null);
-    fetchAds();
-  }, [pageId, adType, limit, searchTerms]);
+    const fetchAdsData = async () => {
+      setLoading(true);
+      setError(null);
 
-  const loadMore = () => {
-    if (nextPage && !loading) {
-      fetchAds(nextPage);
+      try {
+        const response = await searchMetaAds({
+          query: query,
+          active_status: 'all',
+          media_types: 'all',
+          platform: 'facebook,instagram',
+          ad_type: 'all',
+          search_type: 'keyword_unordered'
+        });
+
+        // Flatten and slice the nested results array
+        const flattenedAds = response.results.flat().slice(0, limit);
+        setAds(flattenedAds);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to fetch ads");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (query) {
+      fetchAdsData();
     }
-  };
+  }, [query, limit]);
 
   if (error) {
-    return <div className="text-red-500">Error: {error}</div>;
+    return (
+      <div className="rounded-lg bg-red-50 p-4">
+        <p className="text-sm text-red-500">{error}</p>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4">
-      {loading && ads.length === 0 ? (
-        <div className="text-gray-500">Loading...</div>
-      ) : (
-        <>
-          <div className="grid gap-4">
-            {ads.map(ad => (
-              <div key={ad.id} className="border p-4 rounded-lg shadow-sm">
-                <h3 className="font-bold">{ad.page_name}</h3>
-                {ad.ad_creative_body && (
-                  <p className="mt-2 text-gray-700">{ad.ad_creative_body}</p>
-                )}
-                {ad.ad_creative_link_title && (
-                  <p className="mt-2 text-blue-600 font-medium">
-                    {ad.ad_creative_link_title}
-                  </p>
-                )}
-                <div className="mt-2 text-sm text-gray-500">
-                  <p>Created: {new Date(ad.ad_creation_time).toLocaleDateString()}</p>
-                  <p>Status: {ad.status}</p>
-                  <p>Funding: {ad.funding_entity}</p>
-                </div>
-                <a 
-                  href={ad.ad_snapshot_url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-block text-blue-500 hover:underline"
-                >
-                  View Ad
-                </a>
-              </div>
-            ))}
-          </div>
-          {nextPage && (
-            <button
-              onClick={loadMore}
-              disabled={loading}
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Loading...' : 'Load More'}
-            </button>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
+    <Card className={`w-full ${className}`}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <CardTitle className="text-2xl font-bold">{heading}</CardTitle>
+        <div className="flex items-center space-x-2">
+          <button
+            className="rounded-full p-2 hover:bg-gray-100 transition-colors"
+            aria-label="Scroll left"
+            onClick={() => {
+              const scrollArea = document.querySelector(".scroll-area");
+              if (scrollArea) {
+                scrollArea.scrollBy({ left: -300, behavior: "smooth" });
+              }
+            }}
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            className="rounded-full p-2 hover:bg-gray-100 transition-colors"
+            aria-label="Scroll right"
+            onClick={() => {
+              const scrollArea = document.querySelector(".scroll-area");
+              if (scrollArea) {
+                scrollArea.scrollBy({ left: 300, behavior: "smooth" });
+              }
+            }}
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+      </CardHeader>
 
-export default FacebookAds;
+      <CardContent>
+        {loading ? (
+          <div className="flex h-48 items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" />
+          </div>
+        ) : ads.length > 0 ? (
+          <ScrollArea className="scroll-area w-full whitespace-nowrap">
+            <div className="flex space-x-4">
+              {ads.map((ad) => (
+                <Card key={ad.adArchiveID} className="w-80 flex-none">
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <h3 className="font-medium">{ad.pageName}</h3>
+                      
+                      <div className="flex flex-wrap gap-2">
+                        <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                          {ad.entityType}
+                        </span>
+                        {ad.containsDigitallyCreatedMedia && (
+                          <span className="rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-600">
+                            Digital Media
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="text-sm text-gray-600">
+                        <p>Status: {ad.isActive ? 'Active' : 'Inactive'}</p>
+                        {ad.containsSensitiveContent && (
+                          <p className="text-yellow-600">Contains sensitive content</p>
+                        )}
+                      </div>
+
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>
+                          Started: {new Date(ad.startDate * 1000).toLocaleDateString()}
+                        </span>
+                        {ad.endDate && (
+                          <span>
+                            Ends: {new Date(ad.endDate * 1000).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="text-xs text-gray-500">
+                        ID: {ad.adArchiveID}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        ) : (
+          <div className="flex h-48 items-center justify-center">
+            <p className="text-center text-gray-500">No ads found for "{query}"</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+export default MetaAds;

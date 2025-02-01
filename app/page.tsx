@@ -9,7 +9,7 @@ import RainbowCursor from "app/components/ui/RainbowCursor";
 // Define interfaces for props and component types
 interface SearchComponentConfig {
   name: string;
-  component: React.LazyExoticComponent<React.ComponentType<{ query: string }>>;
+  component: React.LazyExoticComponent<React.ComponentType<any>>; // Use 'any' to allow different prop types
 }
 
 interface SearchFormProps {
@@ -30,9 +30,9 @@ const SEARCH_COMPONENTS: SearchComponentConfig[] = [
   // { name: 'PlayStoreAnalytics', component: lazy(() => import("app/components/ui/PlayStoreAnalytics")) },
   // { name: 'RedditAnalytics', component: lazy(() => import("app/components/ui/RedditAnalytics")) },
   // { name: 'YoutubeAnalysis', component: lazy(() => import("app/components/ui/YoutubeAnalysis")) },
-  { name: 'QuoraAnalysis', component: lazy(() => import("app/components/ui/QuoraAnalysis")) }
+  // { name: 'QuoraAnalysis', component: lazy(() => import("app/components/ui/QuoraAnalysis")) }
   // { name: 'TrendAnalysis', component: lazy(() => import("app/components/ui/TrendAnalysis")) },
-  // { name: 'RunningAds', component: lazy(() => import("app/components/ui/RunningAds")) }
+  { name: 'RunningAds', component: lazy(() => import("app/components/ui/RunningAds")) }
   // { name: 'AdsAnalytics', component: lazy(() => import("app/components/ui/AdsAnalytics")) },
   // { name: 'NewsResults', component: lazy(() => import("app/components/ui/NewsResults")) },
   // { name: 'TopPainpoints', component: lazy(() => import("app/components/ui/TopPainpoints")) },

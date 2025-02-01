@@ -1,16 +1,11 @@
-// app/api/facebook-ads/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 
-const FACEBOOK_API_VERSION = 'v18.0';
+// Constants defined using Next.js public environment variables
+const FACEBOOK_API_VERSION = process.env.NEXT_PUBLIC_FB_API_VERSION || 'v18.0';
 const FACEBOOK_API_BASE_URL = `https://graph.facebook.com/${FACEBOOK_API_VERSION}`;
-
-// Required permissions for Ad Library API
-const REQUIRED_PERMISSIONS = [
-  'ads_read',
-  'ads_management',
-  'read_insights'
-];
+const DEFAULT_SEARCH_TERMS = process.env.NEXT_PUBLIC_DEFAULT_SEARCH_TERMS || '';
+const ADS_PER_PAGE = parseInt(process.env.NEXT_PUBLIC_ADS_PER_PAGE || '25');
 
 interface FacebookAdsParams {
   pageId?: string;
@@ -33,9 +28,9 @@ async function getFacebookAds(params: FacebookAdsParams) {
       {
         params: {
           access_token: accessToken,
-          search_terms: params.searchTerms || '',
+          search_terms: params.searchTerms || DEFAULT_SEARCH_TERMS,
           ad_type: params.adType || 'ALL',
-          ad_reached_countries: ['US'],
+          ad_reached_countries: ['IN'], // Set to India
           fields: [
             'id',
             'ad_creation_time',
@@ -49,9 +44,12 @@ async function getFacebookAds(params: FacebookAdsParams) {
             'page_name',
             'publisher_platforms',
             'status',
-            'funding_entity'
+            'funding_entity',
+            'demographic_distribution', // Added for Indian demographic data
+            'region_distribution',      // Added for Indian region distribution
+            'impressions'              // Added for reach metrics
           ].join(','),
-          limit: params.limit || 25,
+          limit: params.limit || ADS_PER_PAGE,
           ...(params.pageId && { page_id: params.pageId }),
           ...(params.after && { after: params.after })
         },
@@ -63,7 +61,6 @@ async function getFacebookAds(params: FacebookAdsParams) {
 
     return response.data;
   } catch (error: any) {
-    // Handle specific Facebook API errors
     if (error.response?.data?.error) {
       const fbError = error.response.data.error;
       
@@ -90,12 +87,11 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     
-    // Properly handle null values from searchParams
     const params: FacebookAdsParams = {
       pageId: searchParams.get('pageId') || undefined,
       adType: searchParams.get('adType') || 'ALL',
-      limit: searchParams.has('limit') ? parseInt(searchParams.get('limit')!) : 25,
-      searchTerms: searchParams.get('searchTerms') || undefined,
+      limit: searchParams.has('limit') ? parseInt(searchParams.get('limit')!) : ADS_PER_PAGE,
+      searchTerms: searchParams.get('searchTerms') || DEFAULT_SEARCH_TERMS,
       after: searchParams.get('after') || undefined
     };
 
