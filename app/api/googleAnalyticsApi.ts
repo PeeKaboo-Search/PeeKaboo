@@ -1,209 +1,116 @@
-interface QuoraAnswer {
-  content: string;
-  author: {
-    name: string;
-    surname?: string;
-    profile_url: string;
-    credentials: string; // Ensure this is always a string
-    followers?: number;
-    profileImage?: string;
-  };
-  post_url: string;
-  upvotes: number;
-  comments?: number;
-  timestamp: string;
+export interface GoogleResult {
+  title: string;
+  snippet: string;
+  link: string;
 }
 
-interface QuoraAPIResponse {
-  data: Array<any>;
-  pageInfo?: {
-    hasNextPage?: boolean;
-    endCursor?: string;
-  };
+export interface Trend {
+  title: string;
+  description: string;
+  percentage: number;
 }
 
-interface AnalysisResult {
-  success: boolean;
-  data?: {
-    analysis: string;
-    sources: QuoraAnswer[];
-    timestamp: string;
-  };
-  error?: string;
+export interface Competitor {
+  name: string;
+  strength: string;
+  score: number;
 }
 
-export class QuoraAnalysisService {
-  // Updated Groq API URL (ensure this is correct)
-  private static readonly GROQ_API_URL = 'https://api.groq.com/v1/chat/completions'; // Updated endpoint
-  private static readonly RAPIDAPI_KEY = process.env.NEXT_PUBLIC_RAPIDAPI_KEY;
-  private static readonly GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+export interface AnalyticsSummary {
+  overview: string;
+  trends: Trend[];
+  competitors: Competitor[];
+  opportunities: string[];
+}
 
-  /**
-   * Search and analyze Quora answers
-   */
-  public static async analyzeQuoraData(query: string): Promise<AnalysisResult> {
-    try {
-      if (!this.RAPIDAPI_KEY || !this.GROQ_API_KEY) {
-        throw new Error('Missing required API keys');
-      }
+export const fetchGoogleResults = async (
+  query: string
+): Promise<{ results: GoogleResult[]; summary: AnalyticsSummary } | null> => {
+  try {
+    const searchApiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
+    const searchEngineId = process.env.NEXT_PUBLIC_GOOGLE_SEARCH_ENGINE_ID;
+    const groqApiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
 
-      const answers = await this.searchQuoraAnswers(query);
-
-      if (answers.length === 0) {
-        return {
-          success: false,
-          error: 'No relevant Quora answers found',
-        };
-      }
-
-      // Only send content to Groq for analysis
-      const relevantContent = answers.map((answer) => answer.content).join('\n\n');
-      const analysis = await this.generateAnalysis(query, relevantContent);
-
-      // Return full answer data as sources
-      return {
-        success: true,
-        data: {
-          analysis,
-          sources: answers,
-          timestamp: new Date().toISOString(),
-        },
-      };
-    } catch (error) {
-      console.error('Analysis error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'An unknown error occurred',
-      };
+    if (!searchApiKey || !searchEngineId || !groqApiKey) {
+      throw new Error("API keys are missing. Check environment variables.");
     }
-  }
 
-  /**
-   * Search for Quora answers
-   */
-  private static async searchQuoraAnswers(query: string): Promise<QuoraAnswer[]> {
-    const url = new URL('https://quora-scraper.p.rapidapi.com/search_answers');
-    url.searchParams.append('query', query);
-    url.searchParams.append('language', 'en');
-    url.searchParams.append('time', 'all_times');
+    // Fetch Google Search results
+    const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(query)}`;
+    const searchResponse = await fetch(searchUrl);
 
-    try {
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'x-rapidapi-key': this.RAPIDAPI_KEY || '',
-          'x-rapidapi-host': 'quora-scraper.p.rapidapi.com',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: QuoraAPIResponse = await response.json();
-
-      if (!data || !data.data || !Array.isArray(data.data)) {
-        throw new Error('Invalid response format from Quora API');
-      }
-
-      return data.data.map((item) => this.parseQuoraAnswer(item));
-    } catch (error) {
-      console.error('Quora search error:', error);
-      throw new Error('Failed to fetch Quora answers');
+    if (!searchResponse.ok) {
+      throw new Error(`Google Search API error: ${searchResponse.status}`);
     }
-  }
 
-  /**
-   * Parse raw Quora answer data into standardized format
-   */
-  private static parseQuoraAnswer(item: any): QuoraAnswer {
-    return {
-      content: this.truncateText(item.content || '', 1000),
-      author: {
-        name: item.author?.name || 'Anonymous',
-        surname: item.author?.surname,
-        profile_url: item.author?.url || '',
-        credentials: item.author?.credentials || '', // Ensure this is always a string
-        followers: this.parseNumber(item.author?.followers),
-        profileImage: item.author?.profileImage,
-      },
-      post_url: item.url || '',
-      upvotes: this.parseNumber(item.upvotes),
-      comments: this.parseNumber(item.comments),
-      timestamp: new Date().toISOString(), // Use current time if no timestamp provided
-    };
-  }
+    const searchData: { items: Array<{ title: string; snippet: string; link: string }> } = await searchResponse.json();
+    const results: GoogleResult[] = searchData.items.map(item => ({
+      title: item.title || "No title available",
+      snippet: item.snippet || "No snippet available",
+      link: item.link || "#",
+    }));
 
-  /**
-   * Generate analysis using Groq
-   */
-  private static async generateAnalysis(query: string, content: string): Promise<string> {
-    const prompt = `Analyze these Quora answers about "${query}". Focus on:
-    1. Key themes and patterns
-    2. Notable insights or unique perspectives
-    3. Common experiences or solutions mentioned
-    4. Areas of disagreement or debate
-    
-    Provide a clear, organized analysis with specific examples from the answers.`;
+    if (results.length === 0) {
+      throw new Error("No results found from Google Search API.");
+    }
 
-    const payload = {
-      model: 'mixtral-8x7b-32768', // Ensure this model is supported by Groq
-      messages: [
+    // Modified Groq API prompt for advertisement and research analysis
+    const context = `You are an advertising research specialist. Analyze these search results and provide a structured analysis for creating effective advertisements in the following JSON format:
+    {
+      "overview": "A brief HTML-formatted overview analyzing market positioning and advertising potential",
+      "trends": [
         {
-          role: 'system',
-          content: prompt,
-        },
-        {
-          role: 'user',
-          content,
-        },
+          "title": "Advertising trend or consumer behavior pattern",
+          "description": "HTML-formatted description of the trend's relevance to advertising",
+          "percentage": number (0-100 indicating trend strength)
+        }
       ],
-      temperature: 0.7,
-      max_tokens: 4000,
-    };
-
-    try {
-      const response = await fetch(this.GROQ_API_URL, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.GROQ_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Groq API error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data?.choices?.[0]?.message?.content || 'Analysis generation failed. Please try again.';
-    } catch (error) {
-      console.error('Groq API error:', error);
-      throw new Error('Failed to generate analysis');
+      "competitors": [
+        {
+          "name": "Competitor brand/company",
+          "strength": "HTML-formatted analysis of their advertising strategy",
+          "score": number (0-100 based on advertising presence)
+        }
+      ],
+      "opportunities": [
+        "HTML-formatted advertising opportunity or campaign suggestion"
+      ]
     }
-  }
+    Ensure all text fields contain properly formatted HTML with appropriate tags (<p>, <strong>, <em>, etc.).
+    Focus on advertising angles, messaging themes, and campaign opportunities.
+    Analyze audience preferences, ad placement strategies, and messaging effectiveness.
+    Limit to 3 trends, 3 competitors, and 3 opportunities.
+    Base percentages and scores on advertising impact and market presence in the search results.`;
 
-  /**
-   * Safely parse number values
-   */
-  private static parseNumber(value: any): number {
-    if (typeof value === 'number') return value;
-    if (typeof value === 'string') {
-      const parsed = parseInt(value.replace(/[^0-9-]/g, ''), 10);
-      return isNaN(parsed) ? 0 : parsed;
+    const summaryResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${groqApiKey}`,
+      },
+      body: JSON.stringify({
+        model: "mixtral-8x7b-32768",
+        messages: [
+          { role: "system", content: context },
+          { role: "user", content: JSON.stringify(results.slice(0, 5)) },
+        ],
+        temperature: 0.7,
+        max_tokens: 1500,
+      }),
+    });
+
+    if (!summaryResponse.ok) {
+      throw new Error(`Groq API error: ${summaryResponse.status}`);
     }
-    return 0;
-  }
 
-  /**
-   * Truncate text to a specified length
-   */
-  private static truncateText(text: string, maxLength: number): string {
-    if (!text) return '';
-    if (text.length <= maxLength) return text;
+    const summaryData: { choices: Array<{ message: { content: string } }> } = await summaryResponse.json();
+    const content = summaryData.choices[0].message.content;
 
-    const truncated = text.substring(0, maxLength);
-    return truncated.substring(0, truncated.lastIndexOf(' ')) + '...';
+    // Validate JSON before parsing
+    const summary: AnalyticsSummary = JSON.parse(content);
+    return { results, summary };
+  } catch (error) {
+    console.error("Error in fetchGoogleResults:", error);
+    return null;
   }
-}
+};
