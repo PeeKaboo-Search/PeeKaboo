@@ -1,334 +1,276 @@
-import axios, { AxiosError } from 'axios';
-import Debug from 'debug';
-
-// Initialize debuggers for different components
-const debug = {
-  search: Debug('quora:search'),
-  details: Debug('quora:details'),
-  process: Debug('quora:process'),
-  analysis: Debug('quora:analysis')
-};
-
-interface QuoraPost {
-  title: string;
-  url: string;
-  topics: string[];
-  followers: number;
-  topAnswer: Answer;
-  additionalAnswers: Answer[];
-  createdAt: string;
+interface QuoraAnswer {
+  content: string;
+  author: {
+    name: string;
+    surname?: string;
+    profile_url: string;
+    credentials: string;
+    followers?: number;
+    profileImage?: string;
+  };
+  post_url: string;
+  upvotes: number;
+  comments?: number;
+  timestamp: string;
 }
 
-interface Answer {
-  text: string;
-  author: string;
-  authorProfile: string;
-  authorCredentials: string;
-  upvotes: number;
-  numComments: number;
-  createdAt: string;
+interface QuoraAPIResponse {
+  data: Array<any>;
+  pageInfo?: {
+    hasNextPage?: boolean;
+    endCursor?: string;
+  };
 }
 
 interface AnalysisResult {
   success: boolean;
   data?: {
     analysis: string;
-    rawPosts: QuoraPost[];
+    sources: QuoraAnswer[];
     timestamp: string;
   };
   error?: string;
-  debug?: {
-    searchResponse?: any;
-    questionResponses?: any[];
-    groqResponse?: any;
-  };
 }
 
 export class QuoraAnalysisService {
-  private static readonly GROQ_API_URL = 'https://api.groq.com/v1/completions';
-  private static readonly RAPIDAPI_URL = 'https://quora-scraper.p.rapidapi.com/api/v1';
+  private static readonly TIMEOUT = 30000; // 30 seconds timeout
   private static readonly RAPIDAPI_KEY = process.env.NEXT_PUBLIC_RAPIDAPI_KEY;
   private static readonly GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY;
 
   /**
-   * Enable debug mode to get detailed logging
+   * Fetch with timeout wrapper
    */
-  public static enableDebug() {
-    Debug.enable('quora:*');
-  }
+  private static async fetchWithTimeout(
+    url: string,
+    options: RequestInit,
+    timeout: number
+  ): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-  /**
-   * Handle API errors with detailed logging
-   */
-  private static handleApiError(error: unknown, context: string): never {
-    if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError;
-      debug.search.error(`${context} API Error:`, {
-        status: axiosError.response?.status,
-        statusText: axiosError.response?.statusText,
-        data: axiosError.response?.data,
-        headers: axiosError.response?.headers,
-        config: {
-          url: axiosError.config?.url,
-          method: axiosError.config?.method,
-          headers: axiosError.config?.headers,
-          params: axiosError.config?.params
-        }
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
       });
-    } else {
-      debug.search.error(`${context} Unknown Error:`, error);
-    }
-    throw error;
-  }
-
-  /**
-   * Search Quora for questions related to the query.
-   */
-  private static async searchQuora(query: string): Promise<string[]> {
-    debug.search('Searching Quora with query:', query);
-    
-    try {
-      const config = {
-        params: {
-          query,
-          type: 'question',
-          limit: '5'
-        },
-        headers: {
-          'X-RapidAPI-Key': this.RAPIDAPI_KEY,
-          'X-RapidAPI-Host': 'quora-scraper.p.rapidapi.com'
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new Error('Request timed out');
         }
-      };
-      
-      debug.search('Request config:', config);
-
-      const response = await axios.get(`${this.RAPIDAPI_URL}/search`, config);
-      
-      debug.search('Search response:', response.data);
-
-      if (!response.data?.results?.length) {
-        debug.search('No results found');
-        return [];
       }
-
-      const urls = response.data.results
-        .filter((result: any) => {
-          const isValid = result.url && result.url.includes('quora.com/');
-          debug.search(`Filtering URL ${result.url}: ${isValid}`);
-          return isValid;
-        })
-        .map((result: any) => result.url)
-        .slice(0, 5);
-
-      debug.search('Filtered URLs:', urls);
-      return urls;
-
-    } catch (error) {
-      return this.handleApiError(error, 'Search');
+      throw error;
     }
   }
 
   /**
-   * Fetch details for a specific Quora question.
-   */
-  private static async fetchQuestionDetails(url: string) {
-    debug.details('Fetching details for URL:', url);
-
-    try {
-      const config = {
-        params: { url },
-        headers: {
-          'X-RapidAPI-Key': this.RAPIDAPI_KEY,
-          'X-RapidAPI-Host': 'quora-scraper.p.rapidapi.com'
-        }
-      };
-
-      debug.details('Request config:', config);
-
-      const response = await axios.get(`${this.RAPIDAPI_URL}/question/details`, config);
-      
-      debug.details('Question details response:', response.data);
-      return response.data;
-
-    } catch (error) {
-      return this.handleApiError(error, 'Details');
-    }
-  }
-
-  /**
-   * Process the Quora API response into a QuoraPost object.
-   */
-  private static processQuoraResponse(response: any): QuoraPost {
-    debug.process('Processing response:', response);
-
-    const { question, answers = [] } = response.data || {};
-    
-    debug.process('Extracted question:', question);
-    debug.process('Extracted answers:', answers);
-
-    const processedAnswers = answers.map((answer: any) => {
-      const processed = {
-        text: this.truncateText(answer.content, 1000),
-        author: answer.author?.name || 'Anonymous',
-        authorProfile: answer.author?.profile_url || '',
-        authorCredentials: answer.author?.credentials || '',
-        upvotes: answer.upvotes || 0,
-        numComments: answer.comment_count || 0,
-        createdAt: answer.post_time || new Date().toISOString()
-      };
-      debug.process('Processed answer:', processed);
-      return processed;
-    });
-
-    const post = {
-      title: question?.title || '',
-      url: question?.url || '',
-      topics: question?.topics || [],
-      followers: question?.followers || 0,
-      topAnswer: processedAnswers[0] || this.createEmptyAnswer(),
-      additionalAnswers: processedAnswers.slice(1, 3),
-      createdAt: new Date().toISOString()
-    };
-
-    debug.process('Final processed post:', post);
-    return post;
-  }
-
-  /**
-   * Create an empty answer object for cases where no answers exist.
-   */
-  private static createEmptyAnswer(): Answer {
-    return {
-      text: 'No answer available',
-      author: 'N/A',
-      authorProfile: '',
-      authorCredentials: '',
-      upvotes: 0,
-      numComments: 0,
-      createdAt: new Date().toISOString()
-    };
-  }
-
-  /**
-   * Truncate text to a specified length.
-   */
-  private static truncateText(text: string, maxLength: number): string {
-    if (!text) return '';
-    if (text.length <= maxLength) return text;
-    
-    const truncated = text.substring(0, maxLength);
-    return truncated.substring(0, truncated.lastIndexOf(' ')) + '...';
-  }
-
-  /**
-   * Analyze Quora data for a given query.
+   * Main analysis method
    */
   public static async analyzeQuoraData(query: string): Promise<AnalysisResult> {
-    debug.analysis('Starting analysis for query:', query);
-
-    const debugData: AnalysisResult['debug'] = {};
-
     try {
-      // Validate API keys
-      if (!this.RAPIDAPI_KEY || !this.GROQ_API_KEY) {
-        throw new Error('Missing required API keys');
+      // Validate inputs and API keys
+      if (!query.trim()) {
+        return { success: false, error: 'Query cannot be empty' };
       }
-
-      debug.analysis('API keys validated');
-
-      // Get question URLs
-      const questionUrls = await this.searchQuora(query);
-      debugData.searchResponse = questionUrls;
-
-      debug.analysis('Found question URLs:', questionUrls);
-
-      if (questionUrls.length === 0) {
-        return {
-          success: false,
-          error: 'No relevant Quora questions found',
-          debug: debugData
-        };
-      }
-
-      // Fetch and process questions
-      const questionPromises = questionUrls.map(url => this.fetchQuestionDetails(url));
-      const responses = await Promise.allSettled(questionPromises);
       
-      debugData.questionResponses = responses.map(response => 
-        response.status === 'fulfilled' ? response.value : response.reason
-      );
-
-      const quoraPosts = responses
-        .filter((result): result is PromiseFulfilledResult<any> => {
-          const isValid = result.status === 'fulfilled' && result.value?.data?.question;
-          debug.analysis('Filtering response:', { status: result.status, isValid });
-          return isValid;
-        })
-        .map(result => this.processQuoraResponse(result.value));
-
-      debug.analysis('Processed posts:', quoraPosts);
-
-      if (quoraPosts.length === 0) {
-        return {
-          success: false,
-          error: 'Failed to process Quora questions',
-          debug: debugData
-        };
+      if (!this.RAPIDAPI_KEY || !this.GROQ_API_KEY) {
+        return { success: false, error: 'API keys not configured' };
       }
 
-      // Generate analysis using Groq
-      const groqPayload = {
-        model: 'mixtral-8x7b-32768',
-        messages: [
-          {
-            role: 'system',
-            content: `Analyze these Quora posts about "${query}" and provide insights:`
-          },
-          {
-            role: 'user',
-            content: JSON.stringify(quoraPosts, null, 2)
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 4000
-      };
+      // Fetch Quora answers
+      const answers = await this.searchQuoraAnswers(query);
+      if (answers.length === 0) {
+        return { success: false, error: 'No relevant Quora answers found' };
+      }
 
-      debug.analysis('Groq API request payload:', groqPayload);
+      // Prepare content for analysis
+      const relevantContent = answers
+        .map((answer) => answer.content.trim())
+        .filter(Boolean)
+        .join('\n\n');
 
-      const groqResponse = await axios.post(
-        this.GROQ_API_URL,
-        groqPayload,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.GROQ_API_KEY}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      if (!relevantContent) {
+        return { success: false, error: 'No valid content to analyze' };
+      }
 
-      debugData.groqResponse = groqResponse.data;
-      debug.analysis('Groq API response:', groqResponse.data);
-
-      const analysis = groqResponse.data?.choices?.[0]?.message?.content ||
-        '<p>Analysis generation failed. Please try again.</p>';
+      // Generate analysis
+      const analysis = await this.generateAnalysis(query, relevantContent);
 
       return {
         success: true,
         data: {
           analysis,
-          rawPosts: quoraPosts,
-          timestamp: new Date().toISOString()
+          sources: answers,
+          timestamp: new Date().toISOString(),
         },
-        debug: debugData
       };
 
     } catch (error) {
-      debug.analysis('Error in analyzeQuoraData:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'An unknown error occurred',
-        debug: debugData
-      };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Analysis error:', error);
+      return { success: false, error: errorMessage };
     }
+  }
+
+  /**
+   * Search Quora answers
+   */
+  private static async searchQuoraAnswers(query: string): Promise<QuoraAnswer[]> {
+    const url = new URL('https://quora-scraper.p.rapidapi.com/search_answers');
+    url.searchParams.append('query', query);
+    url.searchParams.append('language', 'en');
+    url.searchParams.append('time', 'all_times');
+
+    try {
+      const response = await this.fetchWithTimeout(
+        url.toString(),
+        {
+          method: 'GET',
+          headers: {
+            'x-rapidapi-key': this.RAPIDAPI_KEY || '',
+            'x-rapidapi-host': 'quora-scraper.p.rapidapi.com',
+          },
+        },
+        this.TIMEOUT
+      );
+
+      if (!response.ok) {
+        throw new Error(`Quora API error: ${response.status}`);
+      }
+
+      const data: QuoraAPIResponse = await response.json();
+      
+      if (!data?.data || !Array.isArray(data.data)) {
+        throw new Error('Invalid Quora API response format');
+      }
+
+      return data.data.map(this.parseQuoraAnswer);
+
+    } catch (error) {
+      console.error('Quora search error:', error);
+      throw new Error(
+        `Failed to fetch Quora answers: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`
+      );
+    }
+  }
+
+  /**
+   * Parse Quora answer
+   */
+  private static parseQuoraAnswer(item: any): QuoraAnswer {
+    return {
+      content: QuoraAnalysisService.sanitizeText(item.content || ''),
+      author: {
+        name: item.author?.name || 'Anonymous',
+        surname: item.author?.surname,
+        profile_url: item.author?.url || '',
+        credentials: String(item.author?.credentials || ''),
+        followers: QuoraAnalysisService.parseNumber(item.author?.followers),
+        profileImage: item.author?.profileImage,
+      },
+      post_url: item.url || '',
+      upvotes: QuoraAnalysisService.parseNumber(item.upvotes),
+      comments: QuoraAnalysisService.parseNumber(item.comments),
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Generate analysis using Groq API
+   */
+  private static async generateAnalysis(query: string, content: string): Promise<string> {
+    const url = 'https://api.groq.com/openai/v1/chat/completions';
+    
+    const payload = {
+      model: 'mixtral-8x7b-32768',
+      messages: [
+        {
+          role: 'system',
+          content: `You are an expert at analyzing Quora discussions. Analyze the following answers about "${query}" focusing on key themes, insights, and patterns.`,
+        },
+        {
+          role: 'user',
+          content: content,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 4000,
+    };
+
+    try {
+      const response = await this.fetchWithTimeout(
+        url,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.GROQ_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        },
+        this.TIMEOUT
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(
+          `Groq API error (${response.status}): ${
+            errorData ? JSON.stringify(errorData) : response.statusText
+          }`
+        );
+      }
+
+      const data = await response.json();
+      const analysis = data?.choices?.[0]?.message?.content;
+
+      if (!analysis) {
+        throw new Error('No analysis generated from Groq API');
+      }
+
+      return analysis;
+
+    } catch (error) {
+      console.error('Groq API error:', error);
+      throw new Error(
+        `Analysis generation failed: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`
+      );
+    }
+  }
+
+  /**
+   * Utility: Parse number values
+   */
+  private static parseNumber(value: any): number {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+      const parsed = parseInt(value.replace(/[^0-9-]/g, ''), 10);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  }
+
+  /**
+   * Utility: Sanitize and truncate text
+   */
+  private static sanitizeText(text: string, maxLength: number = 1000): string {
+    if (!text) return '';
+    
+    // Remove excess whitespace and normalize
+    let sanitized = text
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // Truncate if necessary
+    if (sanitized.length <= maxLength) return sanitized;
+    
+    const truncated = sanitized.substring(0, maxLength);
+    return truncated.substring(0, truncated.lastIndexOf(' ')) + '...';
   }
 }

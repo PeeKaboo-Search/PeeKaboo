@@ -1,35 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { QuoraAnalysisService } from 'app/api/quoraAnalytics';
-import { QuoraPost } from 'app/types/quora';
+import { QuoraAnalysisService } from '@/app/api/quoraAnalytics';
 
-interface ExtendedQuoraPost extends QuoraPost {
-  sentiment?: number;
-}
-
-interface QuoraAnalysisResponse {
-  success: boolean;
-  data?: {
-    analysis: string;
-    rawPosts: ExtendedQuoraPost[];
-    timestamp: string;
+interface QuoraAnswer {
+  content: string;
+  author: {
+    name: string;
+    profile_url: string;
+    credentials: string;
   };
-  error?: string;
+  post_url: string;
+  upvotes: number;
+  timestamp: string;
 }
 
-interface QuoraAnalysisProps {
+interface AnalysisData {
+  analysis: string;
+  sources: QuoraAnswer[];
+  timestamp: string;
+}
+
+interface QuoraAnalyticsProps {
   query: string;
   className?: string;
   answerMaxLength?: number;
-}
-
-interface AnalysisState {
-  loading: boolean;
-  error?: string;
-  data?: {
-    analysis: string;
-    rawPosts: ExtendedQuoraPost[];
-    timestamp: string;
-  };
 }
 
 const truncateText = (text: string, maxLength: number = 200): string => {
@@ -39,97 +32,80 @@ const truncateText = (text: string, maxLength: number = 200): string => {
     : text.substring(0, maxLength) + '...';
 };
 
-const SentimentIndicator: React.FC<{ sentiment?: number }> = ({ sentiment = 0 }) => {
-  const normalizedSentiment = Math.max(-1, Math.min(1, sentiment));
-  const position = ((normalizedSentiment + 1) / 2) * 100;
-
-  return (
-    <div className="flex w-full h-2 bg-gray-200 rounded-full overflow-hidden my-2">
-      <div 
-        className="relative w-full"
-        style={{
-          background: `linear-gradient(to right, 
-            rgb(239, 68, 68) ${position < 50 ? position : 50}%, 
-            rgb(34, 197, 94) ${position > 50 ? position : 50}%)`
-        }}
-      >
-        <span 
-          className="absolute w-2 h-2 bg-white rounded-full transform -translate-x-1/2 -translate-y-1/2 top-1/2"
-          style={{ left: `${position}%` }}
-        />
-      </div>
-    </div>
-  );
-};
-
-const AnswerCard: React.FC<{ 
-  answer: ExtendedQuoraPost['topAnswer'],
-  maxLength: number 
-}> = ({ answer, maxLength }) => (
+const AnswerCard = ({ answer, maxLength }: { answer: QuoraAnswer; maxLength: number }) => (
   <div className="bg-white rounded-lg shadow-md p-4 mb-4">
     <div className="text-gray-700 mb-3">
-      {truncateText(answer.text, maxLength)}
+      {truncateText(answer.content, maxLength)}
     </div>
     <div className="flex items-center justify-between text-sm">
+      <div className="flex flex-col">
+        <a 
+          href={answer.author.profile_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:text-blue-800"
+        >
+          By: {answer.author.name}
+        </a>
+        {answer.author.credentials && (
+          <span className="text-xs text-gray-500">{answer.author.credentials}</span>
+        )}
+      </div>
+      <div className="flex items-center space-x-4 text-gray-600">
+        <span>👍 {answer.upvotes}</span>
+      </div>
+    </div>
+    <div className="flex justify-between items-center text-xs text-gray-500 mt-2">
+      <span>{new Date(answer.timestamp).toLocaleDateString()}</span>
       <a 
-        href={answer.authorProfile}
+        href={answer.post_url}
         target="_blank"
         rel="noopener noreferrer"
         className="text-blue-600 hover:text-blue-800"
       >
-        By: {answer.author}
+        View on Quora →
       </a>
-      <div className="flex items-center space-x-4 text-gray-600">
-        <span>👍 {answer.upvotes}</span>
-        <span>💬 {answer.numComments}</span>
-      </div>
-    </div>
-    <div className="text-xs text-gray-500 mt-2">
-      {new Date(answer.createdAt).toLocaleDateString()}
     </div>
   </div>
 );
 
-const QuoraAnalytics: React.FC<QuoraAnalysisProps> = ({ 
+export default function QuoraAnalytics({ 
   query, 
   className = '', 
   answerMaxLength = 300 
-}) => {
-  const [analysisState, setAnalysisState] = useState<AnalysisState>({
-    loading: true,
-    data: undefined
+}: QuoraAnalyticsProps) {
+  const [state, setState] = useState<{
+    loading: boolean;
+    error?: string;
+    data?: AnalysisData;
+  }>({
+    loading: true
   });
 
   useEffect(() => {
     const fetchAnalysis = async () => {
       if (!query) return;
 
-      setAnalysisState(prev => ({ ...prev, loading: true }));
+      setState(prev => ({ ...prev, loading: true }));
 
       try {
-        const result: QuoraAnalysisResponse = await QuoraAnalysisService.analyzeQuoraData(query);
+        const result = await QuoraAnalysisService.analyzeQuoraData(query);
         
         if (result.success && result.data) {
-          setAnalysisState({
+          setState({
             loading: false,
-            data: {
-              analysis: result.data.analysis,
-              rawPosts: result.data.rawPosts,
-              timestamp: result.data.timestamp
-            }
+            data: result.data
           });
         } else {
-          setAnalysisState({
+          setState({
             loading: false,
-            error: result.error || 'Unknown error occurred',
-            data: undefined
+            error: result.error || 'Unknown error occurred'
           });
         }
       } catch (error) {
-        setAnalysisState({
+        setState({
           loading: false,
-          error: error instanceof Error ? error.message : 'Failed to analyze Quora data',
-          data: undefined
+          error: error instanceof Error ? error.message : 'Failed to analyze Quora data'
         });
       }
     };
@@ -137,7 +113,7 @@ const QuoraAnalytics: React.FC<QuoraAnalysisProps> = ({
     fetchAnalysis();
   }, [query]);
 
-  if (analysisState.loading) {
+  if (state.loading) {
     return (
       <div className={`flex justify-center items-center min-h-[200px] ${className}`}>
         <div className="text-center">
@@ -148,82 +124,42 @@ const QuoraAnalytics: React.FC<QuoraAnalysisProps> = ({
     );
   }
 
-  if (analysisState.error) {
+  if (state.error) {
     return (
       <div className={`bg-red-50 border border-red-200 rounded-lg p-4 ${className}`}>
         <h2 className="text-red-800 text-lg font-semibold mb-2">Analysis Error</h2>
-        <p className="text-red-600">{analysisState.error}</p>
+        <p className="text-red-600">{state.error}</p>
       </div>
     );
   }
 
-  if (!analysisState.data) {
+  if (!state.data) {
     return null;
   }
 
-  const { data } = analysisState;
+  const { data } = state;
 
   return (
     <div className="space-y-6">
       {/* Analysis Overview */}
       <section className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-2xl font-semibold mb-4">Quora Analysis</h2>
+        <h2 className="text-2xl font-semibold mb-4">Insights from Quora</h2>
         <div 
           className="prose max-w-none"
           dangerouslySetInnerHTML={{ __html: data.analysis }}
         />
       </section>
 
-      {/* Questions and Answers Section */}
+      {/* Answers Section */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold">Top Questions & Answers</h2>
+        <h2 className="text-xl font-semibold">Top Answers</h2>
         <div className="grid gap-6 md:grid-cols-2">
-          {data.rawPosts.map((post, index) => (
-            <article 
-              key={`post-${index}`}
-              className="bg-white rounded-lg shadow-md overflow-hidden"
-            >
-              <div className="p-4">
-                <header className="mb-4">
-                  <h3 className="text-lg font-semibold mb-2">
-                    {truncateText(post.title, 100)}
-                  </h3>
-                  <a 
-                    href={post.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-600 hover:text-blue-800"
-                  >
-                    View on Quora →
-                  </a>
-                </header>
-
-                <SentimentIndicator sentiment={post.sentiment} />
-
-                {/* Top Answer */}
-                <div className="mb-4">
-                  <h4 className="text-md font-semibold mb-2">Top Answer</h4>
-                  <AnswerCard 
-                    answer={post.topAnswer}
-                    maxLength={answerMaxLength}
-                  />
-                </div>
-
-                {/* Additional Answers */}
-                {post.additionalAnswers.length > 0 && (
-                  <div>
-                    <h4 className="text-md font-semibold mb-2">Additional Insights</h4>
-                    {post.additionalAnswers.map((answer, idx) => (
-                      <AnswerCard 
-                        key={`additional-${idx}`}
-                        answer={answer}
-                        maxLength={answerMaxLength}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </article>
+          {data.sources.map((answer, index) => (
+            <AnswerCard 
+              key={`answer-${index}`}
+              answer={answer}
+              maxLength={answerMaxLength}
+            />
           ))}
         </div>
       </section>
@@ -234,6 +170,4 @@ const QuoraAnalytics: React.FC<QuoraAnalysisProps> = ({
       </div>
     </div>
   );
-};
-
-export default QuoraAnalytics;
+}
