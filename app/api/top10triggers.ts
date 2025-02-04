@@ -33,7 +33,7 @@ export const useGoogleSearchStore = () => {
       // Enhanced prompt for more detailed trigger generation
       const context = `You are a world-class marketing strategist and psychological insight expert. 
 
-      For the given search query, generate 9 powerful marketing triggers that go beyond surface-level insights. Each trigger should provide:
+      For the given search query, generate 10 powerful marketing triggers that go beyond surface-level insights. Each trigger should provide:
       
       1. A crisp, memorable 1-2 word heading
       2. A concise description (20-30 words)
