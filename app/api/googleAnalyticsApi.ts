@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 export interface GoogleResult {
   title: string;
   snippet: string;
@@ -23,6 +25,12 @@ export interface AnalyticsSummary {
   opportunities: string[];
 }
 
+export interface GoogleSearchData {
+  results: GoogleResult[];
+  summary: AnalyticsSummary;
+}
+
+// Original function kept for backwards compatibility
 export const fetchGoogleResults = async (
   query: string
 ): Promise<{ results: GoogleResult[]; summary: AnalyticsSummary } | null> => {
@@ -113,4 +121,68 @@ export const fetchGoogleResults = async (
     console.error("Error in fetchGoogleResults:", error);
     return null;
   }
+};
+
+// New hook for state management
+export const useGoogleSearchStore = () => {
+  const [googleData, setGoogleData] = useState<GoogleSearchData | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const getGoogleData = async (query: string): Promise<GoogleSearchData | null> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Reuse the existing fetchGoogleResults function
+      const result = await fetchGoogleResults(query);
+      
+      if (!result) {
+        throw new Error("Failed to fetch Google search data");
+      }
+
+      const googleSearchData: GoogleSearchData = {
+        results: result.results,
+        summary: result.summary
+      };
+      
+      // Update state
+      setGoogleData(googleSearchData);
+      setIsLoading(false);
+      
+      return googleSearchData;
+    } catch (error) {
+      console.error("Error in getGoogleData:", error);
+      setError(error instanceof Error ? error.message : "An unknown error occurred");
+      setIsLoading(false);
+      return null;
+    }
+  };
+
+  // Clear stored data
+  const clearGoogleData = () => {
+    setGoogleData(null);
+  };
+
+  return {
+    googleData,
+    getGoogleData,
+    clearGoogleData,
+    isLoading,
+    error
+  };
+};
+
+// Optional: Utility function to directly fetch data without hook
+export const fetchAndProcessGoogleData = async (query: string): Promise<GoogleSearchData | null> => {
+  const result = await fetchGoogleResults(query);
+  
+  if (!result) {
+    return null;
+  }
+
+  return {
+    results: result.results,
+    summary: result.summary
+  };
 };

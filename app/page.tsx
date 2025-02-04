@@ -26,9 +26,9 @@ interface ResultsSectionProps {
 // Component configuration
 const SEARCH_COMPONENTS: SearchComponentConfig[] = [
   // { name: 'ImageResult', component: lazy(() => import("app/components/ui/ImageResult")) },
-  // { name: 'GoogleAnalytics', component: lazy(() => import("app/components/ui/GoogleAnalytics")) }
+   { name: 'GoogleAnalytics', component: lazy(() => import("app/components/ui/GoogleAnalytics")) },
   // { name: 'PlayStoreAnalytics', component: lazy(() => import("app/components/ui/PlayStoreAnalytics")) },
-   { name: 'RedditAnalytics', component: lazy(() => import("app/components/ui/RedditAnalytics")) },
+  // { name: 'RedditAnalytics', component: lazy(() => import("app/components/ui/RedditAnalytics")) },
   // { name: 'YoutubeAnalysis', component: lazy(() => import("app/components/ui/YoutubeAnalysis")) },
   // { name: 'QuoraAnalysis', component: lazy(() => import("app/components/ui/QuoraAnalysis")) }
   // { name: 'TrendAnalysis', component: lazy(() => import("app/components/ui/TrendAnalysis")) },
@@ -36,7 +36,7 @@ const SEARCH_COMPONENTS: SearchComponentConfig[] = [
   // { name: 'AdsAnalytics', component: lazy(() => import("app/components/ui/AdsAnalytics")) },
   // { name: 'NewsResults', component: lazy(() => import("app/components/ui/NewsResults")) },
   // { name: 'TopPainpoints', component: lazy(() => import("app/components/ui/TopPainpoints")) },
-  // { name: 'TopTriggers', component: lazy(() => import("app/components/ui/TopTriggers")) },
+   { name: 'TopTriggers', component: lazy(() => import("app/components/ui/TopTriggers")) },
   // { name: 'Recommended', component: lazy(() => import("app/components/ui/Recommended")) },
   // { name: 'StrategyAnalysis', component: lazy(() => import("app/components/ui/StrategyAnalysis")) },
   // { name: 'SentimentAnalysis', component: lazy(() => import("app/components/ui/SentimentAnalysis")) },
