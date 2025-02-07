@@ -1,66 +1,84 @@
 import { useState } from 'react';
-import debug from 'debug';
 
-// Initialize debuggers
-const logError = debug('fb-ads:error');
-const logInfo = debug('fb-ads:info');
-const logDebug = debug('fb-ads:debug');
-
-// Enable debugging in development
-if (process.env.NODE_ENV === 'development') {
-  debug.enable('fb-ads:*');
-}
-
-// Core interfaces
-export interface AdCard {
-  body: string;
-  caption: string | null;
-  cta_text: string;
-  cta_type: string;
-  title: string;
-  link_url: string;
-  video_preview_image_url?: string;
-  video_sd_url?: string;
-  video_hd_url?: string;
-}
-
-export interface AdSnapshot {
-  ad_creative_id: string;
-  body: {
-    text?: string;
+// Official Facebook Ad API Interfaces
+export interface FacebookAdCreative {
+  id: string;
+  name?: string;
+  title?: string;
+  body?: string;
+  object_story_spec?: {
+    page_id: string;
+    link_data?: {
+      link: string;
+      message: string;
+      caption?: string;
+      description?: string;
+    };
   };
-  caption: string;
-  cards: AdCard[];
-  page_name: string;
-  page_like_count: number;
-  page_profile_picture_url: string;
-  creation_time: number;
-  instagram_actor_name?: string;
-  instagram_profile_pic_url?: string;
+  thumbnail_url?: string;
+  image_url?: string;
+  video_id?: string;
+  call_to_action_type?: string;
+}
+
+export interface FacebookAdInsights {
+  impressions: string;
+  spend: string;
+  clicks: string;
+  reach: string;
+  frequency: string;
+  cpc: string;
+  cpm: string;
+  ctr: string;
+  date_start: string;
+  date_stop: string;
 }
 
 export interface FacebookAd {
-  adid: string;
-  adArchiveID: string;
-  pageID: string;
-  pageName: string;
-  currency: string;
-  startDate: number;
-  endDate: number;
-  entityType: string;
-  snapshot: AdSnapshot;
-  isActive: boolean;
+  id: string;
+  name: string;
+  status: string;
+  effective_status: string;
+  campaign_id: string;
+  adset_id: string;
+  creative: FacebookAdCreative;
+  insights?: FacebookAdInsights;
+  created_time: string;
+  updated_time: string;
+  bid_amount?: number;
+  budget_remaining?: number;
+  campaign?: {
+    id: string;
+    name: string;
+  };
+  adset?: {
+    id: string;
+    name: string;
+  };
 }
 
-export interface MetaAdResponse {
+export interface FacebookAdResponse {
   data: FacebookAd[];
-  total_count: number;
+  paging?: {
+    cursors: {
+      before: string;
+      after: string;
+    };
+    next?: string;
+    previous?: string;
+  };
 }
 
+// Analysis interfaces
 export interface AdPerformanceMetric {
   metric: string;
   description: string;
   score: number;
+  value: string;
+  trend?: {
+    direction: 'up' | 'down' | 'stable';
+    percentage: number;
+  };
 }
 
 export interface CompetitorAnalysis {
@@ -71,6 +89,11 @@ export interface CompetitorAnalysis {
     min: number;
     max: number;
   };
+  performance: {
+    ctr: number;
+    cpc: number;
+    reach: number;
+  };
 }
 
 export interface AdAnalysisSummary {
@@ -78,313 +101,275 @@ export interface AdAnalysisSummary {
   adPerformance: AdPerformanceMetric[];
   competitors: CompetitorAnalysis[];
   recommendations: string[];
+  totalSpend: number;
+  totalReach: number;
+  averageCTR: number;
 }
 
-export interface FacebookMetaData {
-  rawData: MetaAdResponse;
+export interface FacebookAdsData {
+  rawData: FacebookAdResponse;
   analysis: AdAnalysisSummary;
 }
 
-export class APIError extends Error {
-  constructor(
-    message: string,
-    public status?: number,
-    public code?: string
-  ) {
-    super(message);
-    this.name = 'APIError';
-  }
-}
-
-// Singleton Service Implementation
-export class FacebookMetaService {
-  private static instance: FacebookMetaService;
-  private static readonly BASE_URL = 'https://meta-ad-library.p.rapidapi.com/search/ads';
-  private static readonly API_KEY = process.env.NEXT_PUBLIC_RAPID_API_KEY;
-  private static readonly GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY;
-  private readonly cache: Map<string, { data: FacebookMetaData; timestamp: number }>;
-  private readonly CACHE_DURATION = 1000 * 60 * 5; // 5 minutes
+// Singleton Facebook Ads Service
+export class FacebookAdsService {
+  private static instance: FacebookAdsService;
+  private static readonly API_VERSION = 'v18.0';
+  private accessToken: string | null = null;
+  private cache: Map<string, FacebookAdsData>;
 
   private constructor() {
     this.cache = new Map();
-    logInfo('FacebookMetaService initialized');
   }
 
-  public static getInstance(): FacebookMetaService {
-    if (!this.instance) {
-      this.instance = new FacebookMetaService();
+  public static getInstance(): FacebookAdsService {
+    if (!FacebookAdsService.instance) {
+      FacebookAdsService.instance = new FacebookAdsService();
     }
-    return this.instance;
+    return FacebookAdsService.instance;
   }
 
-  private getCacheKey(query: string): string {
-    return `fb-ads:${query.toLowerCase().trim()}`;
+  public setAccessToken(token: string) {
+    this.accessToken = token;
   }
 
-  private isValidCache(timestamp: number): boolean {
-    return Date.now() - timestamp < this.CACHE_DURATION;
+  private async fetchWithRetry<T>(
+    url: string,
+    options: RequestInit,
+    retries = 3
+  ): Promise<T> {
+    let lastError: Error;
+    
+    for (let i = 0; i < retries; i++) {
+      try {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        if (i === retries - 1) break;
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+      }
+    }
+    throw lastError!;
   }
 
-  private validateApiKey(): void {
-    if (!FacebookMetaService.API_KEY) {
-      logError('API key not configured');
-      throw new APIError('API key not configured', 401, 'MISSING_API_KEY');
+  private buildGraphAPIUrl(path: string, params: Record<string, string>): string {
+    const baseUrl = `https://graph.facebook.com/${FacebookAdsService.API_VERSION}`;
+    const searchParams = new URLSearchParams({
+      access_token: this.accessToken!,
+      ...params
+    });
+    return `${baseUrl}${path}?${searchParams}`;
+  }
+
+  public async getAdAccountAds(adAccountId: string): Promise<FacebookAdsData> {
+    if (!this.accessToken) {
+      throw new Error('Access token not set');
+    }
+
+    const cacheKey = `account_${adAccountId}`;
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey)!;
+    }
+
+    try {
+      const fields = [
+        'id',
+        'name',
+        'status',
+        'effective_status',
+        'created_time',
+        'updated_time',
+        'campaign_id',
+        'adset_id',
+        'creative{id,name,title,body,object_story_spec,thumbnail_url,image_url,video_id,call_to_action_type}',
+        'insights{impressions,spend,clicks,reach,frequency,cpc,cpm,ctr}'
+      ].join(',');
+
+      const adsResponse = await this.fetchWithRetry<FacebookAdResponse>(
+        this.buildGraphAPIUrl(`/act_${adAccountId}/ads`, {
+          fields,
+          limit: '500',
+          status: '["ACTIVE", "PAUSED"]'
+        }),
+        { method: 'GET' }
+      );
+
+      const analysis = await this.generateAnalysis(adsResponse);
+      const result = { rawData: adsResponse, analysis };
+      
+      this.cache.set(cacheKey, result);
+      return result;
+
+    } catch (error) {
+      console.error('Error fetching Facebook ads:', error);
+      throw error;
     }
   }
 
-  private getRequestOptions(query: string): { url: string; options: RequestInit } {
-    const params = new URLSearchParams({
-      query,
-      active_status: 'all',
-      media_types: 'all',
-      platform: 'facebook,instagram',
-      ad_type: 'all',
-      search_type: 'keyword_unordered'
+  private async generateAnalysis(response: FacebookAdResponse): Promise<AdAnalysisSummary> {
+    const ads = response.data;
+    
+    if (!ads.length) {
+      return {
+        overview: 'No active ads found for analysis.',
+        adPerformance: [],
+        competitors: [],
+        recommendations: [],
+        totalSpend: 0,
+        totalReach: 0,
+        averageCTR: 0
+      };
+    }
+
+    // Calculate total spend and reach
+    let totalSpend = 0;
+    let totalReach = 0;
+    let totalClicks = 0;
+    let totalImpressions = 0;
+
+    ads.forEach(ad => {
+      if (ad.insights) {
+        totalSpend += parseFloat(ad.insights.spend) || 0;
+        totalReach += parseFloat(ad.insights.reach) || 0;
+        totalClicks += parseFloat(ad.insights.clicks) || 0;
+        totalImpressions += parseFloat(ad.insights.impressions) || 0;
+      }
     });
 
-    return {
-      url: `${FacebookMetaService.BASE_URL}?${params}`,
-      options: {
-        method: 'GET',
-        headers: {
-          'x-rapidapi-key': FacebookMetaService.API_KEY!,
-          'x-rapidapi-host': 'meta-ad-library.p.rapidapi.com'
-        }
+    const averageCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+
+    // Generate performance metrics
+    const adPerformance: AdPerformanceMetric[] = [
+      {
+        metric: 'Click-Through Rate',
+        description: `Average CTR across all ads: ${averageCTR.toFixed(2)}%`,
+        score: Math.min(averageCTR * 20, 100), // Scale CTR to 0-100
+        value: `${averageCTR.toFixed(2)}%`
+      },
+      {
+        metric: 'Total Reach',
+        description: `Total number of unique users reached: ${totalReach.toLocaleString()}`,
+        score: Math.min((totalReach / 10000) * 100, 100), // Scale based on reach
+        value: totalReach.toLocaleString()
+      },
+      {
+        metric: 'Cost Efficiency',
+        description: `Average cost per click: $${(totalSpend / totalClicks).toFixed(2)}`,
+        score: Math.min(100 - ((totalSpend / totalClicks) * 20), 100), // Lower CPC = higher score
+        value: `$${(totalSpend / totalClicks).toFixed(2)}`
       }
-    };
-  }
+    ];
 
-  private transformAdData(rawAd: any): FacebookAd {
-    try {
-      logDebug('Transforming ad data:', rawAd.adid);
-      
-      // Destructure with default values
-      const {
-        adid = '',
-        adArchiveID = '',
-        pageID = '',
-        pageName = '',
-        currency = '',
-        startDate = Date.now() / 1000,
-        endDate = Date.now() / 1000,
-        entityType = '',
-        isActive = false,
-        snapshot = {}
-      } = rawAd;
-
-      // Transform snapshot data
-      const transformedSnapshot: AdSnapshot = {
-        ad_creative_id: snapshot.ad_creative_id || '',
-        body: {
-          text: snapshot.body?.text || ''
-        },
-        caption: snapshot.caption || '',
-        cards: Array.isArray(snapshot.cards) 
-          ? snapshot.cards.map(this.transformCard)
-          : [],
-        page_name: snapshot.page_name || '',
-        page_like_count: snapshot.page_like_count || 0,
-        page_profile_picture_url: snapshot.page_profile_picture_url || '',
-        creation_time: snapshot.creation_time || Date.now() / 1000,
-        instagram_actor_name: snapshot.instagram_actor_name,
-        instagram_profile_pic_url: snapshot.instagram_profile_pic_url
-      };
-
-      return {
-        adid,
-        adArchiveID,
-        pageID,
-        pageName,
-        currency,
-        startDate,
-        endDate,
-        entityType,
-        isActive,
-        snapshot: transformedSnapshot
-      };
-    } catch (error) {
-      logError('Error transforming ad data:', error);
-      throw new APIError('Failed to transform ad data', 500, 'TRANSFORM_ERROR');
-    }
-  }
-
-  private transformCard(card: any): AdCard {
-    return {
-      body: card.body || '',
-      caption: card.caption || null,
-      cta_text: card.cta_text || '',
-      cta_type: card.cta_type || '',
-      title: card.title || '',
-      link_url: card.link_url || '',
-      video_preview_image_url: card.video_preview_image_url,
-      video_sd_url: card.video_sd_url,
-      video_hd_url: card.video_hd_url
-    };
-  }
-
-  public async fetchAds(query: string): Promise<FacebookMetaData> {
-    try {
-      this.validateApiKey();
-      
-      const cacheKey = this.getCacheKey(query);
-      const cachedData = this.cache.get(cacheKey);
-      
-      if (cachedData && this.isValidCache(cachedData.timestamp)) {
-        logInfo('Cache hit for query:', query);
-        return cachedData.data;
+    // Group ads by campaign for competitor analysis
+    const campaignGroups = ads.reduce((groups, ad) => {
+      const campaignId = ad.campaign?.id || 'unknown';
+      if (!groups[campaignId]) {
+        groups[campaignId] = [];
       }
+      groups[campaignId].push(ad);
+      return groups;
+    }, {} as Record<string, FacebookAd[]>);
 
-      logInfo('Fetching ads for query:', query);
-      const { url, options } = this.getRequestOptions(query);
-      
-      const response = await fetch(url, options);
-      
-      if (!response.ok) {
-        throw new APIError(
-          `API request failed: ${response.statusText}`,
-          response.status,
-          'API_ERROR'
-        );
-      }
+    // Generate competitor analysis
+    const competitors = Object.entries(campaignGroups)
+      .map(([_, campaignAds]) => {
+        const campaign = campaignAds[0].campaign;
+        if (!campaign) return null;
 
-      const rawData = await response.json();
-      const ads = Array.isArray(rawData) ? rawData : [];
-      
-      const metaData: FacebookMetaData = {
-        rawData: {
-          data: ads.map(ad => this.transformAdData(ad)),
-          total_count: ads.length
-        },
-        analysis: await this.generateAnalysis(query, ads)
-      };
+        const campaignSpend = campaignAds.reduce((sum, ad) => 
+          sum + (parseFloat(ad.insights?.spend || '0')), 0);
+        const campaignClicks = campaignAds.reduce((sum, ad) => 
+          sum + (parseFloat(ad.insights?.clicks || '0')), 0);
+        const campaignImpressions = campaignAds.reduce((sum, ad) => 
+          sum + (parseFloat(ad.insights?.impressions || '0')), 0);
 
-      this.cache.set(cacheKey, {
-        data: metaData,
-        timestamp: Date.now()
-      });
-
-      return metaData;
-
-    } catch (error) {
-      logError('Error fetching ads:', error);
-      
-      if (error instanceof APIError) {
-        throw error;
-      }
-      
-      throw new APIError(
-        error instanceof Error ? error.message : 'Unknown error occurred',
-        500,
-        'UNKNOWN_ERROR'
-      );
-    }
-  }
-
-  private async generateAnalysis(query: string, ads: any[]): Promise<AdAnalysisSummary> {
-    // Default analysis for empty or failed requests
-    const defaultAnalysis: AdAnalysisSummary = {
-      overview: 'No data available for analysis.',
-      adPerformance: [],
-      competitors: [],
-      recommendations: []
-    };
-
-    if (!ads.length) {
-      return defaultAnalysis;
-    }
-
-    try {
-      // Simplified analysis based on available data
-      const competitors = new Map<string, number>();
-      ads.forEach(ad => {
-        const count = competitors.get(ad.pageName) || 0;
-        competitors.set(ad.pageName, count + 1);
-      });
-
-      const topCompetitors = Array.from(competitors.entries())
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 3)
-        .map(([name, count]) => ({
-          name,
-          analysis: `Running ${count} ads in this category`,
-          adCount: count,
+        return {
+          name: campaign.name,
+          analysis: `Campaign performance analysis for ${campaign.name}`,
+          adCount: campaignAds.length,
           estimatedSpend: {
-            min: count * 100,
-            max: count * 1000
+            min: campaignSpend * 0.9,
+            max: campaignSpend * 1.1
+          },
+          performance: {
+            ctr: campaignImpressions > 0 ? (campaignClicks / campaignImpressions) * 100 : 0,
+            cpc: campaignClicks > 0 ? campaignSpend / campaignClicks : 0,
+            reach: parseFloat(campaignAds[0].insights?.reach || '0')
           }
-        }));
+        };
+      })
+      .filter((c): c is CompetitorAnalysis => c !== null)
+      .sort((a, b) => b.estimatedSpend.max - a.estimatedSpend.max)
+      .slice(0, 3);
 
-      return {
-        overview: `Analysis of ${ads.length} ads for "${query}"`,
-        adPerformance: [
-          {
-            metric: 'Active Campaigns',
-            description: 'Number of currently running ad campaigns',
-            score: (ads.filter(ad => ad.isActive).length / ads.length) * 100
-          }
-        ],
-        competitors: topCompetitors,
-        recommendations: [
-          'Review competitor ad content for insights',
-          'Consider adjusting campaign timing',
-          'Optimize ad creative based on top performers'
-        ]
-      };
-
-    } catch (error) {
-      logError('Error generating analysis:', error);
-      return defaultAnalysis;
-    }
+    return {
+      overview: `Analysis of ${ads.length} ads across ${Object.keys(campaignGroups).length} campaigns`,
+      adPerformance,
+      competitors,
+      recommendations: [
+        'Optimize campaigns with high CTR but low reach',
+        'Review and adjust bidding strategy for underperforming ads',
+        'Consider expanding budget for best performing campaigns'
+      ],
+      totalSpend,
+      totalReach,
+      averageCTR
+    };
   }
 
-  public clearCache(): void {
+  public clearCache() {
     this.cache.clear();
-    logInfo('Cache cleared');
   }
 }
 
-// React Hook
-export const useFacebookMetaStore = () => {
-  const [metaData, setMetaData] = useState<FacebookMetaData | null>(null);
+// React Hook for using the service
+export const useFacebookAdsStore = () => {
+  const [adsData, setAdsData] = useState<FacebookAdsData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const getMetaData = async (query: string) => {
+  const getAdsData = async (adAccountId: string, accessToken: string) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const service = FacebookMetaService.getInstance();
-      const result = await service.fetchAds(query);
-      setMetaData(result);
+      const service = FacebookAdsService.getInstance();
+      service.setAccessToken(accessToken);
+      const result = await service.getAdAccountAds(adAccountId);
+      setAdsData(result);
     } catch (error) {
-      const errorMessage = error instanceof APIError 
-        ? `${error.code}: ${error.message}`
-        : "An unknown error occurred";
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
       setError(errorMessage);
-      logError('Error in hook:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const clearMetaData = () => {
-    setMetaData(null);
+  const clearAdsData = () => {
+    setAdsData(null);
     setError(null);
-    FacebookMetaService.getInstance().clearCache();
+    FacebookAdsService.getInstance().clearCache();
   };
 
   return {
-    metaData,
-    getMetaData,
-    clearMetaData,
+    adsData,
+    getAdsData,
+    clearAdsData,
     isLoading,
     error
   };
 };
 
 // Helper function for direct API access
-export const fetchAndProcessMetaData = async (query: string): Promise<FacebookMetaData | null> => {
-  const service = FacebookMetaService.getInstance();
-  return await service.fetchAds(query);
+export const fetchAndProcessAdsData = async (
+  adAccountId: string, 
+  accessToken: string
+): Promise<FacebookAdsData | null> => {
+  const service = FacebookAdsService.getInstance();
+  service.setAccessToken(accessToken);
+  return await service.getAdAccountAds(adAccountId);
 };
