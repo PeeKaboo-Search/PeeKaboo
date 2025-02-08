@@ -1,234 +1,210 @@
-import React, { useState, useEffect } from 'react';
-import { RedditAnalysisService } from 'app/api/redditAnalysis';
-import { RedditPost } from 'app/types/index';
-import '@/app/styles/reddit-analysis.css';
+"use client";
+import React, { useEffect, useState, Suspense, lazy } from "react";
+import { fetchRedditResults } from "@/app/api/redditAnalysis";
+import { TrendingUp, Award, Lightbulb, Activity } from "lucide-react";
+import { Progress } from "@/app/components/ui/progress";
+import "@/app/styles/reddit-analysis.css";
 
-// Extended interfaces with improved type definitions
-interface ExtendedRedditPost extends RedditPost {
-  sentiment?: number;
+interface Trend {
+  title: string;
+  description: string;
+  percentage: number;
 }
 
-interface RedditAnalysisResponse {
-  success: boolean;
-  data?: {
-    analysis: string;
-    themes?: string[];
-    rawPosts: ExtendedRedditPost[];
-    timestamp: string;
-  };
-  error?: string;
+interface Competitor {
+  name: string;
+  strength: string;
+  score: number;
 }
 
-interface RedditAnalysisProps {
+interface AnalyticsSummary {
+  overview: string;
+  trends: Trend[];
+  competitors: Competitor[];
+  opportunities: string[];
+}
+
+interface RedditResult {
+  title: string;
+  subreddit: string;
+  snippet: string;
+  link?: string;
+}
+
+interface RedditAnalyticsProps {
   query: string;
-  className?: string;
-  postBodyMaxLength?: number;
 }
 
-interface AnalysisState {
-  loading: boolean;
-  error?: string;
-  data?: {
-    analysis: string;
-    themes: string[];
-    rawPosts: ExtendedRedditPost[];
-    timestamp: string;
-  };
-}
-
-// Utility function to truncate text
-const truncateText = (text: string, maxLength: number = 200): string => {
-  if (!text) return '';
-  return text.length <= maxLength 
-    ? text 
-    : text.substring(0, maxLength) + '...';
-};
-
-// Sentiment Indicator Component
-const SentimentIndicator: React.FC<{ sentiment?: number }> = ({ sentiment = 0 }) => {
-  const normalizedSentiment = Math.max(-1, Math.min(1, sentiment));
-  const position = ((normalizedSentiment + 1) / 2) * 100;
-
-  return (
-    <div className="sentiment-indicator-wrapper">
-      <div 
-        className="sentiment-indicator" 
-        style={{
-          background: `linear-gradient(to right, 
-            #FF6B6B ${position < 50 ? position : 50}%, 
-            #4ADE80 ${position > 50 ? position : 50}%)`
-        }}
-      >
-        <span 
-          className="sentiment-marker" 
-          style={{ 
-            left: `${position}%`,
-          }} 
-        />
-      </div>
-    </div>
-  );
-};
-
-// Themes Display Component
-const ThemesDisplay: React.FC<{ themes?: string[] }> = ({ themes = [] }) => {
-  if (themes.length === 0) return null;
-
-  return (
-    <div className="themes-container">
-      <h3>Key Themes</h3>
-      <div className="themes-grid">
-        {themes.map((theme, index) => (
-          <div 
-            key={`theme-${index}`} 
-            className="theme-chip"
-          >
-            {theme}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// Main Reddit Analytics Component
-const RedditAnalytics: React.FC<RedditAnalysisProps> = ({ 
-  query, 
-  className = '', 
-  postBodyMaxLength = 200 
-}) => {
-  const [analysisState, setAnalysisState] = useState<AnalysisState>({
-    loading: true,
-    data: undefined
-  });
-
-  useEffect(() => {
-    const fetchAnalysis = async () => {
-      if (!query) return;
-
-      setAnalysisState(prev => ({ ...prev, loading: true }));
-
-      try {
-        const result: RedditAnalysisResponse = await RedditAnalysisService.analyzeRedditData(query);
-        
-        if (result.success && result.data) {
-          setAnalysisState({
-            loading: false,
-            data: {
-              analysis: result.data.analysis || '',
-              themes: result.data.themes || [],
-              rawPosts: result.data.rawPosts || [],
-              timestamp: result.data.timestamp || new Date().toISOString()
-            }
-          });
-        } else {
-          setAnalysisState({
-            loading: false,
-            error: result.error || 'Unknown error occurred',
-            data: undefined
-          });
-        }
-      } catch (error) {
-        setAnalysisState({
-          loading: false,
-          error: error instanceof Error ? error.message : 'Failed to analyze Reddit data',
-          data: undefined
-        });
-      }
-    };
-
-    fetchAnalysis();
-  }, [query]);
-
-  // Loading State
-  if (analysisState.loading) {
-    return (
-      <div className={`reddit-analytics-loader ${className}`}>
-        <div className="loader-content">
-          <div className="spinner" />
-          <p>Analyzing Reddit data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error State
-  if (analysisState.error) {
-    return (
-      <div className={`reddit-analytics-error ${className}`}>
-        <div className="error-container">
-          <h2>Analysis Error</h2>
-          <p>{analysisState.error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Ensure data is defined before rendering
-  if (!analysisState.data) {
-    return null;
-  }
-
-  const { data } = analysisState;
-
-  return (
-    <div className="reddit-analytics-container">
-      {/* Analysis Overview */}
-      <section className="analysis-overview">
-        <h2>Reddit Analysis</h2>
-        <div 
-          className="analysis-content" 
-          dangerouslySetInnerHTML={{ __html: data.analysis }}
-        />
-      </section>
-
-      {/* Themes */}
-      <ThemesDisplay themes={data.themes} />
-
-      {/* Posts Section */}
-      <section className="posts-section">
-        <h2>Source Posts</h2>
-        <div className="posts-grid">
-          {data.rawPosts.map((post, index) => (
-            <article 
-              key={`post-${index}`} 
-              className="post-card"
-            >
-              <header className="post-header">
-                <h3>{truncateText(post.title, 100)}</h3>
-                <span className="post-subreddit">
-                  r/{post.subreddit}
-                </span>
-              </header>
-
-              <SentimentIndicator sentiment={post.sentiment} />
-
-              <div className="post-stats">
-                <div className="stat upvotes">
-                  <span>↑ {post.upvotes}</span>
-                </div>
-                <div className="stat comments">
-                  <span>💬 {post.comments}</span>
-                </div>
+// Lazy loaded content wrapper
+const AnalyticsContent = lazy(() => Promise.resolve({
+  default: ({
+    summary,
+    results
+  }: {
+    summary: AnalyticsSummary;
+    results: RedditResult[];
+  }) => {
+    const renderTrendsSection = () => (
+      <section className="analytics-section trends">
+        <h2>
+          <TrendingUp className="section-icon" />
+          Community Trends
+        </h2>
+        <div className="analytics-grid">
+          {summary.trends.map((trend, index) => (
+            <div key={index} className="analytics-card glass-card">
+              <div>
+                <h3 dangerouslySetInnerHTML={{ __html: trend.title }} />
+                <p dangerouslySetInnerHTML={{ __html: trend.description }} />
               </div>
-
-              {/* Ensure body is visible with truncated text */}
-              {post.body && (
-                <div className="post-body-container">
-                  <p className="post-body">
-                    {truncateText(post.body, postBodyMaxLength)}
-                  </p>
-                </div>
-              )}
-            </article>
+              <div className="analytics-progress-container">
+                <Progress value={trend.percentage} className="custom-progress" />
+                <span className="analytics-percentage">{trend.percentage}%</span>
+              </div>
+            </div>
           ))}
         </div>
       </section>
+    );
 
-      {/* Timestamp */}
-      <div className="analysis-timestamp">
-        Last updated: {new Date(data.timestamp).toLocaleString()}
+    const renderCompetitorsSection = () => (
+      <section className="analytics-section competitors">
+        <h2>
+          <Award className="section-icon" />
+          Community Discussions
+        </h2>
+        <div className="analytics-grid">
+          {summary.competitors.map((competitor, index) => (
+            <div key={index} className="analytics-card glass-card">
+              <div>
+                <h3 dangerouslySetInnerHTML={{ __html: competitor.name }} />
+                <p dangerouslySetInnerHTML={{ __html: competitor.strength }} />
+              </div>
+              <div className="analytics-progress-container">
+                <Progress value={competitor.score} className="custom-progress" />
+                <span className="analytics-percentage">{competitor.score}%</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+
+    const renderOpportunitiesSection = () => (
+      <section className="analytics-section opportunities">
+        <h2>
+          <Lightbulb className="section-icon" />
+          Community Engagement Opportunities
+        </h2>
+        <div className="analytics-grid">
+          {summary.opportunities.map((opportunity, index) => (
+            <div key={index} className="analytics-card glass-card">
+              <p dangerouslySetInnerHTML={{ __html: opportunity }} />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+
+    const renderSourceDataSection = () => (
+      <section className="analytics-section source-data">
+        <h2>
+          <Activity className="section-icon" />
+          Reddit Discussion Data
+        </h2>
+        <div className="analytics-grid">
+          {results.map((result, index) => (
+            <a
+              key={index}
+              href={result.link}
+              className="analytics-card glass-card"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <h3 dangerouslySetInnerHTML={{ __html: result.title }} />
+              <p className="subreddit-label">{result.subreddit}</p>
+              <p dangerouslySetInnerHTML={{ __html: result.snippet }} />
+            </a>
+          ))}
+        </div>
+      </section>
+    );
+
+    return (
+      <div className="analytics-content">
+        <section className="analytics-overview">
+          <div dangerouslySetInnerHTML={{ __html: summary.overview }} />
+        </section>
+        {renderTrendsSection()}
+        {renderCompetitorsSection()}
+        {renderOpportunitiesSection()}
+        {renderSourceDataSection()}
       </div>
+    );
+  }
+}));
+
+const LoadingSpinner = () => (
+  <div className="analytics-loader">
+    {Array.from({ length: 4 }).map((_, i) => (
+      <div key={i} className="analytics-loader__item" />
+    ))}
+  </div>
+);
+
+const RedditAnalytics: React.FC<RedditAnalyticsProps> = ({ query }) => {
+  const [results, setResults] = useState<RedditResult[]>([]);
+  const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!query.trim()) {
+        setError("Please provide a Reddit search query");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const response = await fetchRedditResults(query);
+        if (response) {
+          setResults(response.results);
+          setSummary(response.summary);
+          setError(null);
+        } else {
+          setError("No Reddit insights found");
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to fetch Reddit data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [query]);
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (error) {
+    return <div className="analytics-error">{error}</div>;
+  }
+
+  return (
+    <div className="analytics-container">
+      <header className="analytics-header">
+        <h1>Reddit Community Insights Dashboard</h1>
+        <p className="query-text">Community Analysis for: {query}</p>
+      </header>
+      {summary && (
+        <Suspense fallback={<LoadingSpinner />}>
+          <AnalyticsContent summary={summary} results={results} />
+        </Suspense>
+      )}
     </div>
   );
 };
