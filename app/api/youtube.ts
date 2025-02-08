@@ -1,141 +1,205 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { z } from 'zod';
 
-// Zod schemas to replace imported types and provide type safety
-const YouTubeVideoSnippetSchema = z.object({
-  title: z.string(),
-  description: z.string(),
-  thumbnails: z.object({
-    default: z.object({
-      url: z.string(),
-      width: z.number().optional(),
-      height: z.number().optional()
-    }),
-    medium: z.object({
-      url: z.string(),
-      width: z.number().optional(),
-      height: z.number().optional()
-    }),
-    high: z.object({
-      url: z.string(),
-      width: z.number().optional(),
-      height: z.number().optional()
+// Rate limiting configuration
+const RETRY_DELAY = 2000; // 2 seconds
+const MAX_RETRIES = 3;
+
+// Comment schema definition
+const YouTubeCommentSchema = z.object({
+  snippet: z.object({
+    topLevelComment: z.object({
+      snippet: z.object({
+        textDisplay: z.string(),
+        textOriginal: z.string(),
+        authorDisplayName: z.string(),
+        authorProfileImageUrl: z.string().optional(),
+        authorChannelUrl: z.string().optional(),
+        likeCount: z.number(),
+        publishedAt: z.string(),
+      })
     })
-  }),
-  channelTitle: z.string(),
-  publishedAt: z.string()
+  })
 });
 
-const VideoStatisticsSchema = z.object({
-  viewCount: z.string(),
-  likeCount: z.string().optional(),
-  commentCount: z.string().optional()
-});
-
-const YouTubeSearchItemSchema = z.object({
-  id: z.object({
-    videoId: z.string()
-  }),
-  snippet: YouTubeVideoSnippetSchema
-});
-
-const YouTubeStatisticsItemSchema = z.object({
-  id: z.string(),
-  statistics: VideoStatisticsSchema
-});
-
-const YouTubeSearchResponseSchema = z.object({
-  items: z.array(YouTubeSearchItemSchema),
+const YouTubeCommentsResponseSchema = z.object({
+  items: z.array(YouTubeCommentSchema),
   nextPageToken: z.string().optional(),
-  prevPageToken: z.string().optional()
+  pageInfo: z.object({
+    totalResults: z.number(),
+    resultsPerPage: z.number()
+  })
 });
 
-const YouTubeStatisticsResponseSchema = z.object({
-  items: z.array(YouTubeStatisticsItemSchema)
-});
+// Type definitions
+type YouTubeComment = z.infer<typeof YouTubeCommentSchema>;
+type YouTubeCommentsResponse = z.infer<typeof YouTubeCommentsResponseSchema>;
 
-// Type aliases to replace imported types and satisfy ESLint
-type YouTubeVideo = z.infer<typeof YouTubeSearchItemSchema>;
-type VideoStatistics = z.infer<typeof VideoStatisticsSchema>;
-type YouTubeSearchResponse = z.infer<typeof YouTubeSearchResponseSchema>;
-type YouTubeStatisticsResponse = z.infer<typeof YouTubeStatisticsResponseSchema>;
-
-const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
-const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
-
-class ApiError extends Error {
-  code: string;
-  constructor(message: string, code: string) {
+// Error class with specific codes
+class YouTubeApiError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public status?: number,
+    public retryable: boolean = false
+  ) {
     super(message);
-    this.code = code;
+    this.name = 'YouTubeApiError';
   }
 }
 
-export async function searchYouTubeVideos(query: string, pageToken?: string): Promise<YouTubeSearchResponse> {
-  if (!YOUTUBE_API_KEY) {
-    throw new ApiError('YouTube API key is not configured', 'CONFIG_ERROR');
+// Request tracking for rate limiting
+const requestTracker = {
+  lastRequest: 0,
+  requestCount: 0,
+  reset(): void {
+    this.requestCount = 0;
+    this.lastRequest = Date.now();
+  },
+  canMakeRequest(): boolean {
+    const now = Date.now();
+    if (now - this.lastRequest >= 60000) { // Reset after 1 minute
+      this.reset();
+      return true;
+    }
+    return this.requestCount < 5; // Max 5 requests per minute
+  },
+  trackRequest(): void {
+    this.requestCount++;
+    this.lastRequest = Date.now();
+  }
+};
+
+interface CommentsFetchOptions {
+  maxResults?: number;
+  pageToken?: string;
+}
+
+// Helper function to delay execution
+const delay = (ms: number): Promise<void> => 
+  new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper function to determine if error is retryable
+const isRetryableError = (error: any): boolean => {
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status;
+    return status === 429 || status === 503 || status === 500;
+  }
+  return false;
+};
+
+// Main fetch function with retries and rate limiting
+export async function fetchVideoComments(
+  videoId: string,
+  options: CommentsFetchOptions = {},
+  retryCount: number = 0
+): Promise<{
+  comments: Array<{
+    text: string;
+    author: string;
+    authorImage?: string;
+    authorChannel?: string;
+    likes: number;
+    publishedDate: string;
+  }>;
+  nextPageToken?: string;
+  totalResults: number;
+}> {
+  const RAPID_API_KEY = process.env.NEXT_PUBLIC_RAPID_YT_API_KEY;
+  const RAPID_API_HOST = 'youtube-api-full.p.rapidapi.com';
+
+  if (!RAPID_API_KEY) {
+    throw new YouTubeApiError(
+      'RapidAPI key is not configured',
+      'CONFIG_ERROR',
+      undefined,
+      false
+    );
+  }
+
+  // Check rate limiting
+  if (!requestTracker.canMakeRequest()) {
+    const waitTime = 60000 - (Date.now() - requestTracker.lastRequest);
+    await delay(waitTime);
   }
 
   try {
-    const response = await axios.get(`${YOUTUBE_API_BASE}/search`, {
+    requestTracker.trackRequest();
+
+    const response = await axios.get('https://youtube-api-full.p.rapidapi.com/video/comments', {
       params: {
-        part: 'snippet',
-        type: 'video',
-        maxResults: '8',
-        q: query,
-        pageToken,
-        key: YOUTUBE_API_KEY
-      }
+        id: "tmrdRJo540w",
+        maxResults: options.maxResults || 20,
+        pageToken: options.pageToken || '',
+        textFormat: 'plainText'
+      },
+      headers: {
+        'x-rapidapi-key': RAPID_API_KEY,
+        'x-rapidapi-host': RAPID_API_HOST
+      },
+      timeout: 10000 // 10 second timeout
     });
 
-    // Validate the response
-    return YouTubeSearchResponseSchema.parse(response.data);
+    const validatedResponse = YouTubeCommentsResponseSchema.parse(response.data);
+
+    return {
+      comments: validatedResponse.items.map(item => ({
+        text: item.snippet.topLevelComment.snippet.textOriginal,
+        author: item.snippet.topLevelComment.snippet.authorDisplayName,
+        authorImage: item.snippet.topLevelComment.snippet.authorProfileImageUrl,
+        authorChannel: item.snippet.topLevelComment.snippet.authorChannelUrl,
+        likes: item.snippet.topLevelComment.snippet.likeCount,
+        publishedDate: item.snippet.topLevelComment.snippet.publishedAt
+      })),
+      nextPageToken: validatedResponse.nextPageToken,
+      totalResults: validatedResponse.pageInfo.totalResults
+    };
+
   } catch (error) {
-    console.error('YouTube search error:', error);
-    throw new ApiError(
-      'Failed to fetch YouTube videos',
-      error instanceof Error ? error.message : 'SEARCH_ERROR'
-    );
-  }
-}
+    // Handle specific error types
+    if (error instanceof z.ZodError) {
+      throw new YouTubeApiError(
+        'Invalid response format from YouTube API',
+        'PARSE_ERROR',
+        undefined,
+        false
+      );
+    }
 
-export async function getVideoStatistics(videoIds: string[]): Promise<Record<string, VideoStatistics>> {
-  if (!YOUTUBE_API_KEY) {
-    throw new ApiError('YouTube API key is not configured', 'CONFIG_ERROR');
-  }
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const retryable = isRetryableError(error);
 
-  try {
-    const response = await axios.get(
-      `${YOUTUBE_API_BASE}/videos`,
-      {
-        params: {
-          part: 'statistics',
-          id: videoIds.join(','),
-          key: YOUTUBE_API_KEY
+      // Handle rate limiting
+      if (status === 429) {
+        if (retryCount < MAX_RETRIES) {
+          await delay(RETRY_DELAY * (retryCount + 1));
+          return fetchVideoComments(videoId, options, retryCount + 1);
         }
       }
-    );
 
-    // Validate the response
-    const validatedResponse = YouTubeStatisticsResponseSchema.parse(response.data);
+      throw new YouTubeApiError(
+        error.response?.data?.message || 'Failed to fetch comments',
+        status === 429 ? 'RATE_LIMIT_ERROR' : 'API_ERROR',
+        status,
+        retryable
+      );
+    }
 
-    return validatedResponse.items.reduce((acc, item) => {
-      acc[item.id] = item.statistics;
-      return acc;
-    }, {} as Record<string, VideoStatistics>);
-  } catch (error) {
-    console.error('Statistics fetch error:', error);
-    throw new ApiError(
-      'Failed to fetch video statistics',
-      error instanceof Error ? error.message : 'STATS_ERROR'
+    // Handle unknown errors
+    throw new YouTubeApiError(
+      'An unexpected error occurred',
+      'UNKNOWN_ERROR',
+      undefined,
+      false
     );
   }
 }
 
-// Expose types to satisfy ESLint
-export type { 
-  YouTubeVideo, 
-  VideoStatistics, 
-  YouTubeSearchResponse, 
-  YouTubeStatisticsResponse 
-};
+// Export types for use in components
+export type { YouTubeComment, YouTubeCommentsResponse };
+
+// Interval to reset request tracker
+setInterval(() => {
+  requestTracker.reset();
+}, 60000); // Reset every minute
