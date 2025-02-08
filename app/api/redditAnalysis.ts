@@ -1,216 +1,148 @@
-import { RedditPost, AnalysisResult } from '../types';
-
-interface GroqResponse {
-  choices?: Array<{
-    message?: {
-      content: string;
-    };
-  }>;
+export interface RedditResult {
+  title: string;
+  subreddit: string;
+  snippet: string;
+  link?: string;
 }
 
-interface RedditApiResponse {
-  kind: string;
-  data: {
-    children: Array<{
-      kind: string;
-      data: {
-        title: string;
-        subreddit: string;
-        ups: number;
-        num_comments: number;
-        selftext: string;
-        url?: string;
-      };
-    }>;
-  };
+export interface Trend {
+  title: string;
+  description: string;
+  percentage: number;
 }
 
-export class RedditAnalysisService {
-  private static readonly GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-  private static readonly REDDIT_API_URL = 'https://oauth.reddit.com';
+export interface Competitor {
+  name: string;
+  strength: string;
+  score: number;
+}
 
-  private static async getRedditToken(): Promise<string> {
-    try {
-      const auth = Buffer.from(
-        `${process.env.NEXT_PUBLIC_REDDIT_CLIENT_ID}:${process.env.NEXT_PUBLIC_REDDIT_CLIENT_SECRET}`
-      ).toString('base64');
-      const response = await fetch('https://www.reddit.com/api/v1/access_token', {
-        method: 'POST',
-        headers: {
-          Authorization: `Basic ${auth}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: 'grant_type=client_credentials',
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to get Reddit token: ${response.status}`);
-      }
-      const data = await response.json();
-      return data.access_token;
-    } catch (error) {
-      console.error('Error getting Reddit token:', error);
-      throw new Error('Failed to authenticate with Reddit');
+export interface AnalyticsSummary {
+  overview: string;
+  trends: Trend[];
+  competitors: Competitor[];
+  opportunities: string[];
+}
+
+export const fetchRedditResults = async (
+  query: string
+): Promise<{ results: RedditResult[]; summary: AnalyticsSummary } | null> => {
+  try {
+    const redditClientId = process.env.NEXT_PUBLIC_REDDIT_CLIENT_ID;
+    const redditClientSecret = process.env.NEXT_PUBLIC_REDDIT_CLIENT_SECRET;
+    const groqApiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+
+    if (!redditClientId || !redditClientSecret || !groqApiKey) {
+      throw new Error("API keys are missing. Check environment variables.");
     }
-  }
 
-  private static async fetchRedditPosts(query: string, token: string): Promise<RedditPost[]> {
+    // Fetch Reddit Authentication Token
+    const authResponse = await fetch('https://www.reddit.com/api/v1/access_token', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`${redditClientId}:${redditClientSecret}`).toString('base64')}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'grant_type=client_credentials',
+    });
+
+    if (!authResponse.ok) {
+      throw new Error(`Reddit Authentication error: ${authResponse.status}`);
+    }
+
+    const authData = await authResponse.json();
+    const accessToken = authData.access_token;
+
+    // Fetch Reddit Search Results
     const subreddits = ['technology', 'products', 'business', 'marketing'];
-    const posts: RedditPost[] = [];
-    try {
-      const relevantSubreddits = subreddits.slice(0, 2);
-      for (const subreddit of relevantSubreddits) {
-        const response = await fetch(
-          `${this.REDDIT_API_URL}/r/${subreddit}/search?q=${encodeURIComponent(query)}&limit=10&sort=relevance&t=year`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'User-Agent': 'RedditAnalytics/1.0',
-            },
-          }
-        );
-        if (!response.ok) continue;
-        const data: RedditApiResponse = await response.json();
-        
-        if (data?.data?.children && Array.isArray(data.data.children)) {
-          const topPosts = data.data.children
-            .filter(child => child?.data && typeof child.data === 'object' && child.data.selftext)
-            .sort((a, b) => (b.data.ups + b.data.num_comments) - (a.data.ups + a.data.num_comments))
-            .slice(0, 5)  // Increased to 5 to provide more context
-            .map(child => ({
-              title: child.data.title || 'No Title',
-              subreddit: child.data.subreddit || subreddit,
-              upvotes: child.data.ups || 0,
-              comments: child.data.num_comments || 0,
-              body: this.truncateText(child.data.selftext, 500), // Increased body text length
-              url: child.data.url, // Added URL for potential additional context
-            }));
-          posts.push(...topPosts);
+    const results: RedditResult[] = [];
+
+    for (const subreddit of subreddits.slice(0, 2)) {
+      const searchResponse = await fetch(
+        `https://oauth.reddit.com/r/${subreddit}/search?q=${encodeURIComponent(query)}&limit=5&sort=relevance&t=year`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'User-Agent': 'RedditAnalytics/1.0',
+          },
         }
-      }
-      return posts;
-    } catch (error) {
-      console.error('Error fetching Reddit posts:', error);
-      throw new Error('Failed to fetch Reddit posts');
-    }
-  }
+      );
 
-  // Utility method to truncate text safely
-  private static truncateText(text: string, maxLength: number): string {
-    if (!text) return '';
-    // Ensure we don't cut words mid-way
-    if (text.length <= maxLength) return text;
-    
-    const truncated = text.substring(0, maxLength);
-    return truncated.substring(0, Math.min(truncated.length, truncated.lastIndexOf(' '))) + '...';
-  }
+      if (!searchResponse.ok) continue;
 
-  public static async analyzeRedditData(query: string): Promise<AnalysisResult> {
-    try {
-      const token = await this.getRedditToken();
-      const redditPosts = await this.fetchRedditPosts(query, token);
+      const searchData = await searchResponse.json();
       
-      // Detailed context with HTML structure template for Groq
-      const context = `
-      Analyze these Reddit posts about ${query} using a structured HTML output. 
-      Follow these guidelines strictly:
+      const subredditResults = searchData.data.children
+        .filter((post: any) => post.data.selftext)
+        .map((post: any) => ({
+          title: post.data.title || "No title available",
+          subreddit: post.data.subreddit || subreddit,
+          snippet: post.data.selftext.slice(0, 200) + "...",
+          link: post.data.url || "#",
+        }));
 
-      1. REQUIRED HTML STRUCTURE:
-      <div class="reddit-analytics-container">
-        <!-- Sentiment Overview -->
-        <div class="analysis-overview">
-          <h2>Overall Analysis</h2>
-          <div class="sentiment-indicator-wrapper">
-            <div class="sentiment-indicator" style="background: linear-gradient(to right, 
-              var(--color-sentiment-negative) 0%, 
-              var(--color-sentiment-neutral) 50%, 
-              var(--color-sentiment-positive) 100%)">
-              <div class="sentiment-marker" style="left: [0-100]%"></div>
-            </div>
-          </div>
-          <div class="analysis-content">
-            [Summarize key insights, 2-3 sentences]
-          </div>
-        </div>
-
-        <!-- Themes Section -->
-        <div class="themes-grid">
-          <!-- Each theme as a chip -->
-          <div class="theme-chip [sentiment-class]">[Theme Name]</div>
-        </div>
-
-        <!-- Posts Section -->
-        <div class="posts-section">
-          <h2>Key Discussions</h2>
-          <div class="posts-grid">
-            <!-- Post Cards -->
-            <div class="post-card">
-              <div class="post-header">
-                <h3>[Post Title]</h3>
-                <span class="post-subreddit">[Subreddit Name]</span>
-              </div>
-              <div class="post-body">[Full Post Content]</div>
-              <div class="post-stats">
-                <div class="stat">
-                  <span>👍 [Upvotes]</span>
-                  <span>💬 [Comments]</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="analysis-timestamp">
-          Analysis generated: [Current Timestamp]
-        </div>
-      </div>
-
-      ANALYSIS REQUIREMENTS:
-      - Use predefined CSS classes exactly as shown
-      - Sentiment Marker: Place at 0-100% based on overall sentiment
-      - Theme Chips: Add 'positive', 'neutral', or 'negative' class
-      - Provide concise, informative content
-      - Ensure readability and visual clarity
-      `;
-
-      const response = await fetch(this.GROQ_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_RGROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "mixtral-8x7b-32768",
-          messages: [
-            { role: "system", content: context },
-            { role: "user", content: JSON.stringify(redditPosts) }
-          ],
-          temperature: 0.7,
-          max_tokens: 4000, // Increased to accommodate more detailed analysis
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get analysis from Groq API');
-      }
-
-      const data: GroqResponse = await response.json();
-      const analysis = data.choices?.[0]?.message?.content || 
-        "<p>No analysis available. Please try again with a different query.</p>";
-
-      return {
-        success: true,
-        data: {
-          analysis,
-          rawPosts: redditPosts.slice(0, 3), // Matching the previous implementation
-          timestamp: new Date().toISOString(),
-        }
-      };
-    } catch (error) {
-      console.error("Error in analyzeRedditData:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-      };
+      results.push(...subredditResults);
     }
+
+    if (results.length === 0) {
+      throw new Error("No results found from Reddit Search API.");
+    }
+
+    // Groq API Analysis Context
+    const context = `You are a social media research specialist. Analyze these Reddit search results and provide a structured analysis in JSON format:
+    {
+      "overview": "A brief HTML-formatted overview analyzing community discussions and trends",
+      "trends": [
+        {
+          "title": "Community trend or discussion pattern",
+          "description": "HTML-formatted description of the trend's significance",
+          "percentage": number (0-100 indicating trend strength)
+        }
+      ],
+      "competitors": [
+        {
+          "name": "Competing brand/community",
+          "strength": "HTML-formatted analysis of their social media presence",
+          "score": number (0-100 based on discussion impact)
+        }
+      ],
+      "opportunities": [
+        "HTML-formatted community engagement or content strategy suggestion"
+      ]
+    }
+    Ensure all text fields contain properly formatted HTML.
+    Focus on community sentiment, discussion themes, and engagement strategies.
+    Limit to 3 trends, 3 competitors, and 3 opportunities.`;
+
+    const summaryResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${groqApiKey}`,
+      },
+      body: JSON.stringify({
+        model: "mixtral-8x7b-32768",
+        messages: [
+          { role: "system", content: context },
+          { role: "user", content: JSON.stringify(results.slice(0, 5)) },
+        ],
+        temperature: 0.7,
+        max_tokens: 1500,
+      }),
+    });
+
+    if (!summaryResponse.ok) {
+      throw new Error(`Groq API error: ${summaryResponse.status}`);
+    }
+
+    const summaryData = await summaryResponse.json();
+    const content = summaryData.choices[0].message.content;
+
+    // Validate JSON before parsing
+    const summary: AnalyticsSummary = JSON.parse(content);
+    return { results, summary };
+  } catch (error) {
+    console.error("Error in fetchRedditResults:", error);
+    return null;
   }
-}
+};

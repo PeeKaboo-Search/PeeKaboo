@@ -1,240 +1,204 @@
-/* Vibrant Glassy Color Design System */
+/* Reddit Analytics Vibrant Glassy Color Design System */
 :root {
-  /* Enhanced Color Palette */
-  --color-primary-blue: #3B82F6;     /* Clean, modern blue */
-  --color-sentiment-negative: #EF4444; /* Vibrant red for negative sentiment */
-  --color-sentiment-positive: #16A34A; /* Bright green for positive sentiment */
-  --color-sentiment-neutral: #FBBF24;  /* Warm yellow for neutral sentiment */
-  --color-accent: #2563EB;           /* Deep blue for accents */
+  /* Reddit-Inspired Color Palette */
+  --color-primary-red: #FF4500;      /* Reddit's iconic orange-red */
+  --color-trends-orangered: #FF5700; /* Slightly brighter trend color */
+  --color-discussions-blue: #0079D3; /* Reddit's signature blue */
+  --color-opportunities-green: #46D160; /* Reddit's upvote green */
+  --color-source-purple: #7E53C1;    /* Vibrant purple for source data */
   
   /* Dark Mode Foundations */
-  --background-deep: #0a0a0c;        /* Deepest background */
-  --background-surface: #141417;     /* Base surface level */
-  --background-elevated: #1e1e24;    /* Elevated surface */
+  --background-deep: #0a0a0c;
+  --background-surface: #141417;
+  --background-elevated: #1e1e24;
   
   /* Typography */
-  --font-display: 'Inter', 'SF Pro Display', system-ui, sans-serif;
-  --font-body: 'Inter', 'SF Pro Text', system-ui, sans-serif;
+  --font-display: 'Inter', 'Reddit Sans', system-ui, sans-serif;
+  --font-body: 'Inter', 'Reddit Sans', system-ui, sans-serif;
   
-  /* Translucent Backgrounds */
+  /* Enhanced Translucent Backgrounds */
   --glass-background: rgba(22, 22, 28, 0.5);  /* Increased transparency */
   --glass-border: rgba(255, 255, 255, 0.1);   /* Lighter border */
 }
 
-/* Global Reset and Base Styling */
 body {
   background-color: var(--background-deep);
   color: white;
   font-family: var(--font-body);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
-  margin: 0;
-  padding: 0;
 }
 
-/* Universal Glass Card Style */
-.glass-card,
-.analysis-overview,
-.theme-chip,
-.post-card {
+.analytics-container {
+  width: 100%;
+  max-width: 100%;
+  padding: 2rem;
+  margin: 0;
+}
+
+.analytics-header {
+  text-align: left;
+  margin-bottom: 2.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.analytics-header h1 {
+  font-family: var(--font-display);
+  font-size: 2.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--color-primary-red);
+  margin-bottom: 0.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.query-text {
+  color: rgba(255,255,255,0.6);
+  font-size: 1rem;
+  position: relative;
+  z-index: 2;
+}
+
+.subreddit-label {
+  color: var(--color-discussions-blue);
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+/* Overview Styling */
+.analytics-overview {
+  background: transparent;
+  margin-bottom: 2rem;
+  color: rgba(255,255,255,0.8);
+  font-size: 1.1rem;
+  position: relative;
+  z-index: 2;
+}
+
+/* Section Headings with Reddit-Inspired Colors */
+.trends .analytics-section h2,
+.competitors .analytics-section h2,
+.opportunities .analytics-section h2,
+.source-data .analytics-section h2 {
+  position: relative;
+  z-index: 2;
+}
+
+.trends .analytics-section h2 { color: var(--color-trends-orangered); }
+.competitors .analytics-section h2 { color: var(--color-discussions-blue); }
+.opportunities .analytics-section h2 { color: var(--color-opportunities-green); }
+.source-data .analytics-section h2 { color: var(--color-source-purple); }
+
+/* Enhanced Glass Morphism Cards */
+.glass-card {
   background: var(--glass-background);
-  backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(25px) saturate(400%);
+  -webkit-backdrop-filter: blur(30px) saturate(80%);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
-  transition: all 0.3s ease;
-  position: relative;
-  z-index: 2;
-}
-
-.glass-card:hover,
-.analysis-overview:hover,
-.theme-chip:hover,
-.post-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 15px 30px rgba(0,0,0,0.3);
-}
-
-/* Sentiment Indicator */
-.sentiment-indicator-wrapper {
-  width: 100%;
-  height: 8px;
-  border-radius: 20px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
-  margin: 0.75rem 0;
   position: relative;
-  z-index: 2;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
 }
 
-.sentiment-indicator {
+.glass-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+  backdrop-filter: blur(30px) saturate(200%);
+  -webkit-backdrop-filter: blur(30px) saturate(200%);
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
   width: 100%;
-  height: 100%;
-  position: relative;
-  transition: all 0.3s ease;
-  background: linear-gradient(to right, 
-    var(--color-sentiment-negative) 0%, 
-    var(--color-sentiment-neutral) 50%, 
-    var(--color-sentiment-positive) 100%);
 }
 
-.sentiment-marker {
-  position: absolute;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: white;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 3;
+.analytics-section {
+  margin-bottom: 2.5rem;
 }
 
-/* Themes Display */
-.themes-grid {
+.analytics-section h2 {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-  position: relative;
-  z-index: 2;
-}
-
-.theme-chip {
-  padding: 0.5rem 1rem;
-  color: white;
-  font-size: 0.875rem;
-  cursor: pointer;
-}
-
-.theme-chip:hover {
-  transform: translateY(-4px);
-}
-
-/* Sentiment-specific Theme Chips */
-.theme-chip.positive { 
-  border-color: var(--color-sentiment-positive);
-  color: var(--color-sentiment-positive);
-}
-
-.theme-chip.negative { 
-  border-color: var(--color-sentiment-negative);
-  color: var(--color-sentiment-negative);
-}
-
-.theme-chip.neutral { 
-  border-color: var(--color-sentiment-neutral);
-  color: var(--color-sentiment-neutral);
-}
-
-/* Analysis Overview */
-.analysis-overview {
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.analysis-overview h2,
-.posts-section h2 {
-  color: white;
-  margin-bottom: 1rem;
+  align-items: center;
   font-family: var(--font-display);
   font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  gap: 0.75rem;
   position: relative;
   z-index: 2;
 }
 
-.analysis-content {
-  color: white;
-  line-height: 1.7;
-  position: relative;
-  z-index: 2;
+.section-icon {
+  opacity: 0.7;
+  stroke-width: 2px;
 }
 
-/* Posts Section */
-.posts-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-  position: relative;
-  z-index: 2;
-}
+.trends .section-icon { color: var(--color-trends-orangered); }
+.competitors .section-icon { color: var(--color-discussions-blue); }
+.opportunities .section-icon { color: var(--color-opportunities-green); }
+.source-data .section-icon { color: var(--color-source-purple); }
 
-/* Post Card */
-.post-card {
-  padding: 1.5rem;
+.analytics-card {
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  padding: 1.5rem;
   gap: 1rem;
-}
-
-.post-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
   position: relative;
-  z-index: 2;
 }
 
-.post-header h3 {
+.analytics-card h3 {
+  font-size: 1.25rem;
   color: white;
-  margin: 0;
-  font-size: 1.2rem;
-  line-height: 1.3;
-  position: relative;
-  z-index: 2;
-}
-
-.post-subreddit {
-  color: var(--color-accent);
   font-weight: 600;
-  font-size: 0.875rem;
   position: relative;
   z-index: 2;
 }
 
-/* Post Stats */
-.post-stats {
-  display: flex;
-  justify-content: space-between;
+.analytics-card p {
   color: rgba(255,255,255,0.7);
-  margin-top: 0.5rem;
-  position: relative;
-  z-index: 2;
-}
-
-.stat {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-}
-
-.stat span {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.post-body {
-  color: white;
   font-size: 0.95rem;
-  line-height: 1.6;
   position: relative;
   z-index: 2;
 }
 
-/* Analysis Timestamp */
-.analysis-timestamp {
+.analytics-progress-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.custom-progress {
+  flex-grow: 1;
+  height: 6px;
+  background: rgba(255,255,255,0.1);
+}
+
+.trends .custom-progress div { background-color: var(--color-trends-orangered); }
+.competitors .custom-progress div { background-color: var(--color-discussions-blue); }
+.opportunities .custom-progress div { background-color: var(--color-opportunities-green); }
+.source-data .custom-progress div { background-color: var(--color-source-purple); }
+
+.analytics-percentage {
+  color: rgba(255,255,255,0.6);
+  font-size: 0.875rem;
+  min-width: 40px;
   text-align: right;
-  color: rgba(255,255,255,0.5);
-  font-size: 0.85rem;
-  margin-top: 1.5rem;
   position: relative;
   z-index: 2;
 }
 
-/* Responsive Adjustments */
 @media (max-width: 768px) {
-  .posts-grid {
+  .analytics-grid {
     grid-template-columns: 1fr;
   }
 }

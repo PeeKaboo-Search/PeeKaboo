@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 export interface GoogleResult {
   title: string;
   snippet: string;
@@ -23,6 +25,12 @@ export interface AnalyticsSummary {
   opportunities: string[];
 }
 
+export interface GoogleSearchData {
+  results: GoogleResult[];
+  summary: AnalyticsSummary;
+}
+
+// Original function kept for backwards compatibility
 export const fetchGoogleResults = async (
   query: string
 ): Promise<{ results: GoogleResult[]; summary: AnalyticsSummary } | null> => {
@@ -44,7 +52,6 @@ export const fetchGoogleResults = async (
     }
 
     const searchData: { items: Array<{ title: string; snippet: string; link: string }> } = await searchResponse.json();
-
     const results: GoogleResult[] = searchData.items.map(item => ({
       title: item.title || "No title available",
       snippet: item.snippet || "No snippet available",
@@ -55,32 +62,33 @@ export const fetchGoogleResults = async (
       throw new Error("No results found from Google Search API.");
     }
 
-    // Groq API prompt for structured analysis
-    const context = `You are a marketing analyst. Analyze these search results and provide a structured analysis in the following JSON format:
+    // Modified Groq API prompt for advertisement and research analysis
+    const context = `You are an advertising research specialist. Analyze these search results and provide a structured analysis for creating effective advertisements in the following JSON format:
     {
-      "overview": "A brief HTML-formatted overview of the main findings",
+      "overview": "A brief HTML-formatted overview analyzing market positioning and advertising potential",
       "trends": [
         {
-          "title": "Trend name",
-          "description": "HTML-formatted description",
-          "percentage": number (0-100)
+          "title": "Advertising trend or consumer behavior pattern",
+          "description": "HTML-formatted description of the trend's relevance to advertising",
+          "percentage": number (0-100 indicating trend strength)
         }
       ],
       "competitors": [
         {
-          "name": "Competitor name",
-          "strength": "HTML-formatted strength description",
-          "score": number (0-100)
+          "name": "Competitor brand/company",
+          "strength": "HTML-formatted analysis of their advertising strategy",
+          "score": number (0-100 based on advertising presence)
         }
       ],
       "opportunities": [
-        "HTML-formatted opportunity description"
+        "HTML-formatted advertising opportunity or campaign suggestion"
       ]
     }
-
     Ensure all text fields contain properly formatted HTML with appropriate tags (<p>, <strong>, <em>, etc.).
+    Focus on advertising angles, messaging themes, and campaign opportunities.
+    Analyze audience preferences, ad placement strategies, and messaging effectiveness.
     Limit to 3 trends, 3 competitors, and 3 opportunities.
-    Base percentages and scores on the frequency and prominence of mentions in the search results.`;
+    Base percentages and scores on advertising impact and market presence in the search results.`;
 
     const summaryResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -108,10 +116,73 @@ export const fetchGoogleResults = async (
 
     // Validate JSON before parsing
     const summary: AnalyticsSummary = JSON.parse(content);
-
     return { results, summary };
   } catch (error) {
     console.error("Error in fetchGoogleResults:", error);
     return null;
   }
+};
+
+// New hook for state management
+export const useGoogleSearchStore = () => {
+  const [googleData, setGoogleData] = useState<GoogleSearchData | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const getGoogleData = async (query: string): Promise<GoogleSearchData | null> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Reuse the existing fetchGoogleResults function
+      const result = await fetchGoogleResults(query);
+      
+      if (!result) {
+        throw new Error("Failed to fetch Google search data");
+      }
+
+      const googleSearchData: GoogleSearchData = {
+        results: result.results,
+        summary: result.summary
+      };
+      
+      // Update state
+      setGoogleData(googleSearchData);
+      setIsLoading(false);
+      
+      return googleSearchData;
+    } catch (error) {
+      console.error("Error in getGoogleData:", error);
+      setError(error instanceof Error ? error.message : "An unknown error occurred");
+      setIsLoading(false);
+      return null;
+    }
+  };
+
+  // Clear stored data
+  const clearGoogleData = () => {
+    setGoogleData(null);
+  };
+
+  return {
+    googleData,
+    getGoogleData,
+    clearGoogleData,
+    isLoading,
+    error
+  };
+};
+
+// Optional: Utility function to directly fetch data without hook
+export const fetchAndProcessGoogleData = async (query: string): Promise<GoogleSearchData | null> => {
+  const result = await fetchGoogleResults(query);
+  
+  if (!result) {
+    return null;
+  }
+
+  return {
+    results: result.results,
+    summary: result.summary
+  };
 };

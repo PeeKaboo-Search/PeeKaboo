@@ -1,48 +1,110 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense, useRef } from "react";
 import { fetchAdsSpendingAnalytics } from "@/app/api/adApi";
-import { 
-  TrendingUp, 
-  BarChart2, 
-  Target, 
-  Activity 
-} from "lucide-react";
+import { TrendingUp, BarChart2, Target, Activity } from "lucide-react";
 import { Progress } from "@/app/components/ui/progress";
-import "@/app/styles/AdsSpending.css";
+import "@/app/styles/AdsSpending.css"; // Assuming this file includes the styles
 
-interface AdSpendingTrend {
-  platform: string;
-  description: string;
-  spendingPercentage: number;
-  averageCPC: number;
-}
+// Lazy loaded sections inside the same file
+const AdSpendingTrendsSection = ({ summary }: { summary: any }) => {
+  return (
+    <section className="analytics-section trends">
+      <h2>
+        <TrendingUp className="section-icon" />
+        Ad Spending Trends
+      </h2>
+      <div className="analytics-grid">
+        {summary?.adSpendingTrends.map((trend: any, index: number) => (
+          <div key={index} className="analytics-card glass-card fade-in">
+            <div>
+              <h3>{trend.platform}</h3>
+              <p dangerouslySetInnerHTML={{ __html: trend.description }} />
+            </div>
+            <div className="analytics-progress-container">
+              <Progress value={trend.spendingPercentage} className="custom-progress" />
+              <span className="analytics-percentage">{trend.spendingPercentage}%</span>
+            </div>
+            <div className="text-sm text-white/60 mt-2">
+              Avg. CPC: ${trend.averageCPC.toFixed(2)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
 
-interface TopAdvertiser {
-  name: string;
-  industryShare: string;
-  adSpendingScore: number;
-}
+const TopAdvertisersSection = ({ summary }: { summary: any }) => {
+  return (
+    <section className="analytics-section competitors">
+      <h2>
+        <BarChart2 className="section-icon" />
+        Top Advertisers
+      </h2>
+      <div className="analytics-grid">
+        {summary?.topAdvertisers.map((advertiser: any, index: number) => (
+          <div key={index} className="analytics-card glass-card fade-in">
+            <div>
+              <h3>{advertiser.name}</h3>
+              <p>{advertiser.industryShare}</p>
+            </div>
+            <div className="analytics-progress-container">
+              <Progress value={advertiser.adSpendingScore} className="custom-progress" />
+              <span className="analytics-percentage">{advertiser.adSpendingScore}%</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
 
-interface AdsSpendingAnalyticsSummary {
-  overview: string;
-  adSpendingTrends: AdSpendingTrend[];
-  topAdvertisers: TopAdvertiser[];
-  marketInsights: string[];
-}
+const MarketInsightsSection = ({ summary }: { summary: any }) => {
+  return (
+    <section className="analytics-section opportunities">
+      <h2>
+        <Target className="section-icon" />
+        Market Insights
+      </h2>
+      <div className="analytics-grid">
+        {summary?.marketInsights.map((insight: any, index: number) => (
+          <div key={index} className="analytics-card glass-card fade-in">
+            <p dangerouslySetInnerHTML={{ __html: insight }} />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
 
-interface GoogleResult {
-  title: string;
-  link: string;
-  snippet: string;
-}
+const SourceDataSection = ({ results }: { results: any[] }) => {
+  return (
+    <section className="analytics-section source-data">
+      <h2>
+        <Activity className="section-icon" />
+        Source Data
+      </h2>
+      <div className="analytics-grid">
+        {results.map((result, index) => (
+          <a
+            key={index}
+            href={result.link}
+            className="analytics-card glass-card fade-in"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <h3 dangerouslySetInnerHTML={{ __html: result.title }} />
+            <p dangerouslySetInnerHTML={{ __html: result.snippet }} />
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+};
 
-interface AdsSpendingAnalyticsProps {
-  query: string;
-}
-
-const AdsSpendingAnalytics: React.FC<AdsSpendingAnalyticsProps> = ({ query }) => {
-  const [results, setResults] = useState<GoogleResult[]>([]);
-  const [summary, setSummary] = useState<AdsSpendingAnalyticsSummary | null>(null);
+const AdsSpendingAnalytics: React.FC<{ query: string }> = ({ query }) => {
+  const [results, setResults] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,94 +150,6 @@ const AdsSpendingAnalytics: React.FC<AdsSpendingAnalyticsProps> = ({ query }) =>
     return <div className="analytics-error">{error}</div>;
   }
 
-  const renderAdSpendingTrendsSection = () => (
-    <section className="analytics-section trends">
-      <h2>
-        <TrendingUp className="section-icon" />
-        Ad Spending Trends
-      </h2>
-      <div className="analytics-grid">
-        {summary?.adSpendingTrends.map((trend, index) => (
-          <div key={index} className="analytics-card glass-card">
-            <div>
-              <h3>{trend.platform}</h3>
-              <p dangerouslySetInnerHTML={{ __html: trend.description }} />
-            </div>
-            <div className="analytics-progress-container">
-              <Progress value={trend.spendingPercentage} className="custom-progress" />
-              <span className="analytics-percentage">{trend.spendingPercentage}%</span>
-            </div>
-            <div className="text-sm text-white/60 mt-2">
-              Avg. CPC: ${trend.averageCPC.toFixed(2)}
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-
-  const renderTopAdvertisersSection = () => (
-    <section className="analytics-section competitors">
-      <h2>
-        <BarChart2 className="section-icon" />
-        Top Advertisers
-      </h2>
-      <div className="analytics-grid">
-        {summary?.topAdvertisers.map((advertiser, index) => (
-          <div key={index} className="analytics-card glass-card">
-            <div>
-              <h3>{advertiser.name}</h3>
-              <p>{advertiser.industryShare}</p>
-            </div>
-            <div className="analytics-progress-container">
-              <Progress value={advertiser.adSpendingScore} className="custom-progress" />
-              <span className="analytics-percentage">{advertiser.adSpendingScore}%</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-
-  const renderMarketInsightsSection = () => (
-    <section className="analytics-section opportunities">
-      <h2>
-        <Target className="section-icon" />
-        Market Insights
-      </h2>
-      <div className="analytics-grid">
-        {summary?.marketInsights.map((insight, index) => (
-          <div key={index} className="analytics-card glass-card">
-            <p dangerouslySetInnerHTML={{ __html: insight }} />
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-
-  const renderSourceDataSection = () => (
-    <section className="analytics-section source-data">
-      <h2>
-        <Activity className="section-icon" />
-        Source Data
-      </h2>
-      <div className="analytics-grid">
-        {results.map((result, index) => (
-          <a
-            key={index}
-            href={result.link}
-            className="analytics-card glass-card"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <h3 dangerouslySetInnerHTML={{ __html: result.title }} />
-            <p dangerouslySetInnerHTML={{ __html: result.snippet }} />
-          </a>
-        ))}
-      </div>
-    </section>
-  );
-
   return (
     <div className="analytics-container">
       <header className="analytics-header">
@@ -188,10 +162,15 @@ const AdsSpendingAnalytics: React.FC<AdsSpendingAnalyticsProps> = ({ query }) =>
           <section className="analytics-overview">
             <div dangerouslySetInnerHTML={{ __html: summary.overview }} />
           </section>
-          {renderAdSpendingTrendsSection()}
-          {renderTopAdvertisersSection()}
-          {renderMarketInsightsSection()}
-          {renderSourceDataSection()}
+
+          <div className="analytics-sections">
+            <Suspense fallback={<div className="analytics-loader">Loading...</div>}>
+              <AdSpendingTrendsSection summary={summary} />
+              <TopAdvertisersSection summary={summary} />
+              <MarketInsightsSection summary={summary} />
+              <SourceDataSection results={results} />
+            </Suspense>
+          </div>
         </div>
       )}
     </div>
@@ -199,3 +178,4 @@ const AdsSpendingAnalytics: React.FC<AdsSpendingAnalyticsProps> = ({ query }) =>
 };
 
 export default AdsSpendingAnalytics;
+
