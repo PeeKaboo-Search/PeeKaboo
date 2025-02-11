@@ -1,211 +1,227 @@
 "use client";
-import React, { useEffect, useState, Suspense, lazy } from "react";
-import { fetchGoogleResults } from "app/api/googleAnalyticsApi";
-import { TrendingUp, Award, Lightbulb, Activity } from "lucide-react";
+
+import React, { useEffect, useState, memo } from "react";
+import { TrendingUp, Search, Lightbulb, Activity } from "lucide-react";
 import { Progress } from "@/app/components/ui/progress";
-import "app/styles/GoogleAnalytics.css";
+import { useGoogleSearch, GoogleSearchData } from "@/app/api/googleAnalyticsApi";
+import "@/app/styles/GoogleAnalytics.css";
 
-interface Trend {
-  title: string;
-  description: string;
-  percentage: number;
-}
-
-interface Competitor {
-  name: string;
-  strength: string;
-  score: number;
-}
-
-interface AnalyticsSummary {
-  overview: string;
-  trends: Trend[];
-  competitors: Competitor[];
-  opportunities: string[];
-}
-
-interface GoogleResult {
-  title: string;
-  link: string;
-  snippet: string;
-}
-
+// Types
 interface AdvertisingAnalyticsProps {
   query: string;
 }
 
-// Lazy loaded content wrapper
-const AnalyticsContent = lazy(() => Promise.resolve({
-  default: ({
-    summary,
-    results
-  }: {
-    summary: AnalyticsSummary;
-    results: GoogleResult[];
-  }) => {
-    const renderTrendsSection = () => (
-      <section className="analytics-section trends">
-        <h2>
-          <TrendingUp className="section-icon" />
-          Advertising Trends
-        </h2>
-        <div className="analytics-grid">
-          {summary.trends.map((trend, index) => (
-            <div key={index} className="analytics-card glass-card">
-              <div>
-                <h3 dangerouslySetInnerHTML={{ __html: trend.title }} />
-                <p dangerouslySetInnerHTML={{ __html: trend.description }} />
-              </div>
-              <div className="analytics-progress-container">
-                <Progress value={trend.percentage} className="custom-progress" />
-                <span className="analytics-percentage">{trend.percentage}%</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    );
+interface CardProps {
+  title: string;
+  content: string;
+  items: string[];
+  score: number;
+  scoreLabel: string;
+}
 
-    const renderCompetitorsSection = () => (
-      <section className="analytics-section competitors">
-        <h2>
-          <Award className="section-icon" />
-          Competitor Ad Analysis
-        </h2>
-        <div className="analytics-grid">
-          {summary.competitors.map((competitor, index) => (
-            <div key={index} className="analytics-card glass-card">
-              <div>
-                <h3 dangerouslySetInnerHTML={{ __html: competitor.name }} />
-                <p dangerouslySetInnerHTML={{ __html: competitor.strength }} />
-              </div>
-              <div className="analytics-progress-container">
-                <Progress value={competitor.score} className="custom-progress" />
-                <span className="analytics-percentage">{competitor.score}%</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    );
+interface SectionProps<T> {
+  icon: React.ReactNode;
+  title: string;
+  items: T[];
+  renderItem: (item: T, index: number) => React.ReactNode;
+  emptyMessage: string;
+}
 
-    const renderOpportunitiesSection = () => (
-      <section className="analytics-section opportunities">
-        <h2>
-          <Lightbulb className="section-icon" />
-          Campaign Opportunities
-        </h2>
-        <div className="analytics-grid">
-          {summary.opportunities.map((opportunity, index) => (
-            <div key={index} className="analytics-card glass-card">
-              <p dangerouslySetInnerHTML={{ __html: opportunity }} />
-            </div>
-          ))}
-        </div>
-      </section>
-    );
+// Helper functions
+const validateArray = <T,>(data: T[] | undefined | null): T[] => {
+  return Array.isArray(data) ? data : [];
+};
 
-    const renderSourceDataSection = () => (
-      <section className="analytics-section source-data">
-        <h2>
-          <Activity className="section-icon" />
-          Market Research Data
-        </h2>
-        <div className="analytics-grid">
-          {results.map((result, index) => (
-            <a
-              key={index}
-              href={result.link}
-              className="analytics-card glass-card"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <h3 dangerouslySetInnerHTML={{ __html: result.title }} />
-              <p dangerouslySetInnerHTML={{ __html: result.snippet }} />
-            </a>
-          ))}
+// Base card component
+const AnalyticsCard = memo(({ title, content, items, score, scoreLabel }: CardProps) => (
+  <div className="analytics-card glass-card">
+    <div>
+      <h3>{title}</h3>
+      <p dangerouslySetInnerHTML={{ __html: content }} />
+      {items.length > 0 && (
+        <div className="items-list">
+          <h4>{scoreLabel}s:</h4>
+          <ul>
+            {items.map((item, idx) => (
+              <li key={idx}>{item}</li>
+            ))}
+          </ul>
         </div>
-      </section>
-    );
-
-    return (
-      <div className="analytics-content">
-        <section className="analytics-overview">
-          <div dangerouslySetInnerHTML={{ __html: summary.overview }} />
-        </section>
-        {renderTrendsSection()}
-        {renderCompetitorsSection()}
-        {renderOpportunitiesSection()}
-        {renderSourceDataSection()}
+      )}
+    </div>
+    {score !== undefined && (
+      <div className="analytics-progress-container">
+        <Progress value={score} className="custom-progress" />
+        <span className="analytics-percentage">
+          {scoreLabel}: {score}%
+        </span>
       </div>
-    );
-  }
-}));
+    )}
+  </div>
+));
 
-const LoadingSpinner = () => (
+// Specialized card components
+const TrendCard = memo(({ trend }: { trend: any }) => (
+  <AnalyticsCard
+    title={trend.title}
+    content={trend.analysis}
+    items={validateArray(trend.recommendations)}
+    score={trend.impact}
+    scoreLabel="Impact"
+  />
+));
+
+const ResearchCard = memo(({ insight }: { insight: any }) => (
+  <AnalyticsCard
+    title={insight.key}
+    content={insight.details}
+    items={validateArray(insight.sources)}
+    score={insight.relevance}
+    scoreLabel="Relevance"
+  />
+));
+
+const OpportunityCard = memo(({ opportunity }: { opportunity: any }) => (
+  <AnalyticsCard
+    title={opportunity.title}
+    content={opportunity.description}
+    items={validateArray(opportunity.actionItems)}
+    score={opportunity.potentialScore}
+    scoreLabel="Potential"
+  />
+));
+
+const SourceCard = memo(({ result }: { result: any }) => (
+  <a
+    href={result.link}
+    className="analytics-card glass-card"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    <h3>{result.title}</h3>
+    <p>{result.snippet}</p>
+  </a>
+));
+
+// Generic section component
+const AnalyticsSection = <T,>({
+  icon,
+  title,
+  items,
+  renderItem,
+  emptyMessage
+}: SectionProps<T>) => (
+  <section className="analytics-section">
+    <h2>
+      {icon}
+      {title}
+    </h2>
+    <div className="analytics-grid">
+      {items.length > 0 ? (
+        items.map((item, index) => renderItem(item, index))
+      ) : (
+        <div className="analytics-card glass-card">
+          <p>{emptyMessage}</p>
+        </div>
+      )}
+    </div>
+  </section>
+);
+
+// Loading component
+const LoadingSpinner = memo(() => (
   <div className="analytics-loader">
     {Array.from({ length: 4 }).map((_, i) => (
       <div key={i} className="analytics-loader__item" />
     ))}
   </div>
-);
+));
 
+// Main component
 const AdvertisingAnalytics: React.FC<AdvertisingAnalyticsProps> = ({ query }) => {
-  const [results, setResults] = useState<GoogleResult[]>([]);
-  const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const { searchData, search, isLoading, error } = useGoogleSearch();
+  const [hasSearched, setHasSearched] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!query.trim()) {
-        setError("Please provide an advertising query");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        const response = await fetchGoogleResults(query);
-        if (response) {
-          setResults(response.results);
-          setSummary(response.summary);
-          setError(null);
-        } else {
-          setError("No advertising insights found");
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch advertising data");
-      } finally {
-        setLoading(false);
-      }
+      if (!query.trim() || hasSearched) return;
+      await search(query);
+      setHasSearched(true);
     };
 
     fetchData();
-  }, [query]);
+  }, [query, search, hasSearched]);
 
-  if (loading) {
+  if (isLoading) {
     return <LoadingSpinner />;
   }
 
-  if (error) {
-    return <div className="analytics-error">{error}</div>;
+  if (error || !searchData?.success) {
+    return (
+      <div className="analytics-error">
+        {error || searchData?.error || "Failed to fetch research data"}
+      </div>
+    );
   }
+
+  if (!searchData?.data?.analysis || !searchData?.data?.results) {
+    return (
+      <div className="analytics-error">
+        No analysis data available
+      </div>
+    );
+  }
+
+  const { results, analysis } = searchData.data;
 
   return (
     <div className="analytics-container">
       <header className="analytics-header">
-        <h1>Advertising Insights Dashboard</h1>
-        <p className="query-text">Campaign Analysis for: {query}</p>
+        <h1>Market Research Dashboard</h1>
+        <p className="query-text">Research Analysis for: {query}</p>
       </header>
 
-      {summary && (
-        <Suspense fallback={<LoadingSpinner />}>
-          <AnalyticsContent summary={summary} results={results} />
-        </Suspense>
-      )}
+      <div className="analytics-content">
+        <section className="analytics-overview">
+          <div dangerouslySetInnerHTML={{ __html: analysis.overview }} />
+        </section>
+
+        <AnalyticsSection
+          icon={<TrendingUp className="section-icon" />}
+          title="Market Trends Analysis"
+          items={validateArray(analysis.trends)}
+          renderItem={(trend, index) => <TrendCard key={index} trend={trend} />}
+          emptyMessage="No trend data available"
+        />
+
+        <AnalyticsSection
+          icon={<Search className="section-icon" />}
+          title="Research Insights"
+          items={validateArray(analysis.research)}
+          renderItem={(insight, index) => <ResearchCard key={index} insight={insight} />}
+          emptyMessage="No research insights available"
+        />
+
+        <AnalyticsSection
+          icon={<Lightbulb className="section-icon" />}
+          title="Market Opportunities"
+          items={validateArray(analysis.opportunities)}
+          renderItem={(opportunity, index) => (
+            <OpportunityCard key={index} opportunity={opportunity} />
+          )}
+          emptyMessage="No market opportunities available"
+        />
+
+        <AnalyticsSection
+          icon={<Activity className="section-icon" />}
+          title="Source Data"
+          items={validateArray(results)}
+          renderItem={(result, index) => <SourceCard key={index} result={result} />}
+          emptyMessage="No source data available"
+        />
+      </div>
     </div>
   );
 };
 
-export default AdvertisingAnalytics;
+export default memo(AdvertisingAnalytics);

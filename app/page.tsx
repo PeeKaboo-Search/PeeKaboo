@@ -26,12 +26,12 @@ interface ResultsSectionProps {
 // Component configuration
 const SEARCH_COMPONENTS: SearchComponentConfig[] = [
   // { name: 'ImageResult', component: lazy(() => import("app/components/ui/ImageResult")) },
-  // { name: 'GoogleAnalytics', component: lazy(() => import("app/components/ui/GoogleAnalytics")) },
+   { name: 'GoogleAnalytics', component: lazy(() => import("app/components/ui/GoogleAnalytics")) },
   // { name: 'PlayStoreAnalytics', component: lazy(() => import("app/components/ui/PlayStoreAnalytics")) },
   // { name: 'RedditAnalytics', component: lazy(() => import("app/components/ui/RedditAnalytics")) },
   // { name: 'YoutubeAnalysis', component: lazy(() => import("app/components/ui/YoutubeAnalysis")) },
   // { name: 'QuoraAnalysis', component: lazy(() => import("app/components/ui/QuoraAnalysis")) }
-  { name: 'FacebookAdsAnalysis', component: lazy(() => import("app/components/ui/FacebookAdsAnalytics")) },
+  // { name: 'FacebookAdsAnalysis', component: lazy(() => import("app/components/ui/FacebookAdsAnalytics")) },
   // { name: 'TrendAnalysis', component: lazy(() => import("app/components/ui/TrendAnalysis")) },
   // { name: 'RunningAds', component: lazy(() => import("app/components/ui/RunningAds")) }
   // { name: 'AdsAnalytics', component: lazy(() => import("app/components/ui/AdsAnalytics")) },
