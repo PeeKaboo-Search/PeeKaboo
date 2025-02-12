@@ -1,3 +1,4 @@
+// Original interfaces remain the same
 interface QuoraAnswer {
   content: string;
   author: {
@@ -22,10 +23,33 @@ interface QuoraAPIResponse {
   };
 }
 
+// Enhanced interface to include structured marketing analysis
 interface AnalysisResult {
   success: boolean;
   data?: {
-    analysis: string;
+    analysis: {
+      overview: string;
+      painPoints: Array<{
+        title: string;
+        description: string;
+        frequency: number;
+        impact: number;
+        possibleSolutions: string[];
+      }>;
+      userExperiences: Array<{
+        scenario: string;
+        impact: string;
+        frequencyPattern: string;
+        sentiment: 'positive' | 'negative' | 'neutral';
+      }>;
+      emotionalTriggers: Array<{
+        trigger: string;
+        context: string;
+        intensity: number;
+        responsePattern: string;
+      }>;
+      marketImplications: string;
+    };
     sources: QuoraAnswer[];
     timestamp: string;
   };
@@ -33,13 +57,11 @@ interface AnalysisResult {
 }
 
 export class QuoraAnalysisService {
-  private static readonly TIMEOUT = 30000; // 30 seconds timeout
+  private static readonly TIMEOUT = 30000;
   private static readonly RAPIDAPI_KEY = process.env.NEXT_PUBLIC_RAPIDAPI_KEY;
   private static readonly GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY;
 
-  /**
-   * Fetch with timeout wrapper
-   */
+  // Existing fetchWithTimeout method remains the same
   private static async fetchWithTimeout(
     url: string,
     options: RequestInit,
@@ -66,12 +88,9 @@ export class QuoraAnalysisService {
     }
   }
 
-  /**
-   * Main analysis method
-   */
+  // Enhanced analysis method
   public static async analyzeQuoraData(query: string): Promise<AnalysisResult> {
     try {
-      // Validate inputs and API keys
       if (!query.trim()) {
         return { success: false, error: 'Query cannot be empty' };
       }
@@ -80,13 +99,11 @@ export class QuoraAnalysisService {
         return { success: false, error: 'API keys not configured' };
       }
 
-      // Fetch Quora answers
       const answers = await this.searchQuoraAnswers(query);
       if (answers.length === 0) {
         return { success: false, error: 'No relevant Quora answers found' };
       }
 
-      // Prepare content for analysis
       const relevantContent = answers
         .map((answer) => answer.content.trim())
         .filter(Boolean)
@@ -96,13 +113,12 @@ export class QuoraAnalysisService {
         return { success: false, error: 'No valid content to analyze' };
       }
 
-      // Generate analysis
       const analysis = await this.generateAnalysis(query, relevantContent);
 
       return {
         success: true,
         data: {
-          analysis,
+          analysis: JSON.parse(analysis),
           sources: answers,
           timestamp: new Date().toISOString(),
         },
@@ -115,9 +131,7 @@ export class QuoraAnalysisService {
     }
   }
 
-  /**
-   * Search Quora answers
-   */
+  // Existing searchQuoraAnswers and parseQuoraAnswer methods remain the same
   private static async searchQuoraAnswers(query: string): Promise<QuoraAnswer[]> {
     const url = new URL('https://quora-scraper.p.rapidapi.com/search_answers');
     url.searchParams.append('query', query);
@@ -159,9 +173,6 @@ export class QuoraAnalysisService {
     }
   }
 
-  /**
-   * Parse Quora answer
-   */
   private static parseQuoraAnswer(item: any): QuoraAnswer {
     return {
       content: QuoraAnalysisService.sanitizeText(item.content || ''),
@@ -180,26 +191,59 @@ export class QuoraAnalysisService {
     };
   }
 
-  /**
-   * Generate analysis using Groq API
-   */
+  // Enhanced generateAnalysis method with structured prompt
   private static async generateAnalysis(query: string, content: string): Promise<string> {
     const url = 'https://api.groq.com/openai/v1/chat/completions';
     
+    const analysisPrompt = {
+      role: 'system',
+      content: `You are an expert market research analyst specializing in consumer behavior and sentiment analysis. Analyze the provided Quora discussions about "${query}" and generate a comprehensive analysis in the following JSON format:
+
+{
+  "overview": "Executive summary of the analysis using sophisticated marketing terminology",
+  "painPoints": [
+    {
+      "title": "Clear, impactful title of the pain point",
+      "description": "Detailed analysis of the issue using marketing psychology terms",
+      "frequency": "Numerical value 1-10 indicating how often this appears",
+      "impact": "Numerical value 1-10 indicating severity",
+      "possibleSolutions": ["Array of 2-3 potential solutions"]
+    }
+  ] (exactly 6 items),
+  "userExperiences": [
+    {
+      "scenario": "Detailed description of the user experience",
+      "impact": "Analysis of how this experience affects user behavior",
+      "frequencyPattern": "Pattern of occurrence and context",
+      "sentiment": "positive/negative/neutral"
+    }
+  ] (exactly 3 items),
+  "emotionalTriggers": [
+    {
+      "trigger": "Name of the emotional trigger",
+      "context": "Detailed context where this trigger appears",
+      "intensity": "Numerical value 1-10",
+      "responsePattern": "Typical user response to this trigger"
+    }
+  ] (exactly 3 items),
+  "marketImplications": "Strategic insights for market positioning and product development"
+}
+
+Ensure the analysis is data-driven, uses professional marketing terminology, and provides actionable insights.`
+    };
+
     const payload = {
-      model: 'mixtral-8x7b-32768',
+      model: 'deepseek-r1-distill-qwen-32b',
       messages: [
-        {
-          role: 'system',
-          content: `You are an expert at analyzing Quora discussions. Analyze the following answers about "${query}" focusing on key themes, insights, and patterns.`,
-        },
+        analysisPrompt,
         {
           role: 'user',
           content: content,
         },
       ],
       temperature: 0.7,
-      max_tokens: 4000,
+      max_tokens: 4500,
+      response_format: { type: 'json_object' },
     };
 
     try {
@@ -244,9 +288,7 @@ export class QuoraAnalysisService {
     }
   }
 
-  /**
-   * Utility: Parse number values
-   */
+  // Utility methods remain the same
   private static parseNumber(value: any): number {
     if (typeof value === 'number') return value;
     if (typeof value === 'string') {
@@ -256,18 +298,13 @@ export class QuoraAnalysisService {
     return 0;
   }
 
-  /**
-   * Utility: Sanitize and truncate text
-   */
   private static sanitizeText(text: string, maxLength: number = 1000): string {
     if (!text) return '';
     
-    // Remove excess whitespace and normalize
     let sanitized = text
       .replace(/\s+/g, ' ')
       .trim();
     
-    // Truncate if necessary
     if (sanitized.length <= maxLength) return sanitized;
     
     const truncated = sanitized.substring(0, maxLength);

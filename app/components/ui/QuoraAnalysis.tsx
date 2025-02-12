@@ -1,6 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { QuoraAnalysisService } from '@/app/api/quoraAnalytics';
+"use client";
 
+import React, { useState, useEffect, memo } from 'react';
+import { QuoraAnalysisService } from '@/app/api/quoraAnalytics';
+import { 
+  AlertCircle, Brain, Heart, 
+  TrendingUp, Target, Users 
+} from 'lucide-react';
+import { Progress } from "@/app/components/ui/progress";
+import "@/app/styles/QuoraAnalytics.css"
+
+
+// Types
 interface QuoraAnswer {
   content: string;
   author: {
@@ -13,8 +23,36 @@ interface QuoraAnswer {
   timestamp: string;
 }
 
+interface PainPoint {
+  title: string;
+  description: string;
+  frequency: number;
+  impact: number;
+  possibleSolutions: string[];
+}
+
+interface UserExperience {
+  scenario: string;
+  impact: string;
+  frequencyPattern: string;
+  sentiment: 'positive' | 'negative' | 'neutral';
+}
+
+interface EmotionalTrigger {
+  trigger: string;
+  context: string;
+  intensity: number;
+  responsePattern: string;
+}
+
 interface AnalysisData {
-  analysis: string;
+  analysis: {
+    overview: string;
+    painPoints: PainPoint[];
+    userExperiences: UserExperience[];
+    emotionalTriggers: EmotionalTrigger[];
+    marketImplications: string;
+  };
   sources: QuoraAnswer[];
   timestamp: string;
 }
@@ -22,58 +60,58 @@ interface AnalysisData {
 interface QuoraAnalyticsProps {
   query: string;
   className?: string;
-  answerMaxLength?: number;
 }
 
-const truncateText = (text: string, maxLength: number = 200): string => {
-  if (!text) return '';
-  return text.length <= maxLength 
-    ? text 
-    : text.substring(0, maxLength) + '...';
-};
-
-const AnswerCard = ({ answer, maxLength }: { answer: QuoraAnswer; maxLength: number }) => (
-  <div className="bg-white rounded-lg shadow-md p-4 mb-4">
-    <div className="text-gray-700 mb-3">
-      {truncateText(answer.content, maxLength)}
-    </div>
-    <div className="flex items-center justify-between text-sm">
-      <div className="flex flex-col">
-        <a 
-          href={answer.author.profile_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-600 hover:text-blue-800"
-        >
-          By: {answer.author.name}
-        </a>
-        {answer.author.credentials && (
-          <span className="text-xs text-gray-500">{answer.author.credentials}</span>
-        )}
+// Helper Components
+const AnalysisCard = memo(({ 
+  title, 
+  content, 
+  metric,
+  metricLabel,
+  items 
+}: { 
+  title: string;
+  content: string;
+  metric?: number;
+  metricLabel?: string;
+  items?: string[];
+}) => (
+  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg">
+    <h3 className="text-xl font-semibold mb-4">{title}</h3>
+    <p className="mb-4">{content}</p>
+    {metric !== undefined && (
+      <div className="space-y-2">
+        <Progress value={metric * 10} className="h-2" />
+        <span className="text-sm">
+          {metricLabel}: {metric}/10
+        </span>
       </div>
-      <div className="flex items-center space-x-4 text-gray-600">
-        <span>👍 {answer.upvotes}</span>
-      </div>
-    </div>
-    <div className="flex justify-between items-center text-xs text-gray-500 mt-2">
-      <span>{new Date(answer.timestamp).toLocaleDateString()}</span>
-      <a 
-        href={answer.post_url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-blue-600 hover:text-blue-800"
-      >
-        View on Quora →
-      </a>
-    </div>
+    )}
+    {items && (
+      <ul className="mt-4 space-y-2">
+        {items.map((item, index) => (
+          <li key={index} className="text-sm">{item}</li>
+        ))}
+      </ul>
+    )}
   </div>
-);
+));
 
-export default function QuoraAnalytics({ 
-  query, 
-  className = '', 
-  answerMaxLength = 300 
-}: QuoraAnalyticsProps) {
+const SectionHeader = memo(({ 
+  icon, 
+  title 
+}: { 
+  icon: React.ReactNode; 
+  title: string;
+}) => (
+  <div className="flex items-center gap-2 text-2xl font-bold mb-4">
+    {icon}
+    {title}
+  </div>
+));
+
+// Main Component
+const QuoraAnalyticsDashboard: React.FC<QuoraAnalyticsProps> = ({ query, className = '' }) => {
   const [state, setState] = useState<{
     loading: boolean;
     error?: string;
@@ -115,20 +153,16 @@ export default function QuoraAnalytics({
 
   if (state.loading) {
     return (
-      <div className={`flex justify-center items-center min-h-[200px] ${className}`}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4" />
-          <p className="text-gray-600">Analyzing Quora discussions...</p>
-        </div>
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white" />
       </div>
     );
   }
 
   if (state.error) {
     return (
-      <div className={`bg-red-50 border border-red-200 rounded-lg p-4 ${className}`}>
-        <h2 className="text-red-800 text-lg font-semibold mb-2">Analysis Error</h2>
-        <p className="text-red-600">{state.error}</p>
+      <div className="text-center text-red-500 p-4">
+        {state.error}
       </div>
     );
   }
@@ -140,34 +174,142 @@ export default function QuoraAnalytics({
   const { data } = state;
 
   return (
-    <div className="space-y-6">
-      {/* Analysis Overview */}
-      <section className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-2xl font-semibold mb-4">Insights from Quora</h2>
-        <div 
-          className="prose max-w-none"
-          dangerouslySetInnerHTML={{ __html: data.analysis }}
-        />
-      </section>
+    <div className={`max-w-7xl mx-auto px-4 py-8 ${className}`}>
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Quora Discussion Analysis</h1>
+        <p className="text-lg opacity-70">Analysis for: {query}</p>
+      </header>
 
-      {/* Answers Section */}
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold">Top Answers</h2>
-        <div className="grid gap-6 md:grid-cols-2">
-          {data.sources.map((answer, index) => (
-            <AnswerCard 
-              key={`answer-${index}`}
-              answer={answer}
-              maxLength={answerMaxLength}
-            />
-          ))}
-        </div>
-      </section>
+      <div className="space-y-8">
+        {/* Overview Section */}
+        <section>
+          <SectionHeader 
+            icon={<Target className="w-6 h-6" />} 
+            title="Overview" 
+          />
+          <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6">
+            <div className="prose max-w-none">
+              {data.analysis.overview}
+            </div>
+          </div>
+        </section>
 
-      {/* Timestamp */}
-      <div className="text-sm text-gray-500 text-right">
+        {/* Pain Points Grid */}
+        <section>
+          <SectionHeader 
+            icon={<AlertCircle className="w-6 h-6" />} 
+            title="Pain Points" 
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {data.analysis.painPoints.map((point, index) => (
+              <AnalysisCard
+                key={`pain-${index}`}
+                title={point.title}
+                content={point.description}
+                metric={point.impact}
+                metricLabel="Impact Score"
+                items={point.possibleSolutions}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* User Experiences */}
+        <section>
+          <SectionHeader 
+            icon={<Users className="w-6 h-6" />} 
+            title="User Experiences" 
+          />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {data.analysis.userExperiences.map((exp, index) => (
+              <AnalysisCard
+                key={`exp-${index}`}
+                title={exp.scenario}
+                content={exp.impact}
+                items={[
+                  `Pattern: ${exp.frequencyPattern}`,
+                  `Sentiment: ${exp.sentiment}`
+                ]}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* Emotional Triggers */}
+        <section>
+          <SectionHeader 
+            icon={<Heart className="w-6 h-6" />} 
+            title="Emotional Triggers" 
+          />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {data.analysis.emotionalTriggers.map((trigger, index) => (
+              <AnalysisCard
+                key={`trigger-${index}`}
+                title={trigger.trigger}
+                content={trigger.context}
+                metric={trigger.intensity}
+                metricLabel="Intensity"
+                items={[`Response: ${trigger.responsePattern}`]}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* Market Implications */}
+        <section>
+          <SectionHeader 
+            icon={<Brain className="w-6 h-6" />} 
+            title="Market Implications" 
+          />
+          <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6">
+            <div className="prose max-w-none">
+              {data.analysis.marketImplications}
+            </div>
+          </div>
+        </section>
+
+        {/* Source Answers */}
+        <section>
+          <SectionHeader 
+            icon={<TrendingUp className="w-6 h-6" />} 
+            title="Source Answers" 
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {data.sources.map((answer, index) => (
+              <div key={`answer-${index}`} className="bg-white/10 backdrop-blur-lg rounded-lg p-6">
+                <div className="mb-4">{answer.content}</div>
+                <div className="flex justify-between items-center text-sm">
+                  <a 
+                    href={answer.author.profile_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300"
+                  >
+                    {answer.author.name}
+                  </a>
+                  <div className="flex items-center gap-4">
+                    <span>👍 {answer.upvotes}</span>
+                    <a 
+                      href={answer.post_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300"
+                    >
+                      View on Quora →
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <div className="text-sm opacity-70 text-right mt-8">
         Last updated: {new Date(data.timestamp).toLocaleString()}
       </div>
     </div>
   );
-}
+};
+
+export default memo(QuoraAnalyticsDashboard);
