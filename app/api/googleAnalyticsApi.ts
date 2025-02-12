@@ -140,6 +140,7 @@ const MARKET_RESEARCH_PROMPT = `You are a highly skilled marketing analyst with 
 }
 
 Guidelines:
+Tiktok is banned in India.
 Give me Creative ideas only, not Generic Ideas.
 And use Complex Marketing Language.
 Ensure all insights are specific to the Indian market.
@@ -224,7 +225,7 @@ export class MarketResearchService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: 'deepseek-r1-distill-qwen-32b',
           messages: [
             { role: 'system', content: MARKET_RESEARCH_PROMPT },
             { 

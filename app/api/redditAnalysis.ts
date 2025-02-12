@@ -3,30 +3,66 @@ export interface RedditResult {
   subreddit: string;
   snippet: string;
   link?: string;
+  engagement_metrics?: {
+    upvote_ratio: number;
+    comment_count: number;
+    awards: number;
+  };
 }
 
-export interface Trend {
-  title: string;
-  description: string;
-  percentage: number;
+export interface PainPoint {
+  issue: string;
+  frequency: number; // 0-100
+  impact_score: number; // 0-100
+  verbatim_quotes: string[];
+  suggested_solutions: string[];
 }
 
-export interface Competitor {
-  name: string;
-  strength: string;
-  score: number;
+export interface NicheCommunity {
+  segment: string;
+  demographic_indicators: string[];
+  discussion_themes: string[];
+  engagement_level: number; // 0-100
+  influence_score: number; // 0-100
+  key_influencers: string[];
 }
 
-export interface AnalyticsSummary {
+export interface SentimentAnalysis {
+  overall_sentiment: number; // -100 to 100
+  emotional_triggers: {
+    trigger: string;
+    intensity: number; // 0-100
+    context: string;
+    activation_phrases: string[];
+  }[];
+  brand_perception: {
+    positive_attributes: string[];
+    negative_attributes: string[];
+    neutral_observations: string[];
+  };
+}
+
+export interface MarketingInsight {
   overview: string;
-  trends: Trend[];
-  competitors: Competitor[];
-  opportunities: string[];
+  recurring_pain_points: PainPoint[];
+  niche_communities: NicheCommunity[];
+  sentiment_analysis: SentimentAnalysis;
+  psychographic_insights: {
+    motivation_factors: string[];
+    decision_drivers: string[];
+    adoption_barriers: string[];
+  };
+  competitive_intelligence: {
+    market_positioning: string;
+    share_of_voice: number;
+    competitive_advantages: string[];
+    threat_assessment: string;
+  };
 }
 
-export const fetchRedditResults = async (
+export const fetchMarketingInsights = async (
   query: string
-): Promise<{ results: RedditResult[]; summary: AnalyticsSummary } | null> => {
+): Promise<{ results: RedditResult[]; insights: MarketingInsight } | null> => {
   try {
     const redditClientId = process.env.NEXT_PUBLIC_REDDIT_CLIENT_ID;
     const redditClientSecret = process.env.NEXT_PUBLIC_REDDIT_CLIENT_SECRET;
@@ -36,7 +72,7 @@ export const fetchRedditResults = async (
       throw new Error("API keys are missing. Check environment variables.");
     }
 
-    // Fetch Reddit Authentication Token
+    // Reddit Authentication
     const authResponse = await fetch('https://www.reddit.com/api/v1/access_token', {
       method: 'POST',
       headers: {
@@ -53,17 +89,21 @@ export const fetchRedditResults = async (
     const authData = await authResponse.json();
     const accessToken = authData.access_token;
 
-    // Fetch Reddit Search Results
-    const subreddits = ['technology', 'products', 'business', 'marketing'];
+    // Enhanced Reddit Search with Broader Coverage
+    const subreddits = [
+      'technology', 'products', 'business', 'marketing',
+      'startups', 'entrepreneurship', 'productmanagement',
+      'B2B', 'SaaS', 'digitalmarketing'
+    ];
     const results: RedditResult[] = [];
 
-    for (const subreddit of subreddits.slice(0, 2)) {
+    for (const subreddit of subreddits.slice(0, 5)) {
       const searchResponse = await fetch(
-        `https://oauth.reddit.com/r/${subreddit}/search?q=${encodeURIComponent(query)}&limit=5&sort=relevance&t=year`,
+        `https://oauth.reddit.com/r/${subreddit}/search?q=${encodeURIComponent(query)}&limit=20&sort=relevance&t=year`,
         {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
-            'User-Agent': 'RedditAnalytics/1.0',
+            'User-Agent': 'MarketingInsights/2.0',
           },
         }
       );
@@ -75,74 +115,110 @@ export const fetchRedditResults = async (
       const subredditResults = searchData.data.children
         .filter((post: any) => post.data.selftext)
         .map((post: any) => ({
-          title: post.data.title || "No title available",
-          subreddit: post.data.subreddit || subreddit,
-          snippet: post.data.selftext.slice(0, 200) + "...",
-          link: post.data.url || "#",
+          title: post.data.title,
+          subreddit: post.data.subreddit,
+          snippet: post.data.selftext.slice(0, 300) + "...",
+          link: post.data.url,
+          engagement_metrics: {
+            upvote_ratio: post.data.upvote_ratio,
+            comment_count: post.data.num_comments,
+            awards: post.data.total_awards_received
+          }
         }));
 
       results.push(...subredditResults);
     }
 
     if (results.length === 0) {
-      throw new Error("No results found from Reddit Search API.");
+      throw new Error("Insufficient data from Reddit Search API.");
     }
 
-    // Groq API Analysis Context
-    const context = `You are a social media research specialist. Analyze these Reddit search results and provide a structured analysis in JSON format:
+    // Enhanced Groq API Analysis Context
+    const context = `You are an advanced market research analyst specializing in digital ethnography and consumer behavior. Analyze these Reddit discussions to provide sophisticated marketing insights in JSON format:
     {
-      "overview": "A brief HTML-formatted overview analyzing community discussions and trends",
-      "trends": [
+      "overview": "Comprehensive HTML-formatted analysis of market dynamics and consumer behavior patterns",
+      "recurring_pain_points": [
         {
-          "title": "Community trend or discussion pattern",
-          "description": "HTML-formatted description of the trend's significance",
-          "percentage": number (0-100 indicating trend strength)
+          "issue": "Specific pain point identified",
+          "frequency": "Occurrence frequency (0-100)",
+          "impact_score": "Business impact score (0-100)",
+          "verbatim_quotes": ["Direct user quotes illustrating the pain point"],
+          "suggested_solutions": ["Actionable recommendations"]
         }
       ],
-      "competitors": [
+      "niche_communities": [
         {
-          "name": "Competing brand/community",
-          "strength": "HTML-formatted analysis of their social media presence",
-          "score": number (0-100 based on discussion impact)
+          "segment": "Identified market segment",
+          "demographic_indicators": ["Observable demographic patterns"],
+          "discussion_themes": ["Recurring conversation topics"],
+          "engagement_level": "Community participation score (0-100)",
+          "influence_score": "Market influence rating (0-100)",
+          "key_influencers": ["Notable community members or thought leaders"]
         }
       ],
-      "opportunities": [
-        "HTML-formatted community engagement or content strategy suggestion"
-      ]
+      "sentiment_analysis": {
+        "overall_sentiment": "Aggregate sentiment score (-100 to 100)",
+        "emotional_triggers": [
+          {
+            "trigger": "Identified emotional catalyst",
+            "intensity": "Impact strength (0-100)",
+            "context": "HTML-formatted situational analysis",
+            "activation_phrases": ["Key phrases that activate this emotion"]
+          }
+        ],
+        "brand_perception": {
+          "positive_attributes": ["Favorable brand associations"],
+          "negative_attributes": ["Areas of concern"],
+          "neutral_observations": ["Unbiased market observations"]
+        }
+      },
+      "psychographic_insights": {
+        "motivation_factors": ["Key purchasing drivers"],
+        "decision_drivers": ["Critical factors in decision making"],
+        "adoption_barriers": ["Obstacles to product/service adoption"]
+      },
+      "competitive_intelligence": {
+        "market_positioning": "HTML-formatted competitive landscape analysis",
+        "share_of_voice": "Relative market presence (0-100)",
+        "competitive_advantages": ["Distinct market advantages"],
+        "threat_assessment": "HTML-formatted competitive risk analysis"
+      }
     }
-    Ensure all text fields contain properly formatted HTML.
-    Focus on community sentiment, discussion themes, and engagement strategies.
-    Limit to 3 trends, 3 competitors, and 3 opportunities.`;
 
-    const summaryResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    Tiktok is banned in India.
+    Give me Creative ideas only, not Generic Ideas.
+    And use Complex Marketing Language.
+    Ensure detailed HTML formatting for all text fields.
+    Focus on actionable insights, psychological factors, and market dynamics.
+    Give 6 pain points, 3 niche communities, and 3 emotional triggers.`;
+
+    const insightResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${groqApiKey}`,
       },
       body: JSON.stringify({
-        model: "mixtral-8x7b-32768",
+        model: "deepseek-r1-distill-qwen-32b",
         messages: [
           { role: "system", content: context },
-          { role: "user", content: JSON.stringify(results.slice(0, 5)) },
+          { role: "user", content: JSON.stringify(results.slice(0, 10)) },
         ],
         temperature: 0.7,
-        max_tokens: 1500,
+        max_tokens: 4500,
+        response_format: { type: 'json_object' },
       }),
     });
 
-    if (!summaryResponse.ok) {
-      throw new Error(`Groq API error: ${summaryResponse.status}`);
+    if (!insightResponse.ok) {
+      throw new Error(`Groq API error: ${insightResponse.status}`);
     }
 
-    const summaryData = await summaryResponse.json();
-    const content = summaryData.choices[0].message.content;
-
-    // Validate JSON before parsing
-    const summary: AnalyticsSummary = JSON.parse(content);
-    return { results, summary };
+    const insightData = await insightResponse.json();
+    const insights: MarketingInsight = JSON.parse(insightData.choices[0].message.content);
+    return { results, insights };
   } catch (error) {
-    console.error("Error in fetchRedditResults:", error);
+    console.error("Error in fetchMarketingInsights:", error);
     return null;
   }
 };
