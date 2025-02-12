@@ -1,13 +1,13 @@
-/* Vibrant Glassy Color Design System */
+/* Design System */
 :root {
-  /* Vibrant Color Palette */
-  --color-primary-blue: #3B82F6;     /* Clean, modern blue */
-  --color-trends-blue: #2563EB;      /* Deep blue for trends */
-  --color-competitors-rose: #E11D48; /* Vibrant rose for competitors */
-  --color-opportunities-green: #16A34A; /* Bright green for opportunities */
-  --color-source-purple: #7C3AED;    /* Rich purple for source data */
+  /* Core Colors */
+  --color-primary: #3B82F6;     /* Main brand blue */
+  --color-trends: #2563EB;      /* Trends section */
+  --color-consumer: #16A34A;    /* Consumer insights */
+  --color-industry: #7C3AED;    /* Industry insights */
+  --color-seasonal: #E11D48;    /* Seasonal topics */
   
-  /* Dark Mode Foundations */
+  /* Dark Mode Base */
   --background-deep: #0a0a0c;
   --background-surface: #141417;
   --background-elevated: #1e1e24;
@@ -16,11 +16,12 @@
   --font-display: 'Inter', 'SF Pro Display', system-ui, sans-serif;
   --font-body: 'Inter', 'SF Pro Text', system-ui, sans-serif;
   
-  /* Enhanced Translucent Backgrounds */
-  --glass-background: rgba(22, 22, 28, 0.5);  /* Increased transparency */
-  --glass-border: rgba(255, 255, 255, 0.1);   /* Lighter border */
+  /* Glass Effect */
+  --glass-background: rgba(22, 22, 28, 0.5);
+  --glass-border: rgba(255, 255, 255, 0.1);
 }
 
+/* Base Styles */
 body {
   background-color: var(--background-deep);
   color: white;
@@ -29,169 +30,205 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-.analytics-container {
-  width: 100%;
-  max-width: 100%;
-  padding: 2rem;
-  margin: 0;
+/* Container Layout */
+.max-w-7xl {
+  max-width: 80rem;
+  margin: 0 auto;
 }
 
-.analytics-header {
-  text-align: left;
-  margin-bottom: 2.5rem;
-  position: relative;
-  z-index: 2;  /* Elevate text */
-}
-
-.analytics-header h1 {
+/* Header Styling */
+header h1 {
   font-family: var(--font-display);
   font-size: 2.75rem;
   font-weight: 700;
   letter-spacing: -0.03em;
-  color: var(--color-primary-blue);
+  color: var(--color-primary);
   margin-bottom: 0.5rem;
-  position: relative;
-  z-index: 2;  /* Elevate text */
 }
 
-.query-text {
-  color: rgba(255,255,255,0.6);
-  font-size: 1rem;
-  position: relative;
-  z-index: 2;  /* Elevate text */
-}
-
-/* Overview Styling */
-.analytics-overview {
-  background: transparent;
-  margin-bottom: 2rem;
-  color: rgba(255,255,255,0.8);
+header p {
+  color: rgba(255, 255, 255, 0.6);
   font-size: 1.1rem;
-  position: relative;
-  z-index: 2;  /* Elevate text */
 }
 
-/* Section Headings with Vibrant Colors */
-.trends .analytics-section h2,
-.competitors .analytics-section h2,
-.opportunities .analytics-section h2,
-.source-data .analytics-section h2 {
-  position: relative;
-  z-index: 2;  /* Elevate text */
-}
-
-.trends .analytics-section h2 { color: var(--color-trends-blue); }
-.competitors .analytics-section h2 { color: var(--color-competitors-rose); }
-.opportunities .analytics-section h2 { color: var(--color-opportunities-green); }
-.source-data .analytics-section h2 { color: var(--color-source-purple); }
-
-/* Enhanced Glass Morphism Cards */
-.glass-card {
+/* Market Overview Section */
+.bg-white\/10 {
   background: var(--glass-background);
   backdrop-filter: blur(25px) saturate(400%);
-  -webkit-backdrop-filter: blur(30px) saturate(80%);
+  -webkit-backdrop-filter: blur(25px) saturate(400%);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
-  position: relative;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  transition: all 0.3s ease;
 }
 
-.glass-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 15px 40px rgba(0,0,0,0.25);
-  backdrop-filter: blur(30px) saturate(200%);
-  -webkit-backdrop-filter: blur(30px) saturate(200%);
+.bg-white\/10:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
-.analytics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1.5rem;
-  width: 100%;
-}
-
-.analytics-section {
-  margin-bottom: 2.5rem;
-}
-
-.analytics-section h2 {
-  display: flex;
-  align-items: center;
+/* Section Styling */
+section h2 {
   font-family: var(--font-display);
   font-size: 1.75rem;
   font-weight: 600;
-  margin-bottom: 1.5rem;
-  gap: 0.75rem;
-  position: relative;
-  z-index: 2;  /* Elevate text */
-}
-
-.section-icon {
-  opacity: 0.7;
-  stroke-width: 2px;
-}
-
-.trends .section-icon { color: var(--color-trends-blue); }
-.competitors .section-icon { color: var(--color-competitors-rose); }
-.opportunities .section-icon { color: var(--color-opportunities-green); }
-.source-data .section-icon { color: var(--color-source-purple); }
-
-.analytics-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 1.5rem;
-  gap: 1rem;
-  background: rgba(255,255,255,0.05);
-  border-radius: 12px;
-  position: relative;
-}
-
-.analytics-card h3 {
-  font-size: 1.25rem;
-  color: white;
-  font-weight: 600;
-  position: relative;
-  z-index: 2;  /* Elevate text */
-}
-
-.analytics-card p {
-  color: rgba(255,255,255,0.7);
-  font-size: 0.95rem;
-  position: relative;
-  z-index: 2;  /* Elevate text */
-}
-
-.analytics-progress-container {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
-.custom-progress {
-  flex-grow: 1;
-  height: 6px;
-  background: rgba(255,255,255,0.1);
+/* Card Base Styles */
+.rounded-lg {
+  border-radius: 1rem;
 }
 
-.trends .custom-progress div { background-color: var(--color-trends-blue); }
-.competitors .custom-progress div { background-color: var(--color-competitors-rose); }
-.opportunities .custom-progress div { background-color: var(--color-opportunities-green); }
-.source-data .custom-progress div { background-color: var(--color-source-purple); }
+.shadow-lg {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
 
-.analytics-percentage {
-  color: rgba(255,255,255,0.6);
+/* Section-specific Card Styling */
+/* Trends Section */
+[data-section="trends"] .rounded-lg {
+  border-left: 4px solid var(--color-trends);
+}
+
+[data-section="trends"] h2 {
+  color: var(--color-trends);
+}
+
+[data-section="trends"] .Progress {
+  background-color: var(--color-trends);
+  opacity: 0.2;
+}
+
+[data-section="trends"] .Progress-indicator {
+  background-color: var(--color-trends);
+}
+
+/* Consumer Insights Section */
+[data-section="consumer"] .rounded-lg {
+  border-left: 4px solid var(--color-consumer);
+}
+
+[data-section="consumer"] h2 {
+  color: var(--color-consumer);
+}
+
+/* Industry Insights Section */
+[data-section="industry"] .rounded-lg {
+  border-left: 4px solid var(--color-industry);
+}
+
+[data-section="industry"] h2 {
+  color: var(--color-industry);
+}
+
+/* Seasonal Topics Section */
+[data-section="seasonal"] .rounded-lg {
+  border-left: 4px solid var(--color-seasonal);
+}
+
+[data-section="seasonal"] h2 {
+  color: var(--color-seasonal);
+}
+
+[data-section="seasonal"] .Progress {
+  background-color: var(--color-seasonal);
+  opacity: 0.2;
+}
+
+[data-section="seasonal"] .Progress-indicator {
+  background-color: var(--color-seasonal);
+}
+
+/* Card Content Styling */
+.space-y-4 > * + * {
+  margin-top: 1rem;
+}
+
+/* Card Typography */
+.text-xl {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.text-sm {
   font-size: 0.875rem;
-  min-width: 40px;
-  text-align: right;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Lists within Cards */
+ul.space-y-2 > * + * {
+  margin-top: 0.5rem;
+}
+
+ul.space-y-2 li {
   position: relative;
-  z-index: 2;  /* Elevate text */
+  padding-left: 1.5rem;
+}
+
+ul.space-y-2 li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Progress Bar Styling */
+.Progress {
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.Progress-indicator {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+/* Loading State */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive Grid */
+@media (max-width: 1024px) {
+  .lg\:grid-cols-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 768px) {
-  .analytics-grid {
+  .md\:grid-cols-2 {
     grid-template-columns: 1fr;
   }
+  
+  header h1 {
+    font-size: 2rem;
+  }
+  
+  .max-w-7xl {
+    padding: 1rem;
+  }
+}
+
+/* Error States */
+.text-red-500 {
+  color: #EF4444;
+}
+
+/* Empty State */
+.text-center {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 2rem;
 }

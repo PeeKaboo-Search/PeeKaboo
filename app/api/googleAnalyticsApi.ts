@@ -7,39 +7,59 @@ interface GoogleResult {
   link: string;
 }
 
-interface ResearchTrend {
+interface TrendCard {
   title: string;
-  analysis: string;
+  description: string;
   impact: number;
+  audience: string[];
+  platforms: string[];
+  contentIdeas: string[];
+  bestPractices: string[];
+}
+
+interface InsightCard {
+  title: string;
+  type: 'consumer' | 'industry';
+  keyFindings: string[];
+  implications: string[];
+  opportunities: string[];
   recommendations: string[];
 }
 
-interface ResearchInsight {
-  key: string;
-  details: string;
+interface SeasonalCard {
+  topic: string;
+  timing: string;
   relevance: number;
-  sources: string[];
-}
-
-interface MarketOpportunity {
-  title: string;
   description: string;
-  potentialScore: number;
-  actionItems: string[];
+  marketingAngles: string[];
+  contentSuggestions: string[];
 }
 
-interface AnalyticsSummary {
-  overview: string;
-  trends: ResearchTrend[];
-  research: ResearchInsight[];
-  opportunities: MarketOpportunity[];
+interface MarketResearchAnalysis {
+  executiveSummary: string;
+  marketOverview: {
+    targetAudience: string[];
+    demographics: string[];
+    psychographics: string[];
+    channels: string[];
+  };
+  trends: TrendCard[];
+  consumerInsights: InsightCard[];
+  industryInsights: InsightCard[];
+  seasonalTopics: SeasonalCard[];
+  recommendations: {
+    contentStrategy: string[];
+    timing: string[];
+    platforms: string[];
+    messaging: string[];
+  };
 }
 
 interface GoogleSearchData {
   success: boolean;
   data?: {
     results: GoogleResult[];
-    analysis: AnalyticsSummary;
+    analysis: MarketResearchAnalysis;
     timestamp: string;
   };
   error?: string;
@@ -47,8 +67,7 @@ interface GoogleSearchData {
 
 // Configuration
 const CONFIG = {
-  CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
-  REQUEST_TIMEOUT: 30000, // 30 seconds
+  REQUEST_TIMEOUT: 60000,
   API_KEYS: {
     GOOGLE: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
     SEARCH_ENGINE_ID: process.env.NEXT_PUBLIC_GOOGLE_SEARCH_ENGINE_ID,
@@ -56,81 +75,86 @@ const CONFIG = {
   }
 } as const;
 
-// Cache implementation
-class SearchCache {
-  private cache = new Map<string, GoogleSearchData>();
+const MARKET_RESEARCH_PROMPT = `You are a highly skilled marketing analyst with expertise in digital advertising, content strategy, and emerging trends in the Indian market. Conduct a deep-dive analysis of the provided search results and generate a comprehensive advertising research report in JSON format. This report should emphasize actionable insights, data-driven recommendations, and strategic opportunities tailored for Indian audiences across urban and tier-2/3 cities.
 
-  get(query: string): GoogleSearchData | null {
-    const cached = this.cache.get(query);
-    if (!cached) return null;
-
-    const timestamp = new Date(cached.data?.timestamp || '');
-    if (Date.now() - timestamp.getTime() < CONFIG.CACHE_DURATION) {
-      return cached;
-    }
-
-    this.cache.delete(query);
-    return null;
-  }
-
-  set(query: string, data: GoogleSearchData): void {
-    this.cache.set(query, data);
-  }
-}
-
-// Analysis prompt template
-const ANALYSIS_PROMPT = `You are an advanced research and market analysis specialist. Analyze these search results and provide a detailed, actionable analysis in JSON format including overview, trends, research insights, and market opportunities. Focus on key patterns, implications, and actionable recommendations.
-
-{
-  "overview": "A comprehensive HTML-formatted overview analyzing market dynamics, research findings, and strategic implications. Include key patterns and potential impact areas.",
+  "executiveSummary": "HTML-formatted overview highlighting key opportunities for advertising and content creation",
+  
+  "marketOverview": {
+    "targetAudience": ["Detailed audience segments with demographics and interests"],
+    "demographics": ["Key demographic characteristics"],
+    "psychographics": ["Behavioral patterns and preferences"],
+    "channels": ["Most effective marketing channels"]
+  },
   
   "trends": [
     {
-      "title": "Major trend or pattern identified",
-      "analysis": "HTML-formatted in-depth analysis of the trend, including supporting evidence and potential implications",
-      "impact": number (0-100 indicating significance and potential influence),
-      "recommendations": [
-        "Specific, actionable recommendations based on this trend"
-      ]
+      "title": "Trend name",
+      "description": "HTML-formatted trend analysis focusing on advertising potential",
+      "impact": "Impact score (0-100)",
+      "audience": ["Specific audience segments this trend resonates with"],
+      "platforms": ["Best platforms to leverage this trend"],
+      "contentIdeas": ["Specific content ideas to capitalize on trend"],
+      "bestPractices": ["Best practices for trend-based content"]
     }
   ],
   
-  "research": [
+  "consumerInsights": [
     {
-      "key": "Research insight title",
-      "details": "HTML-formatted detailed analysis of research findings and their implications",
-      "relevance": number (0-100 indicating relevance to current context),
-      "sources": [
-        "Referenced sources or supporting evidence"
-      ]
+      "title": "Insight title",
+      "type": "consumer",
+      "keyFindings": ["Critical consumer behavior patterns"],
+      "implications": ["Marketing implications"],
+      "opportunities": ["Specific advertising opportunities"],
+      "recommendations": ["Tactical recommendations for content"]
     }
   ],
   
-  "opportunities": [
+  "industryInsights": [
     {
-      "title": "Strategic opportunity identified",
-      "description": "HTML-formatted comprehensive description of the opportunity",
-      "potentialScore": number (0-100 based on potential impact and feasibility),
-      "actionItems": [
-        "Specific steps or actions to capitalize on this opportunity"
-      ]
+      "title": "Insight title",
+      "type": "industry",
+      "keyFindings": ["Industry patterns and shifts"],
+      "implications": ["Impact on advertising strategy"],
+      "opportunities": ["Market opportunities to exploit"],
+      "recommendations": ["Strategic recommendations"]
     }
-  ]
+  ],
+  
+  "seasonalTopics": [
+    {
+      "topic": "Seasonal theme",
+      "timing": "Optimal timing window",
+      "relevance": "Relevance score (0-100)",
+      "description": "HTML-formatted topic analysis",
+      "marketingAngles": ["Specific marketing angles"],
+      "contentSuggestions": ["Content ideas with formats"]
+    }
+  ],
+  
+  "recommendations": {
+    "contentStrategy": ["Content creation and distribution strategies"],
+    "timing": ["Optimal timing for different content types"],
+    "platforms": ["Platform-specific recommendations"],
+    "messaging": ["Key messaging frameworks"]
+  }
 }
 
 Guidelines:
-- Ensure all text fields use proper HTML formatting (<p>, <strong>, <em>, <ul>, <li>, etc.)
-- Provide 4-5 detailed trends with concrete evidence and implications
-- Include 3-4 research insights with clear sources and practical applications
-- Identify 3-4 high-potential opportunities with specific action items
-- Base all scores on concrete evidence and potential impact
-- Focus on actionable insights and practical applications
-- Consider both immediate and long-term implications
-- Include specific examples and supporting evidence where possible`;
+Give me Creative ideas only, not Generic Ideas.
+And use Complex Marketing Language.
+Ensure all insights are specific to the Indian market.
+Provide six well-researched trend analyses with clear examples.
+Generate three consumer insights focusing on behavioral shifts.
+Create three industry insights highlighting market disruptions.
+Include three seasonal content ideas with optimal timing windows.
+Recommend hashtags, keywords, and engagement benchmarks.
+Balance organic and paid marketing opportunities.
+Address both metro and non-metro digital trends.
+Consider viral potential and interactive formats (polls, quizzes, live sessions).
+Suggest clear CTAs to drive conversions.`;
 
 // Main service class
-export class GoogleSearchService {
-  private static cache = new SearchCache();
+export class MarketResearchService {
   private static activeRequests = new Map<string, Promise<GoogleSearchData>>();
 
   private static async fetchWithTimeout(
@@ -166,7 +190,8 @@ export class GoogleSearchService {
     const searchUrl = new URL('https://www.googleapis.com/customsearch/v1');
     searchUrl.searchParams.append('key', CONFIG.API_KEYS.GOOGLE || '');
     searchUrl.searchParams.append('cx', CONFIG.API_KEYS.SEARCH_ENGINE_ID || '');
-    searchUrl.searchParams.append('q', `${query} research`);
+    searchUrl.searchParams.append('q', `${query} trends marketing advertising content social media`);
+    searchUrl.searchParams.append('num', '10');
 
     const response = await this.fetchWithTimeout(searchUrl.toString(), { method: 'GET' });
 
@@ -189,7 +214,7 @@ export class GoogleSearchService {
   private static async generateAnalysis(
     query: string,
     results: GoogleResult[]
-  ): Promise<AnalyticsSummary> {
+  ): Promise<MarketResearchAnalysis> {
     const response = await this.fetchWithTimeout(
       'https://api.groq.com/openai/v1/chat/completions',
       {
@@ -199,13 +224,17 @@ export class GoogleSearchService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'mixtral-8x7b-32768',
+          model: 'llama-3.3-70b-versatile',
           messages: [
-            { role: 'system', content: ANALYSIS_PROMPT },
-            { role: 'user', content: JSON.stringify(results.slice(0, 8)) },
+            { role: 'system', content: MARKET_RESEARCH_PROMPT },
+            { 
+              role: 'user', 
+              content: `Analyze these search results for ${query} and provide advertising and content marketing insights in json format:\n${JSON.stringify(results, null, 2)}` 
+            },
           ],
           temperature: 0.7,
-          max_tokens: 1800,
+          max_tokens: 4000,
+          response_format: { type: 'json_object' },
         }),
       }
     );
@@ -229,19 +258,12 @@ export class GoogleSearchService {
     return JSON.parse(analysis);
   }
 
-  public static async searchAndAnalyze(query: string): Promise<GoogleSearchData> {
+  public static async researchMarket(query: string): Promise<GoogleSearchData> {
     if (!query.trim()) {
       return { success: false, error: 'Query cannot be empty' };
     }
 
     try {
-      // Check cache first
-      const cachedResult = this.cache.get(query);
-      if (cachedResult) {
-        return cachedResult;
-      }
-
-      // Check for active requests
       const activeRequest = this.activeRequests.get(query);
       if (activeRequest) {
         return activeRequest;
@@ -266,7 +288,6 @@ export class GoogleSearchService {
             },
           };
 
-          this.cache.set(query, response);
           return response;
         } finally {
           this.activeRequests.delete(query);
@@ -277,25 +298,25 @@ export class GoogleSearchService {
       return newRequest;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      console.error('Search and analysis error:', error);
+      console.error('Market research error:', error);
       return { success: false, error: errorMessage };
     }
   }
 }
 
 // React hook
-export const useGoogleSearch = () => {
-  const [searchData, setSearchData] = useState<GoogleSearchData | null>(null);
+export const useMarketResearch = () => {
+  const [researchData, setResearchData] = useState<GoogleSearchData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const search = async (query: string) => {
+  const research = async (query: string) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const result = await GoogleSearchService.searchAndAnalyze(query);
-      setSearchData(result);
+      const result = await MarketResearchService.researchMarket(query);
+      setResearchData(result);
       return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -306,15 +327,15 @@ export const useGoogleSearch = () => {
     }
   };
 
-  const clearSearch = () => {
-    setSearchData(null);
+  const clearResearch = () => {
+    setResearchData(null);
     setError(null);
   };
 
   return {
-    searchData,
-    search,
-    clearSearch,
+    researchData,
+    research,
+    clearResearch,
     isLoading,
     error
   };
