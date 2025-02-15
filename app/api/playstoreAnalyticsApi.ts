@@ -1,224 +1,163 @@
 import { z } from 'zod';
 
-// Detailed Zod Schemas for Type Safety
-export const AppReviewSchema = z.object({
-  username: z.string().optional().default('Anonymous User'),
-  rating: z.number().min(1).max(5).safe().default(3),
-  comment: z.string().optional().default('No detailed comment provided'),
-  date: z.string().optional().default(() => new Date().toISOString().split('T')[0])
+// API Response types
+interface PlayStoreReview {
+  reviewer: string;
+  score: number;
+  text: string;
+  timestamp: string;
+  avatar?: string;
+  version?: string;
+  reply?: string;
+  reply_timestamp?: string;
+  respondent?: string;
+  useful?: number;
+}
+
+interface PlayStoreAppData {
+  title: string;
+  score: number;
+  ratings: number;
+  reviews: PlayStoreReview[];
+  description: string;
+  installs: string;
+  developer: string;
+  icon?: string;
+  genre?: string;
+  price?: {
+    currency: string;
+    value: number;
+  };
+}
+
+// Review schema
+const ReviewSchema = z.object({
+  avatar: z.string().optional(),
+  score: z.number().min(1).max(5),
+  reviewer: z.string(),
+  text: z.string(),
+  timestamp: z.string(),
+  version: z.string().optional(),
+  reply: z.string().optional(),
+  reply_timestamp: z.string().optional(),
+  respondent: z.string().optional(),
+  useful: z.number().optional(),
 });
 
+// App details schema
+const AppDetailsSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  score: z.number(),
+  ratings: z.number(),
+  reviews: z.array(ReviewSchema),
+  installs: z.string(),
+  developer: z.string(),
+  icon: z.string().optional(),
+  genre: z.string().optional(),
+  price: z.object({
+    currency: z.string(),
+    value: z.number()
+  }).optional(),
+});
+
+// Analytics schema
 export const AppAnalyticsSchema = z.object({
-  appName: z.string().min(1, "App name must be provided").trim(),
-  overallRating: z.number().min(1).max(5).safe().default(3),
-  totalReviews: z.number().safe().min(0).default(0),
-  topReviews: z.array(AppReviewSchema).max(5).default([]),
+  appName: z.string(),
+  overallRating: z.number(),
+  totalReviews: z.number(),
+  topReviews: z.array(z.object({
+    username: z.string(),
+    rating: z.number(),
+    comment: z.string(),
+    date: z.string(),
+  })),
   insights: z.object({
-    positiveHighlights: z.array(z.string()).max(5).default([]),
-    negativeComplaints: z.array(z.string()).max(5).default([]),
-    featureSuggestions: z.array(z.string()).max(5).default([])
-  }).default({
-    positiveHighlights: [],
-    negativeComplaints: [],
-    featureSuggestions: []
-  })
+    positiveHighlights: z.array(z.string()),
+    negativeComplaints: z.array(z.string()),
+    featureSuggestions: z.array(z.string()),
+  }),
 });
 
-export type AppReview = z.infer<typeof AppReviewSchema>;
 export type AppAnalytics = z.infer<typeof AppAnalyticsSchema>;
 
-// Interfaces for Search Results
-interface GoogleSearchResult {
-  title: string;
-  snippet: string;
-  link: string;
-}
+// Helper function to extract insights from reviews
+const extractInsights = (reviews: PlayStoreReview[]) => {
+  const insights = {
+    positiveHighlights: [] as string[],
+    negativeComplaints: [] as string[],
+    featureSuggestions: [] as string[],
+  };
 
-// Utility function to parse and clean app name
-function parseAppQuery(query: string): string {
-  const cleanQuery = query
-    .replace(/\b(app|store|play|android|mobile|application|review|reviews)\b/gi, '')
-    .trim();
-  
-  return cleanQuery.split(/\s+/)[0] || cleanQuery;
-}
-
-// Detailed, structured JSON template for Groq AI
-const JSON_TEMPLATE = {
-  appName: "Full App Name",
-  overallRating: 4.5,
-  totalReviews: 50000,
-  topReviews: [
-    {
-      username: "TechFan92",
-      rating: 5,
-      comment: "Amazing app with incredible features and smooth performance!",
-      date: "2024-01-15"
-    },
-    {
-      username: "CasualUser",
-      rating: 3,
-      comment: "Good app, but needs more frequent updates.",
-      date: "2024-02-01"
+  reviews.forEach(review => {
+    const text = review.text.toLowerCase();
+    if (review.score >= 4) {
+      insights.positiveHighlights.push(review.text);
+    } else if (review.score <= 2) {
+      insights.negativeComplaints.push(review.text);
     }
-  ],
-  insights: {
-    positiveHighlights: [
-      "Intuitive user interface",
-      "Regular feature updates",
-      "Responsive customer support"
-    ],
-    negativeComplaints: [
-      "Occasional performance lag",
-      "Some features require in-app purchases",
-      "Battery drain on older devices"
-    ],
-    featureSuggestions: [
-      "Dark mode implementation",
-      "More customization options",
-      "Improved offline functionality"
-    ]
-  }
+    if (text.includes('suggest') || text.includes('would be nice') || text.includes('should add')) {
+      insights.featureSuggestions.push(review.text);
+    }
+  });
+
+  return {
+    positiveHighlights: insights.positiveHighlights.slice(0, 5),
+    negativeComplaints: insights.negativeComplaints.slice(0, 5),
+    featureSuggestions: insights.featureSuggestions.slice(0, 5),
+  };
 };
 
-export const fetchPlayStoreAnalytics = async (query: string): Promise<AppAnalytics | null> => {
+export const fetchPlayStoreAnalytics = async (query: string): Promise<AppAnalytics> => {
+  const url = 'https://google-play-store-scraper-api.p.rapidapi.com/search-apps';
+  
   try {
-    // Validate API keys
-    const searchApiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
-    const searchEngineId = process.env.NEXT_PUBLIC_GOOGLE_SEARCH_ENGINE_ID;
-    const groqApiKey = process.env.NEXT_PUBLIC_RGROQ_API_KEY;
-
-    if (!searchApiKey || !searchEngineId || !groqApiKey) {
-      throw new Error("Missing API keys. Configure environment variables.");
-    }
-
-    // Parse app name from query
-    const appName = parseAppQuery(query);
-
-    // Construct search query
-    const searchQuery = `${appName} Play Store app reviews and ratings`;
-    
-    // Fetch Google Custom Search results
-    const searchUrl = new URL('https://www.googleapis.com/customsearch/v1');
-    searchUrl.searchParams.set('key', searchApiKey);
-    searchUrl.searchParams.set('cx', searchEngineId);
-    searchUrl.searchParams.set('q', searchQuery);
-    searchUrl.searchParams.set('num', '5');
-
-    const searchResponse = await fetch(searchUrl.toString());
-    
-    if (!searchResponse.ok) {
-      throw new Error(`Google Search API Error: ${searchResponse.status}`);
-    }
-
-    const searchData = await searchResponse.json() as { items?: Array<Record<string, string>> };
-    
-    // Extract and clean search results
-    const searchResults: GoogleSearchResult[] = (searchData.items || [])
-      .slice(0, 3)
-      .map((item) => ({
-        title: item.title || 'No Title',
-        snippet: item.snippet || 'No Description',
-        link: item.link || ''
-      }));
-
-    // Prepare AI prompt with context and JSON template
-    const aiPrompt = `
-TASK: Analyze Play Store app reviews for ${appName}
-
-CONTEXT:
-- Analyze the app's user reviews and overall performance
-- Use the following search results as background information
-${searchResults.map(result => 
-  `- Title: ${result.title}\n  Snippet: ${result.snippet}`
-).join('\n')}
-
-REQUIREMENTS:
-1. Generate a comprehensive app review analysis
-2. Follow the exact JSON structure in the template
-3. Be precise, data-driven, and objective
-4. Use real-world insights based on typical user experiences
-
-JSON TEMPLATE:
-${JSON.stringify(JSON_TEMPLATE, null, 2)}
-
-IMPORTANT:
-- Respond ONLY with valid, parseable JSON
-- Ensure all fields are populated
-- Use realistic, meaningful data
-- Focus on user experience and app performance
-`;
-
-    // Call Groq API for analysis
-    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    // Step 1: Search for the app
+    const searchResponse = await fetch(url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${groqApiKey}`
+        'x-rapidapi-key': process.env.NEXT_PUBLIC_PLAYSTORE_RAPIDAPI_KEY || '',
+        'x-rapidapi-host': 'google-play-store-scraper-api.p.rapidapi.com',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'llama3-70b-8192',
-        messages: [
-          { 
-            role: 'system', 
-            content: 'You are an expert mobile app review analyst. Generate precise, data-driven insights.' 
-          },
-          { 
-            role: 'user', 
-            content: aiPrompt 
-          }
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0.5,
-        max_tokens: 1500
+        language: 'en',
+        country: 'us',
+        keyword: query
       })
     });
 
-    if (!groqResponse.ok) {
-      const errorText = await groqResponse.text();
-      throw new Error(`Groq API Error: ${groqResponse.status} - ${errorText}`);
+    if (!searchResponse.ok) {
+      throw new Error(`Search failed with status: ${searchResponse.status}`);
     }
 
-    const groqData = await groqResponse.json() as { choices?: Array<{ message?: { content?: string } }> };
-    const content = groqData.choices?.[0]?.message?.content;
-
-    if (!content) {
-      throw new Error('No content received from Groq API');
+    const searchData = await searchResponse.json();
+    
+    if (!searchData.success || !searchData.data || !searchData.data.length) {
+      throw new Error('No results found');
     }
 
-    // Parse and validate the response
-    let parsedAnalytics: unknown;
-    try {
-      parsedAnalytics = JSON.parse(content);
-    } catch {
-      throw new Error('Invalid JSON response');
-    }
+    const appData = searchData.data[0] as PlayStoreAppData;
+    const reviews = appData.reviews || [];
 
-    // Validate against schema
-    const validationResult = AppAnalyticsSchema.safeParse({
-      ...(parsedAnalytics && typeof parsedAnalytics === 'object' ? parsedAnalytics : {}),
-      appName: appName
-    });
+    // Transform the data to match our schema
+    const analytics: AppAnalytics = {
+      appName: appData.title || query,
+      overallRating: Number(appData.score) || 0,
+      totalReviews: Number(appData.ratings) || 0,
+      topReviews: reviews.slice(0, 5).map((review: PlayStoreReview) => ({
+        username: review.reviewer || 'Anonymous',
+        rating: review.score || 0,
+        comment: review.text || '',
+        date: review.timestamp || new Date().toISOString(),
+      })),
+      insights: extractInsights(reviews)
+    };
 
-    if (!validationResult.success) {
-      console.error('Validation Error:', validationResult.error);
-      return null;
-    }
-
-    return validationResult.data;
+    return AppAnalyticsSchema.parse(analytics);
 
   } catch (error) {
-    console.error('Play Store Analytics Fetch Error:', error);
-    
-    // Detailed error logging
-    if (error instanceof Error) {
-      console.error('Error Details:', {
-        message: error.message,
-        name: error.name,
-        stack: error.stack
-      });
-    }
-
-    return null;
+    console.error('Error fetching Play Store analytics:', error);
+    throw error;
   }
 };

@@ -5,6 +5,7 @@ import { TrendingUp, Award, Lightbulb, Activity } from "lucide-react";
 import { Progress } from "@/app/components/ui/progress";
 import "app/styles/GoogleAnalytics.css";
 
+// TypeScript interfaces
 interface Trend {
   title: string;
   description: string;
@@ -34,23 +35,26 @@ interface AdvertisingAnalyticsProps {
   query: string;
 }
 
-// Lazy loaded content wrapper
-const AnalyticsContent = lazy(() => Promise.resolve({
-  default: ({
-    summary,
-    results
-  }: {
-    summary: AnalyticsSummary;
-    results: GoogleResult[];
-  }) => {
-    const renderTrendsSection = () => (
+// Loading spinner component
+const LoadingSpinner = () => (
+  <div className="analytics-loader">
+    {Array.from({ length: 4 }).map((_, i) => (
+      <div key={i} className="analytics-loader__item" />
+    ))}
+  </div>
+);
+
+// Lazy loaded sections
+const TrendsSection = lazy(() => 
+  Promise.resolve({
+    default: ({ trends }: { trends: Trend[] }) => (
       <section className="analytics-section trends">
         <h2>
           <TrendingUp className="section-icon" />
           Advertising Trends
         </h2>
         <div className="analytics-grid">
-          {summary.trends.map((trend, index) => (
+          {trends.map((trend, index) => (
             <div key={index} className="analytics-card glass-card">
               <div>
                 <h3 dangerouslySetInnerHTML={{ __html: trend.title }} />
@@ -64,16 +68,20 @@ const AnalyticsContent = lazy(() => Promise.resolve({
           ))}
         </div>
       </section>
-    );
+    )
+  })
+);
 
-    const renderCompetitorsSection = () => (
+const CompetitorsSection = lazy(() =>
+  Promise.resolve({
+    default: ({ competitors }: { competitors: Competitor[] }) => (
       <section className="analytics-section competitors">
         <h2>
           <Award className="section-icon" />
           Competitor Ad Analysis
         </h2>
         <div className="analytics-grid">
-          {summary.competitors.map((competitor, index) => (
+          {competitors.map((competitor, index) => (
             <div key={index} className="analytics-card glass-card">
               <div>
                 <h3 dangerouslySetInnerHTML={{ __html: competitor.name }} />
@@ -87,25 +95,33 @@ const AnalyticsContent = lazy(() => Promise.resolve({
           ))}
         </div>
       </section>
-    );
+    )
+  })
+);
 
-    const renderOpportunitiesSection = () => (
+const OpportunitiesSection = lazy(() =>
+  Promise.resolve({
+    default: ({ opportunities }: { opportunities: string[] }) => (
       <section className="analytics-section opportunities">
         <h2>
           <Lightbulb className="section-icon" />
           Campaign Opportunities
         </h2>
         <div className="analytics-grid">
-          {summary.opportunities.map((opportunity, index) => (
+          {opportunities.map((opportunity, index) => (
             <div key={index} className="analytics-card glass-card">
               <p dangerouslySetInnerHTML={{ __html: opportunity }} />
             </div>
           ))}
         </div>
       </section>
-    );
+    )
+  })
+);
 
-    const renderSourceDataSection = () => (
+const SourceDataSection = lazy(() =>
+  Promise.resolve({
+    default: ({ results }: { results: GoogleResult[] }) => (
       <section className="analytics-section source-data">
         <h2>
           <Activity className="section-icon" />
@@ -126,28 +142,8 @@ const AnalyticsContent = lazy(() => Promise.resolve({
           ))}
         </div>
       </section>
-    );
-
-    return (
-      <div className="analytics-content">
-        <section className="analytics-overview">
-          <div dangerouslySetInnerHTML={{ __html: summary.overview }} />
-        </section>
-        {renderTrendsSection()}
-        {renderCompetitorsSection()}
-        {renderOpportunitiesSection()}
-        {renderSourceDataSection()}
-      </div>
-    );
-  }
-}));
-
-const LoadingSpinner = () => (
-  <div className="analytics-loader">
-    {Array.from({ length: 4 }).map((_, i) => (
-      <div key={i} className="analytics-loader__item" />
-    ))}
-  </div>
+    )
+  })
 );
 
 const AdvertisingAnalytics: React.FC<AdvertisingAnalyticsProps> = ({ query }) => {
@@ -200,9 +196,27 @@ const AdvertisingAnalytics: React.FC<AdvertisingAnalyticsProps> = ({ query }) =>
       </header>
 
       {summary && (
-        <Suspense fallback={<LoadingSpinner />}>
-          <AnalyticsContent summary={summary} results={results} />
-        </Suspense>
+        <div className="analytics-content">
+          <section className="analytics-overview">
+            <div dangerouslySetInnerHTML={{ __html: summary.overview }} />
+          </section>
+          
+          <Suspense fallback={<LoadingSpinner />}>
+            <TrendsSection trends={summary.trends} />
+          </Suspense>
+          
+          <Suspense fallback={<LoadingSpinner />}>
+            <CompetitorsSection competitors={summary.competitors} />
+          </Suspense>
+          
+          <Suspense fallback={<LoadingSpinner />}>
+            <OpportunitiesSection opportunities={summary.opportunities} />
+          </Suspense>
+          
+          <Suspense fallback={<LoadingSpinner />}>
+            <SourceDataSection results={results} />
+          </Suspense>
+        </div>
       )}
     </div>
   );
