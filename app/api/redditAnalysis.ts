@@ -89,12 +89,26 @@ export const fetchMarketingInsights = async (
     const authData = await authResponse.json();
     const accessToken = authData.access_token;
 
-    // Enhanced Reddit Search with Broader Coverage
-    const subreddits = [
-      'technology', 'products', 'business', 'marketing',
-      'startups', 'entrepreneurship', 'productmanagement',
-      'B2B', 'SaaS', 'digitalmarketing'
-    ];
+    // Dynamic Subreddit Discovery
+    const subredditSearch = await fetch(
+      `https://oauth.reddit.com/subreddits/search?q=${encodeURIComponent(query)}&limit=7`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'User-Agent': 'YourApp/1.0 (by /u/yourusername)',
+        },
+      }
+    );
+
+    if (!subredditSearch.ok) {
+      throw new Error(`Subreddit search error: ${subredditSearch.status}`);
+    }
+    const subredditData = await subredditSearch.json();
+    const subreddits = subredditData.data.children
+      .slice(0, 5)
+      .map((s: any) => s.data.display_name);
+
+    // Initialize results array
     const results: RedditResult[] = [];
 
     for (const subreddit of subreddits.slice(0, 5)) {
@@ -218,7 +232,7 @@ export const fetchMarketingInsights = async (
     const insights: MarketingInsight = JSON.parse(insightData.choices[0].message.content);
     return { results, insights };
   } catch (error) {
-    console.error("Error in fetchMarketingInsights:", error);
+    console.error("Error in fetchMarketingInsigthts:", error);
     return null;
   }
 };
