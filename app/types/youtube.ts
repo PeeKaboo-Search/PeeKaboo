@@ -1,62 +1,128 @@
-// Video interfaces
+// YouTube Video Types
+export interface YouTubeVideoSnippet {
+  title: string;
+  description: string;
+  thumbnails: {
+    default: {
+      url: string;
+      width?: number;
+      height?: number;
+    };
+    medium: {
+      url: string;
+      width?: number;
+      height?: number;
+    };
+    high: {
+      url: string;
+      width?: number;
+      height?: number;
+    };
+  };
+  channelTitle: string;
+  publishedAt: string;
+}
+
 export interface YouTubeVideo {
   id: {
     videoId: string;
   };
-  snippet: {
-    title: string;
-    description: string;
-    thumbnails: {
-      medium: {
-        url: string;
-      };
-    };
-    publishedAt: string;
-    channelTitle: string;
-  };
+  snippet: YouTubeVideoSnippet;
 }
 
-// Statistics interfaces
+// Statistics Types
 export interface VideoStatistics {
   viewCount: string;
   likeCount: string;
   commentCount: string;
 }
 
-// Transcript interfaces
-export interface TranscriptItem {
-  text: string;
-  duration: number;
-  offset: number;
+// Comment Types
+export interface CommentSnippet {
+  textDisplay: string;
+  textOriginal: string;
+  authorDisplayName: string;
+  authorProfileImageUrl?: string;
+  authorChannelUrl?: string;
+  likeCount: number;
+  publishedAt: string;
+  updatedAt: string;
 }
 
-// Analysis interfaces
-export interface VideoAnalysis {
-  transcript: string;
-  quotes: string[];
-  sentiment: {
-    positive: string[];
-    negative: string[];
+export interface TopLevelComment {
+  id: string;
+  snippet: CommentSnippet;
+}
+
+export interface CommentThread {
+  id: string;
+  snippet: {
+    topLevelComment: TopLevelComment;
+    totalReplyCount: number;
+    canReply?: boolean;
+    isPublic?: boolean;
   };
-  keywords: string[];
-  summary: string;
 }
 
-// Component props
-export interface YouTubeAnalysisProps {
-  query: string;
+export interface CommentThreadResponse {
+  items: CommentThread[];
+  nextPageToken?: string;
 }
 
-// Error state
-export interface ErrorState {
-  message: string;
-  code: string;
+// Comment Analysis Types
+export interface PainPoint {
+  title: string;
+  description: string;
+  frequency: number;
+  impact: number;
+  possibleSolutions: string[];
 }
 
-// API Response types
+export interface UserExperience {
+  scenario: string;
+  impact: string;
+  frequencyPattern: string;
+  sentiment: 'positive' | 'negative' | 'neutral';
+}
+
+export interface EmotionalTrigger {
+  trigger: string;
+  context: string;
+  intensity: number;
+  responsePattern: string;
+}
+
+export interface CommentAnalysisData {
+  analysis: {
+    overview: string;
+    painPoints: PainPoint[];
+    userExperiences: UserExperience[];
+    emotionalTriggers: EmotionalTrigger[];
+    marketImplications: string;
+  };
+  sources: Array<{
+    content: string;
+    author: {
+      name: string;
+      profileImage?: string;
+    };
+    likeCount: number;
+    timestamp: string;
+  }>;
+  timestamp: string;
+}
+
+export interface CommentAnalysis {
+  success: boolean;
+  data?: CommentAnalysisData;
+  error?: string;
+}
+
+// API Response Types
 export interface YouTubeSearchResponse {
   items: YouTubeVideo[];
   nextPageToken?: string;
+  prevPageToken?: string;
 }
 
 export interface YouTubeStatisticsResponse {
@@ -64,4 +130,14 @@ export interface YouTubeStatisticsResponse {
     id: string;
     statistics: VideoStatistics;
   }>;
+}
+
+// Component Props and State Types
+export interface YouTubeVideosProps {
+  query: string;
+}
+
+export interface ErrorState {
+  message: string;
+  code: string;
 }
