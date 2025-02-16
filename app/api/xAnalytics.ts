@@ -1,345 +1,322 @@
 import { useState } from 'react';
 
-// Types for processed tweets
-interface ProcessedTweet {
-  id: string;
-  text: string;
+// Twitter API Response Types
+interface TwitterAPITweet {
+  tweet_id?: string;
+  text?: string;
+  created_at?: string;
+  screen_name?: string;
+  followers_count?: number;
+  profile_url?: string;
+  retweets?: number;
+  favorites?: number;
+  replies?: number;
+}
+
+interface TwitterAPIResponse {
+  timeline?: TwitterAPITweet[];
+  status?: string;
+}
+
+// Simplified Tweet Types for Analysis
+interface SimplifiedTweet {
+  content: string;
+  engagement: number;
   created_at: string;
-  user: {
-    name: string;
-    username: string;
+}
+
+// Analysis Result Types
+interface SentimentAnalysis {
+  score: number;
+  label: 'positive' | 'negative' | 'neutral';
+  confidence: number;
+}
+
+interface ContentPattern {
+  pattern: string;
+  description: string;
+  frequency: number;
+  examples: string[];
+}
+
+interface TopTweet {
+  content: string;
+  engagement: number;
+  reason: string;
+}
+
+interface MarketInsights {
+  userSentiment: string;
+  actionableInsights: string[];
+}
+
+interface Analysis {
+  overview: string;
+  sentimentAnalysis: SentimentAnalysis;
+  contentPatterns: ContentPattern[];
+  engagement: {
+    topTweets: TopTweet[];
   };
-  metrics: {
-    retweets: number;
-    likes: number;
-    replies: number;
-  };
+  marketInsights: MarketInsights;
 }
 
 interface AnalysisResult {
-  overallSentiment: {
-    score: number;
-    label: string;
-    confidence: number;
-    keyPhrases: string[];
+  success: boolean;
+  data?: {
+    analysis: Analysis;
+    sources: SimplifiedTweet[];
+    timestamp: string;
   };
-  trends: {
-    trend: string;
-    frequency: number;
-    sentiment: number;
-    relatedHashtags: string[];
-  }[];
-  topHashtags: string[];
-  engagementMetrics: {
-    averageRetweets: number;
-    averageLikes: number;
-    averageReplies: number;
-  };
+  error?: string;
 }
 
-// Configuration
-const CONFIG = {
-  TWITTER_API_URL: 'https://twitter-api45.p.rapidapi.com/search.php',
-  REQUEST_TIMEOUT: 30000,
-  MAX_TWEETS: 50,
-  MAX_CHARS_PER_TWEET: 280,
-  MAX_TOTAL_CHARS: 8000,
-  API_KEYS: {
-    RAPID_API: process.env.NEXT_PUBLIC_RAPID_API_KEY,
-    GROQ: process.env.NEXT_PUBLIC_GROQ_API_KEY
-  }
-};
-
 export class TwitterAnalysisService {
+  private static readonly CONFIG = {
+    TWITTER_API_URL: 'https://twitter-api45.p.rapidapi.com/search.php',
+    TIMEOUT: 30000,
+    MAX_TWEETS: 20,
+    MAX_TWEETS_FOR_ANALYSIS: 10,
+    MAX_CONTENT_LENGTH: 100,
+    GROQ_MODEL: 'mixtral-8x7b-32768',
+    API_KEYS: {
+      RAPID_API: process.env.NEXT_PUBLIC_XRAPID_API_KEY,
+      GROQ: process.env.NEXT_PUBLIC_GROQ_API_KEY
+    },
+    RETRY: {
+      MAX_ATTEMPTS: 3,
+      INITIAL_BACKOFF: 2000,
+      MAX_BACKOFF: 15000,
+    }
+  };
+
   private static async fetchWithTimeout(
-    url: string,
-    options: RequestInit,
-    timeout = CONFIG.REQUEST_TIMEOUT
+    url: string, 
+    options: RequestInit, 
+    timeout: number = this.CONFIG.TIMEOUT
   ): Promise<Response> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    const id = setTimeout(() => controller.abort(), timeout);
 
     try {
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
       });
-      clearTimeout(timeoutId);
+      clearTimeout(id);
       return response;
     } catch (error) {
-      clearTimeout(timeoutId);
+      clearTimeout(id);
       throw error;
     }
   }
 
-  private static processTweetText(tweets: any[]): {
-    processedTweets: ProcessedTweet[];
-    stats: {
-      totalTweets: number;
-      processedTweets: number;
-      totalChars: number;
-    };
-  } {
-    const processedTweets: ProcessedTweet[] = [];
-    let totalChars = 0;
-    const maxTweets = Math.min(tweets.length, CONFIG.MAX_TWEETS);
-
-    for (let i = 0; i < maxTweets; i++) {
-      const tweet = tweets[i];
+  private static async makeRequest(
+    url: string,
+    options: RequestInit,
+    attempt: number = 1
+  ): Promise<Response> {
+    try {
+      const response = await this.fetchWithTimeout(url, options);
       
-      // Skip if tweet is invalid
-      if (!tweet || !tweet.text) continue;
-
-      // Truncate tweet text if needed
-      let tweetText = tweet.text;
-      if (tweetText.length > CONFIG.MAX_CHARS_PER_TWEET) {
-        tweetText = tweetText.substring(0, CONFIG.MAX_CHARS_PER_TWEET) + '...';
+      if (response.status === 429 && attempt < this.CONFIG.RETRY.MAX_ATTEMPTS) {
+        const retryAfter = parseInt(response.headers.get('Retry-After') || '5');
+        const backoff = Math.max(
+          retryAfter * 1000,
+          Math.min(
+            this.CONFIG.RETRY.INITIAL_BACKOFF * Math.pow(2, attempt - 1),
+            this.CONFIG.RETRY.MAX_BACKOFF
+          )
+        );
+        await new Promise(resolve => setTimeout(resolve, backoff));
+        return this.makeRequest(url, options, attempt + 1);
       }
-
-      // Check total character limit
-      if (totalChars + tweetText.length > CONFIG.MAX_TOTAL_CHARS) {
-        break;
+      
+      return response;
+    } catch (error) {
+      if (error instanceof Error && 
+          error.name === 'AbortError' && 
+          attempt < this.CONFIG.RETRY.MAX_ATTEMPTS) {
+        await new Promise(resolve => 
+          setTimeout(resolve, this.CONFIG.RETRY.INITIAL_BACKOFF * Math.pow(2, attempt - 1))
+        );
+        return this.makeRequest(url, options, attempt + 1);
       }
-
-      totalChars += tweetText.length;
-
-      // Process tweet into standard format
-      processedTweets.push({
-        id: tweet.tweet_id || `tweet_${i}`,
-        text: tweetText,
-        created_at: tweet.created_at || new Date().toISOString(),
-        user: {
-          name: tweet.screen_name || 'Unknown',
-          username: tweet.screen_name || 'unknown'
-        },
-        metrics: {
-          retweets: 0, // Not provided in the response
-          likes: tweet.favorites || 0,
-          replies: 0 // Not provided in the response
-        }
-      });
+      throw error;
     }
-
-    return {
-      processedTweets,
-      stats: {
-        totalTweets: tweets.length,
-        processedTweets: processedTweets.length,
-        totalChars
-      }
-    };
   }
 
-  private static async searchTweets(query: string): Promise<any> {
-    if (!CONFIG.API_KEYS.RAPID_API) {
-      throw new Error('RapidAPI key not configured');
-    }
-
-    const searchUrl = new URL(CONFIG.TWITTER_API_URL);
-    searchUrl.searchParams.append('query', query);
-    searchUrl.searchParams.append('count', CONFIG.MAX_TWEETS.toString());
-
+  public static async analyzeTweets(query: string): Promise<AnalysisResult> {
     try {
-      const response = await this.fetchWithTimeout(searchUrl.toString(), {
+      if (!query?.trim()) {
+        return { success: false, error: 'Query cannot be empty' };
+      }
+
+      if (!this.CONFIG.API_KEYS.RAPID_API || !this.CONFIG.API_KEYS.GROQ) {
+        return { success: false, error: 'API keys not configured' };
+      }
+
+      const searchUrl = new URL(this.CONFIG.TWITTER_API_URL);
+      searchUrl.searchParams.append('query', query);
+      searchUrl.searchParams.append('count', this.CONFIG.MAX_TWEETS.toString());
+
+      const twitterResponse = await this.makeRequest(searchUrl.toString(), {
         method: 'GET',
         headers: {
-          'x-rapidapi-key': CONFIG.API_KEYS.RAPID_API,
-          'x-rapidapi-host': new URL(CONFIG.TWITTER_API_URL).hostname
+          'x-rapidapi-key': this.CONFIG.API_KEYS.RAPID_API,
+          'x-rapidapi-host': new URL(this.CONFIG.TWITTER_API_URL).hostname
         }
       });
 
-      const responseText = await response.text();
+      if (!twitterResponse.ok) {
+        throw new Error(`Twitter API error: ${twitterResponse.status}`);
+      }
+
+      const data: TwitterAPIResponse = await twitterResponse.json();
       
-      // Log the raw response for debugging
-      console.log('Twitter API Response:', {
-        status: response.status,
-        text: responseText.substring(0, 200) + '...'
-      });
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: `Twitter API error: ${response.status} ${response.statusText}`,
-          rawResponse: responseText
-        };
+      if (!data?.timeline || !Array.isArray(data.timeline)) {
+        throw new Error('Invalid Twitter API response format');
       }
 
-      // Try to parse the response
-      try {
-        const data = JSON.parse(responseText);
+      const tweets = data.timeline
+        .filter((tweet: TwitterAPITweet): tweet is Required<Pick<TwitterAPITweet, 'text'>> => 
+          Boolean(tweet?.text))
+        .map((tweet: TwitterAPITweet): SimplifiedTweet => ({
+          content: this.sanitizeText(tweet.text || '', this.CONFIG.MAX_CONTENT_LENGTH),
+          engagement: (tweet.retweets || 0) + (tweet.favorites || 0) + (tweet.replies || 0),
+          created_at: tweet.created_at || new Date().toISOString()
+        }))
+        .sort((a: SimplifiedTweet, b: SimplifiedTweet) => b.engagement - a.engagement)
+        .slice(0, this.CONFIG.MAX_TWEETS_FOR_ANALYSIS);
 
-        // Handle the new response format
-        if (data.status === 'ok' && Array.isArray(data.timeline)) {
-          return { success: true, data: data.timeline };
-        } else {
-          return { 
-            success: false, 
-            error: 'Unexpected response format',
-            rawResponse: responseText
-          };
-        }
-      } catch (e) {
-        return {
-          success: false,
-          error: 'Failed to parse Twitter API response',
-          rawResponse: responseText
-        };
+      if (tweets.length === 0) {
+        return { success: false, error: 'No valid tweets found' };
       }
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Network error',
-        details: error
+
+      const analysisContext = {
+        query,
+        sampleSize: tweets.length,
+        tweets: tweets.map(t => ({
+          content: t.content,
+          engagement: t.engagement
+        }))
       };
-    }
-  }
 
-  private static async analyzeWithGroq(
-    tweets: ProcessedTweet[],
-    stats: { totalTweets: number; processedTweets: number; totalChars: number }
-  ): Promise<AnalysisResult | null> {
-    if (!CONFIG.API_KEYS.GROQ) {
-      throw new Error('Groq API key not configured');
-    }
-
-    const prompt = `Analyze these ${stats.processedTweets} tweets (from a total of ${stats.totalTweets}):
-
-${JSON.stringify(tweets, null, 2)}
-
-Provide a comprehensive analysis including:
-1. Overall sentiment (positive/negative/neutral)
-2. Key trends and patterns
-3. Most engaging topics
-4. Common hashtags
-
-Format the response as a JSON object with:
-- overallSentiment (score, label, confidence, keyPhrases)
-- trends (array of trends with frequency and sentiment)
-- topHashtags (array of most used hashtags)
-- engagementMetrics (average retweets, likes, replies)`;
-
-    try {
-      const response = await this.fetchWithTimeout(
+      const groqResponse = await this.makeRequest(
         'https://api.groq.com/openai/v1/chat/completions',
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${CONFIG.API_KEYS.GROQ}`,
+            'Authorization': `Bearer ${this.CONFIG.API_KEYS.GROQ}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'mixtral-8x7b-32768',
+            model: this.CONFIG.GROQ_MODEL,
             messages: [
-              { role: 'user', content: prompt }
+              {
+                role: 'system',
+                content: this.getAnalysisPrompt(query)
+              },
+              {
+                role: 'user',
+                content: JSON.stringify(analysisContext)
+              }
             ],
-            temperature: 0.3,
-            max_tokens: 2000,
+            temperature: 0.7,
+            max_tokens: 1000,
             response_format: { type: 'json_object' }
-          }),
+          })
         }
       );
 
-      const data = await response.json();
-      
-      try {
-        return data?.choices?.[0]?.message?.content
-          ? JSON.parse(data.choices[0].message.content)
-          : null;
-      } catch (e) {
-        console.error('Failed to parse Groq response:', data);
-        return null;
-      }
-    } catch (error) {
-      console.error('Groq API Error:', error);
-      return null;
-    }
-  }
-
-  public static async analyzeTweets(query: string) {
-    try {
-      // Validate input
-      if (!query?.trim()) {
-        return { 
-          success: false, 
-          error: 'Please provide a search query' 
-        };
+      if (!groqResponse.ok) {
+        throw new Error(`Groq API error: ${groqResponse.status}`);
       }
 
-      // Search tweets
-      const searchResult = await this.searchTweets(query);
-      
-      // If search failed, return the error
-      if (!searchResult.success) {
-        return searchResult;
-      }
-
-      // Process tweets
-      const { processedTweets, stats } = this.processTweetText(searchResult.data);
-
-      // If no valid tweets found
-      if (processedTweets.length === 0) {
-        return {
-          success: false,
-          error: 'No valid tweets found',
-          rawResponse: searchResult
-        };
-      }
-
-      // Analyze processed tweets
-      const analysis = await this.analyzeWithGroq(processedTweets, stats);
+      const result = await groqResponse.json();
+      const analysis = result.choices[0].message.content;
 
       return {
         success: true,
         data: {
-          query,
-          tweets: processedTweets,
-          stats,
-          analysis,
+          analysis: JSON.parse(analysis),
+          sources: tweets,
           timestamp: new Date().toISOString()
         }
       };
 
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'An error occurred',
-        details: error
-      };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Analysis error:', error);
+      return { success: false, error: errorMessage };
     }
+  }
+
+  private static getAnalysisPrompt(query: string): string {
+    return `Analyze these tweets about "${query}" and provide a concise analysis as JSON:
+{
+  "overview": "Brief executive summary",
+  "sentimentAnalysis": {
+    "score": "Number -1 to 1",
+    "label": "positive/negative/neutral",
+    "confidence": "0-1"
+  },
+  "contentPatterns": [
+    {
+      "pattern": "Pattern name",
+      "description": "Brief description",
+      "frequency": "1-10",
+      "examples": ["1-2 examples"]
+    }
+  ] (2 items),
+  "engagement": {
+    "topTweets": [
+      {
+        "content": "Tweet content",
+        "engagement": "Number",
+        "reason": "Brief reason"
+      }
+    ] (2 items)
+  },
+  "marketInsights": {
+    "userSentiment": "Brief sentiment analysis",
+    "actionableInsights": ["2-3 recommendations"]
+  }
+}`;
+  }
+
+  private static sanitizeText(text: string, maxLength: number = 280): string {
+    if (!text) return '';
+    let sanitized = text.replace(/\s+/g, ' ').trim();
+    return sanitized.length <= maxLength ? sanitized : 
+           sanitized.substring(0, maxLength - 3) + '...';
   }
 }
 
-// React hook (unchanged)
 export const useTwitterAnalysis = () => {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<AnalysisResult['data'] | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const analyze = async (query: string) => {
+  const analyze = async (query: string): Promise<AnalysisResult> => {
     setIsLoading(true);
     setError(null);
 
     try {
       const result = await TwitterAnalysisService.analyzeTweets(query);
-      setData(result);
+      if (result.success && result.data) {
+        setData(result.data);
+      } else {
+        setError(result.error || 'Analysis failed');
+      }
       return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Analysis failed';
       setError(errorMessage);
-      return {
-        success: false,
-        error: errorMessage,
-        details: error
-      };
+      return { success: false, error: errorMessage };
     } finally {
       setIsLoading(false);
     }
   };
 
-  return {
-    data,
-    isLoading,
-    error,
-    analyze
-  };
+  return { data, isLoading, error, analyze };
 };
