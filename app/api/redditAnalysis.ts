@@ -108,7 +108,9 @@ export const fetchMarketingInsights = async (
       if (totalPosts >= 5) break;
       
       const searchResponse = await fetch(
-        `https://oauth.reddit.com/r/${subreddit}/search?q=${encodeURIComponent(query)}&limit=10&sort=relevance&t=year`,
+
+        `https://oauth.reddit.com/r/${subreddit}/search?q=${encodeURIComponent(query)}&limit=5&sort=relevance`,
+
         {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
