@@ -287,7 +287,7 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
         <section>
           <h2 className="text-2xl font-bold mb-4">Market Overview</h2>
           <div className="mb-6" dangerouslySetInnerHTML={{ __html: analysis.executiveSummary }} />
-          <MarketOverview overview={analysis.marketOverview} />
+          
         </section>
 
         {/* Top Triggers Section - Updated for product triggers */}
@@ -341,34 +341,7 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
           emptyMessage="No seasonal topics available"
         />
 
-        <section className="mt-8">
-          <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
-            <Target className="w-6 h-6" />
-            Strategic Recommendations
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <ResearchCard
-              title="Content Strategy"
-              description="Content Creation Guidelines"
-              items={analysis.recommendations.contentStrategy}
-            />
-            <ResearchCard
-              title="Timing"
-              description="Optimal Publishing Schedule"
-              items={analysis.recommendations.timing}
-            />
-            <ResearchCard
-              title="Platforms"
-              description="Channel Strategy"
-              items={analysis.recommendations.platforms}
-            />
-            <ResearchCard
-              title="Messaging"
-              description="Key Messages"
-              items={analysis.recommendations.messaging}
-            />
-          </div>
-        </section>
+       
       </div>
     </div>
   );

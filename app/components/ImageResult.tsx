@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import "../../styles/images.css";
-import { searchImages } from "../../api/imageSearchApi";
+import { searchImages } from "../api/imageSearchApi";
 
 // Define more robust image interface
 interface ImageResult {
