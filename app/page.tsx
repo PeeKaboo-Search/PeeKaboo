@@ -24,17 +24,27 @@ interface ResultsSectionProps {
 }
 
 // Component configuration
-const SEARCH_COMPONENTS: SearchComponentConfig[] = [ 
-//  { name: 'GoogleAnalytics', component: lazy(() => import("app/components/GoogleAnalytics")) }
-  // { name: 'PlayStoreAnalytics', component: lazy(() => import("app/components/ui/PlayStoreAnalytics")) }, 
-  // { name: 'RedditAnalytics', component: lazy(() => import("app/components/ui/RedditAnalytics")) } 
-   { name: 'YoutubeAnalysis', component: lazy(() => import("@/app/components/YoutubeAnalysis")) }
+const SEARCH_COMPONENTS: SearchComponentConfig[] = [
+  // { name: 'ImageResult', component: lazy(() => import("app/components/ui/ImageResult")) },
+  // { name: 'GoogleAnalytics', component: lazy(() => import("app/components/ui/GoogleAnalytics")) },
+  // { name: 'PlayStoreAnalytics', component: lazy(() => import("app/components/ui/PlayStoreAnalytics")) },
+  // { name: 'RedditAnalytics', component: lazy(() => import("app/components/ui/RedditAnalytics"))
+  { name: 'YoutubeAnalysis', component: lazy(() => import("app/components/ui/YoutubeAnalysis")) }
   // { name: 'QuoraAnalysis', component: lazy(() => import("app/components/ui/QuoraAnalysis")) }
-  // { name: 'XAnalytics', component: lazy(() => import("app/components/ui/XAnalytics")) }
-  // { name: 'FacebookAdsAnalysis', component: lazy(() => import("app/components/ui/FacebookAdsAnalytics")) } 
-  // { name: 'AdsAnalytics', component: lazy(() => import("app/components/ui/AdsAnalytics")) }, 
+  // { name: 'XAnalytics', component: lazy(() => import("app/components/ui/XAnalytics")) },
+  // { name: 'FacebookAdsAnalysis', component: lazy(() => import("app/components/ui/FacebookAdsAnalytics")) }
+  // { name: 'TrendAnalysis', component: lazy(() => import("app/components/ui/TrendAnalysis")) },
+  // { name: 'RunningAds', component: lazy(() => import("app/components/ui/RunningAds")) },
+  // { name: 'AdsAnalytics', component: lazy(() => import("app/components/ui/AdsAnalytics")) },
+  // { name: 'NewsResults', component: lazy(() => import("app/components/ui/NewsResults")) },
+  // { name: 'TopPainpoints', component: lazy(() => import("app/components/ui/TopPainpoints")) },
+  // { name: 'TopTriggers', component: lazy(() => import("app/components/ui/TopTriggers")) },
   // { name: 'Recommended', component: lazy(() => import("app/components/ui/Recommended")) },
-  // { name: 'StrategyAnalysis', component: lazy(() => import("app/components/ui/StrategyAnalysis")) }, 
+  // { name: 'StrategyAnalysis', component: lazy(() => import("app/components/ui/StrategyAnalysis")) },
+  // { name: 'SentimentAnalysis', component: lazy(() => import("app/components/ui/SentimentAnalysis")) },
+  // { name: 'Summary', component: lazy(() => import("app/components/ui/Summary")) },
+  // { name: 'StoryBoard', component: lazy(() => import("app/components/ui/StoryBoard")) },
+  // { name: 'Whiteboard', component: lazy(() => import("app/components/ui/Whiteboard")) }
 ];
 
 const SearchForm: React.FC<SearchFormProps> = ({ query, setQuery, handleSearch, isSearching }) => (
