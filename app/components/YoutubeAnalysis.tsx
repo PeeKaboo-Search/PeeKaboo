@@ -50,7 +50,7 @@ interface ErrorState {
   message: string;
   code: string;
 }
-
+      
 // Card props interface
 interface AnalysisCardProps {
   title: string;
