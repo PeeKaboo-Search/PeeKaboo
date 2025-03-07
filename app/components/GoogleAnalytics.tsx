@@ -3,7 +3,8 @@
 import React, { useEffect, useState, memo } from "react";
 import { 
   TrendingUp, Target, Calendar,
-  Lightbulb, Users, Eye
+  Lightbulb, Users, Eye, 
+  KeyRound // For product triggers
 } from "lucide-react";
 import { Progress } from "@/app/components/ui/progress";
 import { useMarketResearch } from "@/app/api/googleAnalyticsApi";
@@ -29,6 +30,74 @@ interface SectionProps<T> {
   items: T[];
   renderItem: (item: T, index: number) => React.ReactNode;
   emptyMessage: string;
+}
+
+// Define interfaces for each data type
+interface Trend {
+  title: string;
+  description: string;
+  audience: string[];
+  platforms: string[];
+  contentIdeas: string[];
+  bestPractices: string[];
+  impact: number;
+}
+
+interface Insight {
+  title: string;
+  keyFindings: string[];
+  implications: string[];
+  opportunities: string[];
+  recommendations: string[];
+}
+
+interface SeasonalTopic {
+  topic: string;
+  description: string;
+  marketingAngles: string[];
+  contentSuggestions: string[];
+  relevance: number;
+  timing: string;
+}
+
+// Updated Trigger interface to match the new product-focused structure
+interface Trigger {
+  productFeature: string;
+  userNeed: string;
+  
+  recommendedProductContent: string[];
+  relevance: number;
+}
+
+interface MarketOverviewData {
+  targetAudience: string[];
+  demographics: string[];
+  psychographics: string[];
+  channels: string[];
+}
+
+interface AnalysisData {
+  executiveSummary: string;
+  marketOverview: MarketOverviewData;
+  topTriggers: Trigger[];
+  trends: Trend[];
+  consumerInsights: Insight[];
+  industryInsights: Insight[];
+  seasonalTopics: SeasonalTopic[];
+  recommendations: {
+    contentStrategy: string[];
+    timing: string[];
+    platforms: string[];
+    messaging: string[];
+  };
+}
+
+interface ResearchData {
+  success: boolean;
+  error?: string;
+  data?: {
+    analysis: AnalysisData;
+  };
 }
 
 // Helper functions
@@ -65,40 +134,40 @@ const ResearchCard = memo(({ title, description, items, score, scoreLabel, timin
 ));
 
 // Specialized card components
-const TrendCard = memo(({ trend }: { trend: any }) => (
+const TrendCard = memo(({ trend }: { trend: Trend }) => (
   <ResearchCard
     title={trend.title}
     description={trend.description}
     items={[
       `<strong>Audience:</strong> ${trend.audience.join(", ")}`,
       `<strong>Platforms:</strong> ${trend.platforms.join(", ")}`,
-      ...trend.contentIdeas.map(idea => `<strong>Content Idea:</strong> ${idea}`),
-      ...trend.bestPractices.map(practice => `<strong>Best Practice:</strong> ${practice}`)
+      ...trend.contentIdeas.map((idea: string) => `<strong>Content Idea:</strong> ${idea}`),
+      ...trend.bestPractices.map((practice: string) => `<strong>Best Practice:</strong> ${practice}`)
     ]}
     score={trend.impact}
     scoreLabel="Impact Score"
   />
 ));
 
-const InsightCard = memo(({ insight }: { insight: any }) => (
+const InsightCard = memo(({ insight }: { insight: Insight }) => (
   <ResearchCard
     title={insight.title}
     description={insight.keyFindings.join("<br/>")}
     items={[
-      ...insight.implications.map(imp => `<strong>Implication:</strong> ${imp}`),
-      ...insight.opportunities.map(opp => `<strong>Opportunity:</strong> ${opp}`),
-      ...insight.recommendations.map(rec => `<strong>Recommendation:</strong> ${rec}`)
+      ...insight.implications.map((imp: string) => `<strong>Implication:</strong> ${imp}`),
+      ...insight.opportunities.map((opp: string) => `<strong>Opportunity:</strong> ${opp}`),
+      ...insight.recommendations.map((rec: string) => `<strong>Recommendation:</strong> ${rec}`)
     ]}
   />
 ));
 
-const SeasonalCard = memo(({ topic }: { topic: any }) => (
+const SeasonalCard = memo(({ topic }: { topic: SeasonalTopic }) => (
   <ResearchCard
     title={topic.topic}
     description={topic.description}
     items={[
-      ...topic.marketingAngles.map(angle => `<strong>Marketing Angle:</strong> ${angle}`),
-      ...topic.contentSuggestions.map(sugg => `<strong>Content Suggestion:</strong> ${sugg}`)
+      ...topic.marketingAngles.map((angle: string) => `<strong>Marketing Angle:</strong> ${angle}`),
+      ...topic.contentSuggestions.map((sugg: string) => `<strong>Content Suggestion:</strong> ${sugg}`)
     ]}
     score={topic.relevance}
     scoreLabel="Relevance Score"
@@ -106,8 +175,21 @@ const SeasonalCard = memo(({ topic }: { topic: any }) => (
   />
 ));
 
+// Updated Trigger Card component for product triggers
+const TriggerCard = memo(({ trigger }: { trigger: Trigger }) => (
+  <ResearchCard
+    title={trigger.productFeature}
+    description={`<strong>User Need:</strong> ${trigger.userNeed}`}
+    items={[
+      ...trigger.recommendedProductContent.map((content: string) => `<strong>Product Content:</strong> ${content}`)
+    ]}
+    score={trigger.relevance}
+    scoreLabel="Relevance Score"
+  />
+));
+
 // Market overview component
-const MarketOverview = memo(({ overview }: { overview: any }) => (
+const MarketOverview = memo(({ overview }: { overview: MarketOverviewData }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
     <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4">
       <h3 className="text-lg font-semibold">Target Audience</h3>
@@ -197,16 +279,27 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Marketing Research Analysis</h1>
-        <p className="text-lg opacity-70">Campaign Research for: {query}</p>
+        <h1 className="text-3xl font-bold mb-2">Product Research Analysis</h1>
+        <p className="text-lg opacity-70">Product Research for: {query}</p>
       </header>
 
       <div className="space-y-8">
         <section>
           <h2 className="text-2xl font-bold mb-4">Market Overview</h2>
           <div className="mb-6" dangerouslySetInnerHTML={{ __html: analysis.executiveSummary }} />
-          <MarketOverview overview={analysis.marketOverview} />
+          
         </section>
+
+        {/* Top Triggers Section - Updated for product triggers */}
+        <ResearchSection
+          icon={<KeyRound className="w-6 h-6" />}
+          title="Top 10 Product Triggers"
+          items={validateArray(analysis.topTriggers)}
+          renderItem={(trigger, index) => (
+            <TriggerCard key={index} trigger={trigger} />
+          )}
+          emptyMessage="No product triggers available"
+        />
 
         <ResearchSection
           icon={<TrendingUp className="w-6 h-6" />}
@@ -248,34 +341,7 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
           emptyMessage="No seasonal topics available"
         />
 
-        <section className="mt-8">
-          <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
-            <Target className="w-6 h-6" />
-            Strategic Recommendations
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <ResearchCard
-              title="Content Strategy"
-              description="Content Creation Guidelines"
-              items={analysis.recommendations.contentStrategy}
-            />
-            <ResearchCard
-              title="Timing"
-              description="Optimal Publishing Schedule"
-              items={analysis.recommendations.timing}
-            />
-            <ResearchCard
-              title="Platforms"
-              description="Channel Strategy"
-              items={analysis.recommendations.platforms}
-            />
-            <ResearchCard
-              title="Messaging"
-              description="Key Messages"
-              items={analysis.recommendations.messaging}
-            />
-          </div>
-        </section>
+       
       </div>
     </div>
   );
