@@ -1,4 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
+"use client";
+
+import React, { useEffect, useState, useRef, memo } from 'react';
 import Image from 'next/image';
 import { 
   Eye, 
@@ -7,7 +9,11 @@ import {
   Loader2, 
   ChevronRight, 
   BarChart2,
-  X 
+  X,
+  TrendingUp,
+  Target,
+  Lightbulb,
+  Users
 } from 'lucide-react';
 import { 
   YouTubeVideo, 
@@ -31,11 +37,22 @@ import {
   DialogTitle,
   DialogClose
 } from "@/app/components/ui/dialog";
+import { Progress } from "@/app/components/ui/progress";
+import "@/app/styles/YouTubeAnalytics.css"
 
 // Error state interface
 interface ErrorState {
   message: string;
   code: string;
+}
+
+// Card props interface
+interface AnalysisCardProps {
+  title: string;
+  description: string;
+  items?: string[];
+  score?: number;
+  scoreLabel?: string;
 }
 
 // Ensure VideoStatistics type is strict
@@ -45,6 +62,111 @@ const ensureVideoStatistics = (stats: Partial<VideoStatistics>): VideoStatistics
   commentCount: stats.commentCount || '0'
 });
 
+// Helper functions
+const validateArray = <T,>(data: T[] | undefined | null): T[] => {
+  return Array.isArray(data) ? data : [];
+};
+
+// Analysis card component
+const AnalysisCard = memo(({ title, description, items, score, scoreLabel }: AnalysisCardProps) => (
+  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg">
+    <div className="flex justify-between items-center mb-4">
+      <h3 className="text-xl font-semibold">{title}</h3>
+    </div>
+    <div className="space-y-4">
+      <p dangerouslySetInnerHTML={{ __html: description }} />
+      {items && items.length > 0 && (
+        <ul className="space-y-2 mt-4">
+          {items.map((item, idx) => (
+            <li key={idx} className="text-sm" dangerouslySetInnerHTML={{ __html: item }} />
+          ))}
+        </ul>
+      )}
+    </div>
+    {score !== undefined && (
+      <div className="mt-4 space-y-2">
+        <Progress value={score} className="h-2" />
+        <span className="text-sm">
+          {scoreLabel}: {score}%
+        </span>
+      </div>
+    )}
+  </div>
+));
+
+// Specialized card components
+const PainPointCard = memo(({ point }: { point: any }) => (
+  <AnalysisCard
+    title={point.title}
+    description={point.description}
+    items={[
+      `<strong>Possible Solutions:</strong> ${point.possibleSolutions.join(", ")}`
+    ]}
+    score={point.frequency}
+    scoreLabel="Frequency Score"
+  />
+));
+
+const ExperienceCard = memo(({ exp }: { exp: any }) => (
+  <AnalysisCard
+    title={`Scenario ${exp.scenario.substring(0, 30)}...`}
+    description={exp.scenario}
+    items={[
+      `<strong>Impact:</strong> ${exp.impact}`,
+      `<strong>Pattern:</strong> ${exp.frequencyPattern}`,
+      `<strong>Sentiment:</strong> <span class="${
+        exp.sentiment === 'positive' ? 'text-green-500' :
+        exp.sentiment === 'negative' ? 'text-red-500' :
+        'text-gray-500'
+      }">${exp.sentiment}</span>`
+    ]}
+  />
+));
+
+const TriggerCard = memo(({ trigger }: { trigger: any }) => (
+  <AnalysisCard
+    title={trigger.trigger}
+    description={trigger.context}
+    items={[
+      `<strong>Response:</strong> ${trigger.responsePattern}`
+    ]}
+    score={trigger.intensity}
+    scoreLabel="Intensity"
+  />
+));
+
+// Generic analysis section component
+const AnalysisSection = <T,>({
+  icon,
+  title,
+  items,
+  renderItem,
+  emptyMessage
+}: {
+  icon: React.ReactNode;
+  title: string;
+  items: T[];
+  renderItem: (item: T, index: number) => React.ReactNode;
+  emptyMessage: string;
+}) => (
+  <section className="mt-8">
+    <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
+      {icon}
+      {title}
+    </h2>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {items.length > 0 ? (
+        items.map((item, index) => renderItem(item, index))
+      ) : (
+        <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6">
+          <p>{emptyMessage}</p>
+        </div>
+      )}
+    </div>
+  </section>
+);
+
+// Main YouTube component
 const YouTubeVideos: React.FC<{ query: string }> = ({ query }) => {
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [statistics, setStatistics] = useState<Record<string, VideoStatistics>>({});
@@ -140,7 +262,7 @@ const YouTubeVideos: React.FC<{ query: string }> = ({ query }) => {
     }
   };
 
-  // New function to handle video selection
+  // Function to handle video selection
   const handleVideoSelect = async (videoId: string) => {
     setSelectedVideo(videoId);
     setComments(null);
@@ -155,7 +277,7 @@ const YouTubeVideos: React.FC<{ query: string }> = ({ query }) => {
     }
   };
 
-  // New function to analyze comments
+  // Function to analyze comments
   const handleAnalyzeComments = async () => {
     if (!selectedVideo || !videos.length) return;
     
@@ -373,113 +495,67 @@ const YouTubeVideos: React.FC<{ query: string }> = ({ query }) => {
         </div>
       )}
 
-      {/* Comment Analysis Dialog */}
+      {/* Comment Analysis Dashboard */}
       <Dialog open={showAnalysis} onOpenChange={setShowAnalysis}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl">Comment Analysis</DialogTitle>
+            <DialogTitle className="text-2xl font-bold">Comment Analysis Dashboard</DialogTitle>
             <DialogClose className="absolute right-4 top-4">
               <X className="h-4 w-4" />
             </DialogClose>
           </DialogHeader>
 
           {commentAnalysis?.success && commentAnalysis.data ? (
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="painPoints">Pain Points</TabsTrigger>
-                <TabsTrigger value="experiences">User Experiences</TabsTrigger>
-                <TabsTrigger value="triggers">Emotional Triggers</TabsTrigger>
-                <TabsTrigger value="implications">Implications</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="overview" className="mt-4">
-                <div className="prose max-w-none">
-                  <p className="text-lg">{commentAnalysis.data.analysis.overview}</p>
+            <div className="space-y-8">
+              <section>
+                <h2 className="text-2xl font-bold mb-4">Overview</h2>
+                <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6">
+                  <p className="text-lg whitespace-pre-line">{commentAnalysis.data.analysis.overview}</p>
                 </div>
-              </TabsContent>
-              
-              <TabsContent value="painPoints" className="mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {commentAnalysis.data.analysis.painPoints.map((point, i) => (
-                    <Card key={i}>
-                      <CardContent className="p-4">
-                        <h4 className="text-lg font-bold mb-2">{point.title}</h4>
-                        <p className="mb-3">{point.description}</p>
-                        <div className="flex gap-4 mb-3">
-                          <div>
-                            <span className="text-sm text-muted-foreground">Frequency:</span>
-                            <span className="ml-1 font-medium">{point.frequency}/10</span>
-                          </div>
-                          <div>
-                            <span className="text-sm text-muted-foreground">Impact:</span>
-                            <span className="ml-1 font-medium">{point.impact}/10</span>
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium mb-1">Possible Solutions:</p>
-                          <ul className="list-disc pl-5 text-sm">
-                            {point.possibleSolutions.map((solution, j) => (
-                              <li key={j}>{solution}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+              </section>
+
+              <AnalysisSection
+                icon={<TrendingUp className="w-6 h-6" />}
+                title="Pain Points"
+                items={validateArray(commentAnalysis.data.analysis.painPoints)}
+                renderItem={(point, index) => (
+                  <PainPointCard key={index} point={point} />
+                )}
+                emptyMessage="No pain points identified"
+              />
+
+              <AnalysisSection
+                icon={<Users className="w-6 h-6" />}
+                title="User Experiences"
+                items={validateArray(commentAnalysis.data.analysis.userExperiences)}
+                renderItem={(exp, index) => (
+                  <ExperienceCard key={index} exp={exp} />
+                )}
+                emptyMessage="No user experiences identified"
+              />
+
+              <AnalysisSection
+                icon={<Lightbulb className="w-6 h-6" />}
+                title="Emotional Triggers"
+                items={validateArray(commentAnalysis.data.analysis.emotionalTriggers)}
+                renderItem={(trigger, index) => (
+                  <TriggerCard key={index} trigger={trigger} />
+                )}
+                emptyMessage="No emotional triggers identified"
+              />
+
+              <section>
+                <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
+                  <Target className="w-6 h-6" />
+                  Market Implications
+                </h2>
+                <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6">
+                  <div className="prose max-w-none">
+                    <p className="whitespace-pre-line">{commentAnalysis.data.analysis.marketImplications}</p>
+                  </div>
                 </div>
-              </TabsContent>
-              
-              <TabsContent value="experiences" className="mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {commentAnalysis.data.analysis.userExperiences.map((exp, i) => (
-                    <Card key={i}>
-                      <CardContent className="p-4">
-                        <h4 className="text-lg font-bold mb-2">Scenario {i+1}</h4>
-                        <p className="mb-3">{exp.scenario}</p>
-                        <p className="mb-3"><span className="font-medium">Impact:</span> {exp.impact}</p>
-                        <p className="mb-3"><span className="font-medium">Pattern:</span> {exp.frequencyPattern}</p>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Sentiment:</span>
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            exp.sentiment === 'positive' ? 'bg-green-100 text-green-800' :
-                            exp.sentiment === 'negative' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {exp.sentiment}
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="triggers" className="mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {commentAnalysis.data.analysis.emotionalTriggers.map((trigger, i) => (
-                    <Card key={i}>
-                      <CardContent className="p-4">
-                        <h4 className="text-lg font-bold mb-2">{trigger.trigger}</h4>
-                        <p className="mb-3">{trigger.context}</p>
-                        <div className="mb-3">
-                          <span className="text-sm text-muted-foreground">Intensity:</span>
-                          <span className="ml-1 font-medium">{trigger.intensity}/10</span>
-                        </div>
-                        <p><span className="font-medium">Response:</span> {trigger.responsePattern}</p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="implications" className="mt-4">
-                <div className="prose max-w-none">
-                  <h3 className="text-lg font-bold mb-4">Market Implications</h3>
-                  <p className="whitespace-pre-line">{commentAnalysis.data.analysis.marketImplications}</p>
-                </div>
-              </TabsContent>
-            </Tabs>
+              </section>
+            </div>
           ) : (
             <div className="py-8 text-center">
               <p className="text-muted-foreground">
@@ -493,4 +569,4 @@ const YouTubeVideos: React.FC<{ query: string }> = ({ query }) => {
   );
 };
 
-export default YouTubeVideos;
+export default memo(YouTubeVideos);

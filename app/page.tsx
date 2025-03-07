@@ -28,7 +28,11 @@ const SEARCH_COMPONENTS: SearchComponentConfig[] = [
   // { name: 'ImageResult', component: lazy(() => import("app/components/ui/ImageResult")) },
    { name: 'GoogleAnalytics', component: lazy(() => import("app/components/ui/GoogleAnalytics")) }
   // { name: 'PlayStoreAnalytics', component: lazy(() => import("app/components/ui/PlayStoreAnalytics")) },
+<<<<<<< HEAD
  // { name: 'RedditAnalytics', component: lazy(() => import("app/components/ui/RedditAnalytics")) }
+=======
+   { name: 'RedditAnalytics', component: lazy(() => import("app/components/ui/RedditAnalytics")) 
+>>>>>>> 492902ce672286bcbdb08062730a015e36ced6e2
   // { name: 'YoutubeAnalysis', component: lazy(() => import("app/components/ui/YoutubeAnalysis")) }
   // { name: 'QuoraAnalysis', component: lazy(() => import("app/components/ui/QuoraAnalysis")) }
   // { name: 'XAnalytics', component: lazy(() => import("app/components/ui/XAnalytics")) }

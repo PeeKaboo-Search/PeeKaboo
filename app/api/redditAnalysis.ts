@@ -108,7 +108,9 @@ export const fetchMarketingInsights = async (
       if (totalPosts >= 5) break;
       
       const searchResponse = await fetch(
+
         `https://oauth.reddit.com/r/${subreddit}/search?q=${encodeURIComponent(query)}&limit=5&sort=relevance`,
+
         {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -263,7 +265,7 @@ export const fetchMarketingInsights = async (
           { role: "user", content: JSON.stringify(groqInputData) },
         ],
         temperature: 0.7,
-        max_tokens: 4500,
+        max_tokens: 3000,
         response_format: { type: 'json_object' },
       }),
     });
