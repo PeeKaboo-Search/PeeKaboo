@@ -32,10 +32,21 @@ const VideoStatisticsSchema = z.object({
   commentCount: z.string().optional()
 });
 
-const YouTubeSearchItemSchema = z.object({
-  id: z.object({
+// Fix: Handle different types of video IDs in search results
+const YouTubeVideoIdSchema = z.object({
+  kind: z.string().optional(),
+  videoId: z.string()
+});
+
+// Use union type to handle different kinds of IDs that might be returned
+const YouTubeSearchItemIdSchema = z
+  .object({
     videoId: z.string()
-  }),
+  })
+  .or(YouTubeVideoIdSchema);
+
+const YouTubeSearchItemSchema = z.object({
+  id: YouTubeSearchItemIdSchema,
   snippet: YouTubeVideoSnippetSchema,
   statistics: VideoStatisticsSchema.optional()
 });
@@ -124,16 +135,16 @@ const CommentAnalysisSchema = z.object({
     timestamp: z.string()
   }).optional(),
   error: z.string().optional()
-}).optional();
+});
 
 // Type aliases
-type YouTubeVideo = z.infer<typeof YouTubeSearchItemSchema>;
-type VideoStatistics = z.infer<typeof VideoStatisticsSchema>;
-type YouTubeSearchResponse = z.infer<typeof YouTubeSearchResponseSchema>;
-type YouTubeStatisticsResponse = z.infer<typeof YouTubeStatisticsResponseSchema>;
-type CommentThread = z.infer<typeof CommentThreadSchema>;
-type CommentThreadResponse = z.infer<typeof CommentThreadResponseSchema>;
-type CommentAnalysis = z.infer<typeof CommentAnalysisSchema>;
+export type YouTubeVideo = z.infer<typeof YouTubeSearchItemSchema>;
+export type VideoStatistics = z.infer<typeof VideoStatisticsSchema>;
+export type YouTubeSearchResponse = z.infer<typeof YouTubeSearchResponseSchema>;
+export type YouTubeStatisticsResponse = z.infer<typeof YouTubeStatisticsResponseSchema>;
+export type CommentThread = z.infer<typeof CommentThreadSchema>;
+export type CommentThreadResponse = z.infer<typeof CommentThreadResponseSchema>;
+export type CommentAnalysis = z.infer<typeof CommentAnalysisSchema>;
 
 // Constants
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
@@ -175,6 +186,21 @@ async function fetchWithTimeout(
   }
 }
 
+// Helper function to extract videoId safely
+function getVideoId(item: any): string | null {
+  if (typeof item.id === 'string') {
+    return item.id;
+  }
+  
+  if (item.id && typeof item.id === 'object') {
+    if (item.id.videoId) {
+      return item.id.videoId;
+    }
+  }
+  
+  return null;
+}
+
 export async function searchYouTubeVideos(query: string, pageToken?: string): Promise<YouTubeSearchResponse> {
   if (!YOUTUBE_API_KEY) {
     throw new ApiError('YouTube API key is not configured', 'CONFIG_ERROR');
@@ -191,17 +217,43 @@ export async function searchYouTubeVideos(query: string, pageToken?: string): Pr
         key: YOUTUBE_API_KEY
       }
     });
-    const searchData = YouTubeSearchResponseSchema.parse(searchResponse.data);
+    
+    // Pre-process the items to ensure they all have a valid id.videoId structure
+    const processedData = {
+      ...searchResponse.data,
+      items: searchResponse.data.items.map((item: any) => {
+        // If id is a string, convert it to { videoId: id }
+        if (typeof item.id === 'string') {
+          return { ...item, id: { videoId: item.id } };
+        }
+        // If id is already an object with videoId, keep it as is
+        if (item.id && typeof item.id === 'object' && item.id.videoId) {
+          return item;
+        }
+        // Otherwise, this item doesn't have a valid videoId, filter it out
+        return null;
+      }).filter(Boolean) // Remove null items
+    };
+    
+    const searchData = YouTubeSearchResponseSchema.parse(processedData);
     
     // Fetch statistics for videos
-    const videoIds = searchData.items.map(item => item.id.videoId);
+    const videoIds = searchData.items
+      .map(item => getVideoId(item))
+      .filter((id): id is string => id !== null);
+    
     const statistics = await getVideoStatistics(videoIds);
 
-    // Merge statistics and sort videos
-    const itemsWithStats = searchData.items.map(item => ({
-      ...item,
-      statistics: statistics[item.id.videoId]
-    })).sort((a, b) => {
+    // Merge statistics with search results
+    const itemsWithStats = searchData.items.map(item => {
+      const videoId = getVideoId(item);
+      if (!videoId) return item;
+      
+      return {
+        ...item,
+        statistics: statistics[videoId]
+      };
+    }).sort((a, b) => {
       const aViews = parseInt(a.statistics?.viewCount || '0');
       const bViews = parseInt(b.statistics?.viewCount || '0');
       return bViews - aViews;
@@ -262,7 +314,7 @@ export async function getVideoComments(videoId: string, maxResults: number = 100
           videoId: videoId,
           maxResults: maxResults,
           order: 'relevance',
-          textFormat: 'plainText', // Added to ensure textOriginal
+          textFormat: 'plainText',
           key: YOUTUBE_API_KEY
         }
       }
@@ -276,7 +328,6 @@ export async function getVideoComments(videoId: string, maxResults: number = 100
     );
   }
 }
-//
 
 export async function analyzeVideoComments(videoId: string, videoTitle: string): Promise<CommentAnalysis> {
   try {
@@ -424,10 +475,6 @@ Ensure the analysis is data-driven, uses professional creator terminology, and p
   }
 }
 
-
-// Remaining functions (analyzeVideoComments, generateCommentAnalysis, sanitizeText) remain unchanged
-// ... (keep the existing implementations of analyzeVideoComments, generateCommentAnalysis, and sanitizeText)
-
 // Utility function
 function sanitizeText(text: string, maxLength: number = 1000): string {
   if (!text) return '';
@@ -436,14 +483,3 @@ function sanitizeText(text: string, maxLength: number = 1000): string {
   const truncated = sanitized.substring(0, maxLength);
   return truncated.substring(0, truncated.lastIndexOf(' ')) + '...';
 }
-
-// Expose types
-export type { 
-  YouTubeVideo, 
-  VideoStatistics, 
-  YouTubeSearchResponse, 
-  YouTubeStatisticsResponse,
-  CommentThread,
-  CommentThreadResponse,
-  CommentAnalysis
-};
