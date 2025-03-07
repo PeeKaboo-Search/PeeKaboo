@@ -16,7 +16,7 @@ interface TrendCard {
   contentIdeas: string[];
   bestPractices: string[];
 }
-
+ 
 interface InsightCard {
   title: string;
   type: 'consumer' | 'industry';
@@ -24,7 +24,7 @@ interface InsightCard {
   implications: string[];
   opportunities: string[];
   recommendations: string[];
-}
+}   
 
 interface SeasonalCard {
   topic: string;
@@ -33,6 +33,16 @@ interface SeasonalCard {
   description: string;
   marketingAngles: string[];
   contentSuggestions: string[];
+}
+
+// Modified Trigger interface focused on product triggers
+interface TriggerCard {
+  productFeature: string;
+  userNeed: string;
+  purchaseIntent: number;
+  conversionRate: number;
+  relevance: number;
+  recommendedProductContent: string[];
 }
 
 interface MarketResearchAnalysis {
@@ -47,6 +57,8 @@ interface MarketResearchAnalysis {
   consumerInsights: InsightCard[];
   industryInsights: InsightCard[];
   seasonalTopics: SeasonalCard[];
+  // Modified top triggers field focused on product
+  topTriggers: TriggerCard[];
   recommendations: {
     contentStrategy: string[];
     timing: string[];
@@ -131,6 +143,16 @@ const MARKET_RESEARCH_PROMPT = `You are a highly skilled marketing analyst with 
     }
   ],
   
+  "topTriggers": [
+    {
+      "productFeature": "Specific product feature or attribute",
+      "userNeed": "Specific user need this feature addresses",
+      
+      "relevance": "Relevance score to product (0-100)",
+      "recommendedProductContent": ["Product-specific content recommendations"]
+    }
+  ],
+  
   "recommendations": {
     "contentStrategy": ["Content creation and distribution strategies"],
     "timing": ["Optimal timing for different content types"],
@@ -138,8 +160,12 @@ const MARKET_RESEARCH_PROMPT = `You are a highly skilled marketing analyst with 
     "messaging": ["Key messaging frameworks"]
   }
 }
-
+  
 Guidelines:
+Include 10 high-value product triggers related to the search topic.
+Each trigger should include user needs, purchase intent metrics, and product-specific content ideas.
+Sort triggers by relevance to the product and potential conversion rate.
+Include a mix of functional and emotional product attributes.
 Tiktok is banned in India.
 Give me Creative ideas only, not Generic Ideas.
 And use Complex Marketing Language.
@@ -150,7 +176,7 @@ Create three industry insights highlighting market disruptions.
 Include three seasonal content ideas with optimal timing windows.
 Recommend hashtags, keywords, and engagement benchmarks.
 Balance organic and paid marketing opportunities.
-Address both metro and non-metro digital trends.
+Address both metro and non-metro digital trends
 Consider viral potential and interactive formats (polls, quizzes, live sessions).
 Suggest clear CTAs to drive conversions.`;
 
@@ -191,7 +217,7 @@ export class MarketResearchService {
     const searchUrl = new URL('https://www.googleapis.com/customsearch/v1');
     searchUrl.searchParams.append('key', CONFIG.API_KEYS.GOOGLE || '');
     searchUrl.searchParams.append('cx', CONFIG.API_KEYS.SEARCH_ENGINE_ID || '');
-    searchUrl.searchParams.append('q', `${query} trends marketing advertising content social media`);
+    searchUrl.searchParams.append('q', `${query} product features benefits user needs`);
     searchUrl.searchParams.append('num', '10');
 
     const response = await this.fetchWithTimeout(searchUrl.toString(), { method: 'GET' });
@@ -230,7 +256,7 @@ export class MarketResearchService {
             { role: 'system', content: MARKET_RESEARCH_PROMPT },
             { 
               role: 'user', 
-              content: `Analyze these search results for ${query} and provide advertising and content marketing insights in json format:\n${JSON.stringify(results, null, 2)}` 
+              content: `Analyze these search results for ${query} and provide product-focused insights in json format:\n${JSON.stringify(results, null, 2)}` 
             },
           ],
           temperature: 0.7,
