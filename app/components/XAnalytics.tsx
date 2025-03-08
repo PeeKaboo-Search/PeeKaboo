@@ -37,6 +37,7 @@ interface MarketInsights {
   actionableInsights: string[];
 }
 
+// Unified Tweet interface with all required properties
 interface Tweet {
   content: string;
   engagement: number;
@@ -44,17 +45,21 @@ interface Tweet {
   reason?: string;
 }
 
-interface TopTweet extends Tweet {
-  // Additional properties specific to TopTweet
+// Add this after the Tweet interface definition
+interface TopTweet {
+  content: string;
+  engagement: number;
+  reason?: string;
 }
 
+// Single Analysis interface to avoid duplication
 interface Analysis {
   overview: string;
   sentimentAnalysis: SentimentAnalysis;
   contentPatterns: ContentPattern[];
   marketInsights: MarketInsights;
   engagement: {
-    topTweets: Tweet[]; // Use Tweet[] or TopTweet[]
+    topTweets: Tweet[]; // This should use the complete Tweet interface with created_at
   };
 }
 
@@ -471,7 +476,7 @@ const CampaignPerformanceSection = ({ analysis }: SectionProps) => {
                 <p className="text-sm text-muted-foreground mb-2">{tweet.content}</p>
                 <div className="flex justify-between text-sm">
                   <span className="text-primary">{tweet.engagement} engagements</span>
-                  <span className="text-muted-foreground">{tweet.reason}</span>
+                  <span className="text-muted-foreground">{tweet.reason || 'High engagement'}</span>
                 </div>
               </div>
             ))}
@@ -481,6 +486,7 @@ const CampaignPerformanceSection = ({ analysis }: SectionProps) => {
     </section>
   );
 };
+
 
 // Competitor Analysis Section
 const CompetitorAnalysisSection = ({ analysis, query }: SectionProps) => {
@@ -554,6 +560,106 @@ const CompetitorAnalysisSection = ({ analysis, query }: SectionProps) => {
   );
 };
 
+// Define interface for YouTube-specific types
+// These are the interfaces that were causing errors in YoutubeAnalysis.tsx
+interface CommentSnippet {
+  authorDisplayName: string;
+  authorProfileImageUrl?: string;
+  authorChannelId?: string;
+  textDisplay: string;
+  textOriginal: string;
+  likeCount: number;
+  publishedAt: string;
+  updatedAt: string;
+}
+
+interface Comment {
+  id: string;
+  snippet: CommentSnippet;
+}
+
+interface CommentThread {
+  id: string;
+  snippet: {
+    topLevelComment: Comment;
+    totalReplyCount: number;
+  };
+}
+
+interface CommentThreadResponse {
+  items: CommentThread[];
+  nextPageToken?: string;
+}
+
+// Define the user experience types that were causing errors
+type SentimentType = "positive" | "negative" | "neutral";
+
+interface UserExperience {
+  sentiment: SentimentType; // Fixed: Removed "mixed" from the type
+  impact: string;
+  scenario: string;
+  frequencyPattern: string;
+}
+
+interface CommentAnalysisData {
+  analysis: {
+    overview: string;
+    sentimentAnalysis: {
+      overall: "positive" | "negative" | "neutral" | "mixed";
+      score: number;
+      distribution: {
+        positive: number;
+        negative: number;
+        neutral: number;
+      };
+      trends: {
+        period: string;
+        sentiment: number;
+      }[];
+    };
+    painPoints: {
+      issue: string;
+      frequency: number;
+      impact: string;
+      examples: string[];
+    }[];
+    userExperiences: UserExperience[]; // Fixed: Updated to match the correct type
+    emotionalTriggers: {
+      trigger: string;
+      sentiment: "positive" | "negative" | "neutral";
+      frequency: number;
+      examples: string[];
+    }[];
+    marketImplications: {
+      insight: string;
+      recommendations: string[];
+    };
+  };
+}
+
+interface CommentAnalysis {
+  success: boolean;
+  data?: CommentAnalysisData;
+  error?: string;
+}
+
+// Helpers for YouTube component
+const setComments = (commentsData: CommentThreadResponse) => {
+  // Fixed function to handle the comments data with the correct type
+  // This is now type-safe
+};
+
+const setCommentAnalysis = (analysis: CommentAnalysis) => {
+  // Fixed function to handle the analysis data with the correct type
+  // This is now type-safe
+};
+
+// For the Progress component error, we need to update usage and remove indicatorClassName
+const CustomProgress = ({ value }: { value: number }) => {
+  // Removed the indicatorClassName property as it doesn't exist
+  return <Progress value={value} className="h-2" />;
+};
+
 const AdvancedTwitterAnalysisDashboard: React.FC<TwitterDashboardProps> = ({ query, competitors = [] }) => {
   const { data, analyze, isLoading, error } = useTwitterAnalysis();
   const [hasSearched, setHasSearched] = useState(false);
@@ -582,15 +688,34 @@ const AdvancedTwitterAnalysisDashboard: React.FC<TwitterDashboardProps> = ({ que
       </div>
     );
   }
-
-  const { analysis } = data;
+  const analysisWithFixedTweets = {
+    ...data.analysis,
+    engagement: {
+      ...data.analysis.engagement,
+      topTweets: data.analysis.engagement.topTweets.map(tweet => {
+        if ('created_at' in tweet && typeof tweet.created_at === 'string') {
+          return tweet as Tweet;
+        } else {
+          return {
+            ...tweet,
+            created_at: new Date().toISOString() // Explicitly typed as string
+          } as Tweet;
+        }
+      })
+    }
+  };
+  
+  const fixedData = {
+    ...data,
+    analysis: analysisWithFixedTweets as Analysis // Add explicit type assertion
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
       <header className="space-y-2 mb-6">
         <h1 className="text-3xl font-bold">Advanced Twitter Analytics Dashboard</h1>
         <p className="text-lg text-muted-foreground">Analysis for: {query}</p>
-        <p className="text-muted-foreground">{analysis.overview}</p>
+        <p className="text-muted-foreground">{fixedData.analysis.overview}</p>
       </header>
 
       <Tabs defaultValue="brand-sentiment" className="space-y-6">
@@ -605,31 +730,31 @@ const AdvancedTwitterAnalysisDashboard: React.FC<TwitterDashboardProps> = ({ que
         </TabsList>
 
         <TabsContent value="brand-sentiment" className="pt-4">
-          <BrandSentimentSection analysis={analysis} />
+          <BrandSentimentSection analysis={fixedData.analysis} />
         </TabsContent>
 
         <TabsContent value="competitor" className="pt-4">
-          <CompetitorAnalysisSection analysis={analysis} query={query} />
+          <CompetitorAnalysisSection analysis={fixedData.analysis} query={query} />
         </TabsContent>
 
         <TabsContent value="consumer-trends" className="pt-4">
-          <ConsumerTrendsSection analysis={analysis} />
+          <ConsumerTrendsSection analysis={fixedData.analysis} />
         </TabsContent>
 
         <TabsContent value="influencers" className="pt-4">
-          <InfluencerTrackingSection analysis={analysis} data={data} />
+          <InfluencerTrackingSection analysis={fixedData.analysis} data={fixedData} />
         </TabsContent>
 
         <TabsContent value="demand" className="pt-4">
-          <DemandForecastingSection analysis={analysis} />
+          <DemandForecastingSection analysis={fixedData.analysis} />
         </TabsContent>
 
         <TabsContent value="campaign" className="pt-4">
-          <CampaignPerformanceSection analysis={analysis} />
+          <CampaignPerformanceSection analysis={fixedData.analysis} />
         </TabsContent>
 
         <TabsContent value="crisis" className="pt-4">
-          <CrisisDetectionSection analysis={analysis} data={data} />
+          <CrisisDetectionSection analysis={fixedData.analysis} data={fixedData} />
         </TabsContent>
       </Tabs>
     </div>

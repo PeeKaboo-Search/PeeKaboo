@@ -18,16 +18,18 @@
         "name": "next"
       }
     ],
-    "baseUrl": ".", // Ensure this is set to the root directory
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"] // This will map '@/' to the root of your project
-    }
+      "@/*": ["./*"]
+    },
+    "types": ["estree", "json-schema"]
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts"
-, "debug.js"  ],
+    ".next/types/**/*.ts",
+    "debug.js"
+  ],
   "exclude": ["node_modules"]
 }
