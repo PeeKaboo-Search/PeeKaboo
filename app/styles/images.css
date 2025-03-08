@@ -1,3 +1,4 @@
+/* Base container styles */
 .images-container {
   width: 100%;
   max-width: 100%;
@@ -8,6 +9,7 @@
   z-index: 2;
 }
 
+/* Header styling */
 .images-header {
   margin-bottom: 1.5rem;
   text-align: left;
@@ -26,9 +28,20 @@
   font-size: 1rem;
   color: rgba(255,255,255,0.6);
 }
+
+/* Gallery container for slider layout */
+.image-gallery-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+/* Slider view area */
 .images-slider {
   width: 100%;
-  overflow-x: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none; /* Firefox */
   padding: 0.5rem;
@@ -41,14 +54,17 @@
   display: none;
 }
 
+/* Image track that moves with slider */
 .images-track {
   display: flex;
   gap: 1.5rem;
   padding: 0.25rem;
   position: relative;
   z-index: 2;
+  transition: transform 0.3s ease;
 }
 
+/* Individual image cards */
 .image-card {
   flex: 0 0 auto;
   width: 280px;
@@ -72,6 +88,7 @@
   background: rgba(22, 22, 28, 0.3); /* Slightly less transparent on hover */
 }
 
+/* Image container */
 .image-wrapper {
   position: relative;
   padding-top: 75%; /* 4:3 aspect ratio */
@@ -90,6 +107,7 @@
   z-index: 2;
 }
 
+/* Image title area */
 .image-title-container {
   padding: 0.75rem;
   background: rgba(22, 22, 28, 0.2);
@@ -109,15 +127,108 @@
   z-index: 2;
 }
 
-/* Rest of the styles remain the same */
+/* Transparent slider container */
+.slider-container {
+  margin: 12px 10px;
+  padding: 0 10px;
+  width: 100%;
+  position: relative;
+  z-index: 3;
+}
+
+/* Transparent slider styling */
+.transparent-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  outline: none;
+  opacity: 0.7;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.transparent-slider:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Slider thumb for webkit browsers */
+.transparent-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary-blue, rgba(60, 130, 246, 0.9));
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  transition: transform 0.2s, background 0.2s;
+}
+
+.transparent-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  background: var(--color-primary-blue, rgba(60, 130, 246, 1));
+}
+
+/* Slider thumb for Firefox */
+.transparent-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary-blue, rgba(60, 130, 246, 0.9));
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  transition: transform 0.2s, background 0.2s;
+}
+
+.transparent-slider::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  background: var(--color-primary-blue, rgba(60, 130, 246, 1));
+}
+
+/* Loading, error, and no results states */
 .loading-container,
 .error-message,
 .no-results {
   position: relative;
   z-index: 2;
+  padding: 2rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.1rem;
+}
+
+/* Loading spinner */
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top: 3px solid var(--color-primary-blue, #3c82f6);
+  border-radius: 50%;
+  margin: 0 auto 1rem;
+  animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Error message styling */
+.error-message {
+  color: rgba(255, 100, 100, 0.9);
+  background: rgba(255, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+/* No results styling */
+.no-results {
+  font-style: italic;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 1.5rem;
 }
