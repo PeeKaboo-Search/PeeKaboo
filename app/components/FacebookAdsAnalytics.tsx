@@ -3,10 +3,12 @@
 import React, { useState, useEffect, memo } from 'react';
 import { FacebookAdsAnalysisService } from '@/app/api/facebookAds';
 import { 
-  BarChart, Brain, LineChart, 
-  Target, MessageCircle, Image
+  BarChart, Brain, 
+  Target, MessageCircle, Image as ImageIcon
 } from 'lucide-react';
 import { Progress } from "@/app/components/ui/progress"; 
+import Image from 'next/image';
+
 // Types
 interface ExtractedAdData {
   id: string;
@@ -80,6 +82,8 @@ const AnalysisCard = memo(({
   </div>
 ));
 
+AnalysisCard.displayName = 'AnalysisCard';
+
 const SectionHeader = memo(({ 
   icon, 
   title 
@@ -93,6 +97,8 @@ const SectionHeader = memo(({
   </div>
 ));
 
+SectionHeader.displayName = 'SectionHeader';
+
 const AdMediaGallery = memo(({ ad }: { ad: ExtractedAdData }) => {
   const hasImages = ad.images && ad.images.length > 0;
   const hasVideos = ad.videos && ad.videos.length > 0;
@@ -104,16 +110,18 @@ const AdMediaGallery = memo(({ ad }: { ad: ExtractedAdData }) => {
       {hasImages && (
         <div className="grid grid-cols-2 gap-2">
           {ad.images.slice(0, 4).map((imageUrl, index) => (
-            <img 
-              key={`img-${index}`}
-              src={imageUrl}
-              alt={`Ad image ${index + 1}`}
-              className="w-full h-32 object-cover rounded"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = "/api/placeholder/200/150";
-              }}
-            />
+            <div key={`img-${index}`} className="relative w-full h-32">
+              <Image 
+                src={imageUrl}
+                alt={`Ad image ${index + 1}`}
+                className="object-cover rounded"
+                fill
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = "/api/placeholder/200/150";
+                }}
+              />
+            </div>
           ))}
         </div>
       )}
@@ -121,11 +129,12 @@ const AdMediaGallery = memo(({ ad }: { ad: ExtractedAdData }) => {
       {hasVideos && (
         <div className="mt-2 grid grid-cols-2 gap-2">
           {ad.videos.slice(0, 2).map((video, index) => (
-            <div key={`video-${index}`} className="relative">
-              <img 
+            <div key={`video-${index}`} className="relative h-32">
+              <Image 
                 src={video.preview || "/api/placeholder/200/150"}
                 alt={`Video preview ${index + 1}`}
-                className="w-full h-32 object-cover rounded"
+                className="object-cover rounded"
+                fill
               />
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center">
@@ -141,6 +150,8 @@ const AdMediaGallery = memo(({ ad }: { ad: ExtractedAdData }) => {
     </div>
   );
 });
+
+AdMediaGallery.displayName = 'AdMediaGallery';
 
 // Main Component
 const FacebookAdsAnalyticsDashboard: React.FC<FacebookAdsAnalyticsProps> = ({ query, className = '' }) => {
@@ -292,7 +303,7 @@ const FacebookAdsAnalyticsDashboard: React.FC<FacebookAdsAnalyticsProps> = ({ qu
         {/* Ad Examples */}
         <section>
           <SectionHeader 
-            icon={<Image className="w-6 h-6" />} 
+            icon={<ImageIcon className="w-6 h-6" />} 
             title="Analyzed Ads" 
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -329,5 +340,7 @@ const FacebookAdsAnalyticsDashboard: React.FC<FacebookAdsAnalyticsProps> = ({ qu
     </div>
   );
 };
+
+FacebookAdsAnalyticsDashboard.displayName = 'FacebookAdsAnalyticsDashboard';
 
 export default memo(FacebookAdsAnalyticsDashboard);

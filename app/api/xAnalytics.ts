@@ -286,7 +286,7 @@ export class TwitterAnalysisService {
 
   private static sanitizeText(text: string, maxLength: number = 280): string {
     if (!text) return '';
-    let sanitized = text.replace(/\s+/g, ' ').trim();
+    const sanitized = text.replace(/\s+/g, ' ').trim();
     return sanitized.length <= maxLength ? sanitized : 
            sanitized.substring(0, maxLength - 3) + '...';
   }

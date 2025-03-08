@@ -5,9 +5,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { searchAnimations } from "app/styles/animation/search-animation";
 import "app/styles/page.css";
 
+// Define proper types for component props
+interface ComponentProps {
+  query: string;
+}
+
 interface SearchComponentConfig {
   name: string;
-  component: React.LazyExoticComponent<React.ComponentType<any>>;
+  component: React.LazyExoticComponent<React.ComponentType<ComponentProps>>;
 }
 
 interface SearchFormProps {

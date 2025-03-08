@@ -7,10 +7,10 @@ interface ImageResultProps {
 const ImageResult: React.FC<ImageResultProps> = ({ query }) => {
   return (
     <div className="w-full bg-white p-6 rounded-lg shadow-md">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">Summary</h2>
-      <p className="text-gray-500">This is a placeholder for Summary for query: "{query}"</p>
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">Strategy</h2>
+      <p className="text-gray-500">This is a placeholder for Strategy for query: &ldquo;{query}&rdquo;</p>
       <div className="mt-4 h-48 bg-gray-200 rounded-lg flex items-center justify-center">
-        <span className="text-gray-400">Summary will appear here.</span>
+        <span className="text-gray-400">Coming Soon...</span>
       </div>
     </div>
   );

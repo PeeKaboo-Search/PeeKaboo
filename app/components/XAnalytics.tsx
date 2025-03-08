@@ -1,21 +1,18 @@
 import React, { useEffect, useState, memo } from "react";
 import {
-  MessageCircle,
   TrendingUp,
   Heart,
-  Zap,
   AlertTriangle,
   Users,
   BarChart,
   LineChart,
   Tag,
   Eye,
-  AlertCircle,
   Award,
   Layers,
 } from "lucide-react";
 import { Progress } from "@/app/components/ui/progress";
-import { Card, CardHeader, CardTitle, CardContent } from "@/app/components/ui/card";
+import { Card, CardContent } from "@/app/components/ui/card";
 import { useTwitterAnalysis } from "@/app/api/xAnalytics";
 
 // Define comprehensive types for the analysis data
@@ -42,13 +39,6 @@ interface Tweet {
   content: string;
   engagement: number;
   created_at: string;
-  reason?: string;
-}
-
-// Add this after the Tweet interface definition
-interface TopTweet {
-  content: string;
-  engagement: number;
   reason?: string;
 }
 
@@ -202,6 +192,9 @@ const MetricCard = memo(({ title, value, icon, description }: MetricCardProps) =
   </Card>
 ));
 
+// Add display name to the MetricCard component
+MetricCard.displayName = "MetricCard";
+
 // Brand Sentiment Section
 const BrandSentimentSection = ({ analysis }: SectionProps) => (
   <section className="space-y-4">
@@ -280,7 +273,7 @@ const ConsumerTrendsSection = ({ analysis }: SectionProps) => (
 );
 
 // Influencer Tracking Section
-const InfluencerTrackingSection = ({ analysis, data }: SectionProps) => {
+const InfluencerTrackingSection = ({ data }: SectionProps) => {
   // Sort sources by engagement to find potential influencers
   const potentialInfluencers = data?.sources
     ? [...data.sources]
@@ -304,7 +297,7 @@ const InfluencerTrackingSection = ({ analysis, data }: SectionProps) => {
                   <p className="text-sm text-primary">Engagement Score: {influencer.engagement}</p>
                 </div>
               </div>
-              <p className="text-muted-foreground mb-2">"{influencer.content}"</p>
+              <p className="text-muted-foreground mb-2">&quot;{influencer.content}&quot;</p>
               <p className="text-sm text-muted-foreground">
                 Posted: {new Date(influencer.created_at).toLocaleDateString()}
               </p>
@@ -487,7 +480,6 @@ const CampaignPerformanceSection = ({ analysis }: SectionProps) => {
   );
 };
 
-
 // Competitor Analysis Section
 const CompetitorAnalysisSection = ({ analysis, query }: SectionProps) => {
   // Simulate competitor data
@@ -497,11 +489,8 @@ const CompetitorAnalysisSection = ({ analysis, query }: SectionProps) => {
     { name: "Competitor C", sentiment: 0.5, engagement: 780 },
   ];
 
-  // Get our sentiment and create comparison
+  // Get our sentiment
   const ourSentiment = analysis.sentimentAnalysis.score;
-  const ourEngagement =
-    analysis.engagement.topTweets.reduce((acc: number, tweet) => acc + tweet.engagement, 0) /
-    analysis.engagement.topTweets.length;
 
   return (
     <section className="space-y-4">
@@ -542,7 +531,7 @@ const CompetitorAnalysisSection = ({ analysis, query }: SectionProps) => {
           <h3 className="font-bold text-lg mb-3">Competitive Advantage</h3>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Our brand's sentiment is {ourSentiment > 0 ? "positive" : "negative"} at{" "}
+              Our brand&apos;s sentiment is {ourSentiment > 0 ? "positive" : "negative"} at{" "}
               {(ourSentiment * 100).toFixed(1)}%, which is{" "}
               {Math.abs(ourSentiment) > Math.abs(competitors[0].sentiment) ? "stronger" : "weaker"}
               than the leading competitor.
@@ -560,106 +549,12 @@ const CompetitorAnalysisSection = ({ analysis, query }: SectionProps) => {
   );
 };
 
-// Define interface for YouTube-specific types
-// These are the interfaces that were causing errors in YoutubeAnalysis.tsx
-interface CommentSnippet {
-  authorDisplayName: string;
-  authorProfileImageUrl?: string;
-  authorChannelId?: string;
-  textDisplay: string;
-  textOriginal: string;
-  likeCount: number;
-  publishedAt: string;
-  updatedAt: string;
-}
-
-interface Comment {
-  id: string;
-  snippet: CommentSnippet;
-}
-
-interface CommentThread {
-  id: string;
-  snippet: {
-    topLevelComment: Comment;
-    totalReplyCount: number;
-  };
-}
-
-interface CommentThreadResponse {
-  items: CommentThread[];
-  nextPageToken?: string;
-}
-
-// Define the user experience types that were causing errors
-type SentimentType = "positive" | "negative" | "neutral";
-
-interface UserExperience {
-  sentiment: SentimentType; // Fixed: Removed "mixed" from the type
-  impact: string;
-  scenario: string;
-  frequencyPattern: string;
-}
-
-interface CommentAnalysisData {
-  analysis: {
-    overview: string;
-    sentimentAnalysis: {
-      overall: "positive" | "negative" | "neutral" | "mixed";
-      score: number;
-      distribution: {
-        positive: number;
-        negative: number;
-        neutral: number;
-      };
-      trends: {
-        period: string;
-        sentiment: number;
-      }[];
-    };
-    painPoints: {
-      issue: string;
-      frequency: number;
-      impact: string;
-      examples: string[];
-    }[];
-    userExperiences: UserExperience[]; // Fixed: Updated to match the correct type
-    emotionalTriggers: {
-      trigger: string;
-      sentiment: "positive" | "negative" | "neutral";
-      frequency: number;
-      examples: string[];
-    }[];
-    marketImplications: {
-      insight: string;
-      recommendations: string[];
-    };
-  };
-}
-
-interface CommentAnalysis {
-  success: boolean;
-  data?: CommentAnalysisData;
-  error?: string;
-}
-
-// Helpers for YouTube component
-const setComments = (commentsData: CommentThreadResponse) => {
-  // Fixed function to handle the comments data with the correct type
-  // This is now type-safe
-};
-
-const setCommentAnalysis = (analysis: CommentAnalysis) => {
-  // Fixed function to handle the analysis data with the correct type
-  // This is now type-safe
-};
-
-// For the Progress component error, we need to update usage and remove indicatorClassName
+// Custom Progress component without unused props
 const CustomProgress = ({ value }: { value: number }) => {
-  // Removed the indicatorClassName property as it doesn't exist
   return <Progress value={value} className="h-2" />;
 };
 
+// Main component
 const AdvancedTwitterAnalysisDashboard: React.FC<TwitterDashboardProps> = ({ query, competitors = [] }) => {
   const { data, analyze, isLoading, error } = useTwitterAnalysis();
   const [hasSearched, setHasSearched] = useState(false);
@@ -688,6 +583,7 @@ const AdvancedTwitterAnalysisDashboard: React.FC<TwitterDashboardProps> = ({ que
       </div>
     );
   }
+  
   const analysisWithFixedTweets = {
     ...data.analysis,
     engagement: {
@@ -707,7 +603,7 @@ const AdvancedTwitterAnalysisDashboard: React.FC<TwitterDashboardProps> = ({ que
   
   const fixedData = {
     ...data,
-    analysis: analysisWithFixedTweets as Analysis // Add explicit type assertion
+    analysis: analysisWithFixedTweets as Analysis
   };
 
   return (

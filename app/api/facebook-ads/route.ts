@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 // Constants defined using Next.js public environment variables
 const FACEBOOK_API_VERSION = process.env.NEXT_PUBLIC_FB_API_VERSION || 'v18.0';
@@ -13,6 +13,15 @@ interface FacebookAdsParams {
   limit?: number;
   searchTerms?: string;
   after?: string;
+}
+
+interface FacebookErrorResponse {
+  error: {
+    code: number;
+    message: string;
+    type?: string;
+    fbtrace_id?: string;
+  };
 }
 
 async function getFacebookAds(params: FacebookAdsParams) {
@@ -58,11 +67,14 @@ async function getFacebookAds(params: FacebookAdsParams) {
         }
       }
     );
-
+    
     return response.data;
-  } catch (error: any) {
-    if (error.response?.data?.error) {
-      const fbError = error.response.data.error;
+  } catch (error) {
+    // Properly type the error
+    const axiosError = error as AxiosError<FacebookErrorResponse>;
+    
+    if (axiosError.response?.data?.error) {
+      const fbError = axiosError.response.data.error;
       
       if (fbError.code === 190) {
         throw new Error('Invalid Facebook access token');
@@ -79,6 +91,7 @@ async function getFacebookAds(params: FacebookAdsParams) {
       throw new Error(fbError.message || 'Facebook API error');
     }
     
+    // Re-throw the original error if it's not an API error
     throw error;
   }
 }
@@ -94,7 +107,7 @@ export async function GET(request: NextRequest) {
       searchTerms: searchParams.get('searchTerms') || DEFAULT_SEARCH_TERMS,
       after: searchParams.get('after') || undefined
     };
-
+    
     const response = await getFacebookAds(params);
     return NextResponse.json(response);
     

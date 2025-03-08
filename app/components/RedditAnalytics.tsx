@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState, Suspense, lazy } from "react";
 import { fetchMarketingInsights } from "@/app/api/redditAnalysis";
-import { TrendingUp, Award, Lightbulb, Activity, Brain, Heart, Target } from "lucide-react";
+import { Activity, Brain, Target } from "lucide-react";
 import { Progress } from "@/app/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import Separator from "@/app/components/ui/separator";
@@ -46,34 +46,6 @@ interface MarketingInsight {
 interface RedditAnalyticsProps {
   query: string;
 }
-
-const DescriptionCard = ({ title, description, metrics }: { 
-  title: string;
-  description: string;
-  metrics?: { label: string; value: string | number }[];
-}) => (
-  <Card className="analytics-card">
-    <CardHeader>
-      <CardTitle className="text-lg font-semibold">{title}</CardTitle>
-      <CardDescription className="text-sm text-muted-foreground">
-        {description}
-      </CardDescription>
-    </CardHeader>
-    {metrics && (
-      <CardContent>
-        <Separator className="my-4" />
-        <dl className="space-y-4">
-          {metrics.map((metric, index) => (
-            <div key={index} className="flex justify-between items-center">
-              <dt className="text-sm font-medium text-muted-foreground">{metric.label}</dt>
-              <dd className="text-sm font-medium">{metric.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </CardContent>
-    )}
-  </Card>
-);
 
 // Lazy loaded content wrapper
 const AnalyticsContent = lazy(() => Promise.resolve({

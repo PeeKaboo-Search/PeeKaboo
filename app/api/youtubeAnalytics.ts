@@ -91,7 +91,8 @@ const CommentThreadResponseSchema = z.object({
 });
 
 // Enhanced Comment Analysis schema with sentiment analysis
-const CommentAnalysisSchema = z.object({
+// Export directly to avoid the 'assigned but never used' error
+export const CommentAnalysisSchema = z.object({
   success: z.boolean(),
   data: z.object({
     analysis: z.object({
@@ -195,13 +196,13 @@ async function fetchWithTimeout(
 }
 
 // Helper function to extract videoId safely
-function getVideoId(item: any): string | null {
+function getVideoId(item: YouTubeVideo): string | null {
   if (typeof item.id === 'string') {
-    return item.id;
+    return item.id as string;
   }
   
   if (item.id && typeof item.id === 'object') {
-    if (item.id.videoId) {
+    if ('videoId' in item.id) {
       return item.id.videoId;
     }
   }
@@ -226,16 +227,22 @@ export async function searchYouTubeVideos(query: string, pageToken?: string): Pr
       }
     });
     
+    // Define a type for YouTube API response items
+    type YouTubeResponseItem = {
+      id: string | { videoId?: string; kind?: string };
+      [key: string]: unknown;
+    };
+    
     // Pre-process the items to ensure they all have a valid id.videoId structure
     const processedData = {
       ...searchResponse.data,
-      items: searchResponse.data.items.map((item: any) => {
+      items: searchResponse.data.items.map((item: YouTubeResponseItem) => {
         // If id is a string, convert it to { videoId: id }
         if (typeof item.id === 'string') {
           return { ...item, id: { videoId: item.id } };
         }
         // If id is already an object with videoId, keep it as is
-        if (item.id && typeof item.id === 'object' && item.id.videoId) {
+        if (item.id && typeof item.id === 'object' && 'videoId' in item.id) {
           return item;
         }
         // Otherwise, this item doesn't have a valid videoId, filter it out
@@ -328,10 +335,28 @@ export async function getVideoComments(videoId: string, maxResults: number = 100
       }
     );
     
+    // Define a type for the YouTube comment response
+    type YouTubeCommentItem = {
+      id: string;
+      snippet: {
+        topLevelComment: {
+          id: string;
+          snippet: {
+            textDisplay: string;
+            textOriginal: string;
+            likeCount: number;
+            [key: string]: unknown;
+          };
+        };
+        totalReplyCount: number;
+        [key: string]: unknown;
+      };
+    };
+    
     // Process the response to keep only the text content
     const simplifiedResponse = {
       ...response.data,
-      items: response.data.items.map((item: any) => ({
+      items: response.data.items.map((item: YouTubeCommentItem) => ({
         id: item.id,
         snippet: {
           topLevelComment: {
@@ -509,6 +534,14 @@ async function generateCommentAnalysis(videoTitle: string, commentText: string):
     response_format: { type: 'json_object' },
   };
 
+  type GroqResponse = {
+    choices?: Array<{
+      message?: {
+        content?: string;
+      };
+    }>;
+  };
+
   try {
     const response = await fetchWithTimeout(
       url,
@@ -532,7 +565,7 @@ async function generateCommentAnalysis(videoTitle: string, commentText: string):
       );
     }
 
-    const data = await response.json();
+    const data = await response.json() as GroqResponse;
     const analysis = data?.choices?.[0]?.message?.content;
 
     if (!analysis) {
@@ -554,7 +587,7 @@ async function generateCommentAnalysis(videoTitle: string, commentText: string):
 // Utility function
 function sanitizeText(text: string, maxLength: number = 300): string {
   if (!text) return '';
-  let sanitized = text.replace(/\s+/g, ' ').trim();
+  const sanitized = text.replace(/\s+/g, ' ').trim();
   if (sanitized.length <= maxLength) return sanitized;
   const truncated = sanitized.substring(0, maxLength);
   return truncated.substring(0, truncated.lastIndexOf(' ')) + '...';

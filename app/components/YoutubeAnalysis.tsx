@@ -30,6 +30,7 @@ import {
 } from '@/app/api/youtubeAnalytics';
 import { Card, CardContent } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
 import {
   Dialog,
@@ -61,10 +62,46 @@ interface AnalysisCardProps {
   sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed';
 }
 
+interface PainPoint {
+  title: string;
+  description: string;
+  possibleSolutions: string[];
+  frequency: number;
+  sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed';
+}
+interface CommentItem {
+  id: string;
+  snippet: {
+    topLevelComment: {
+      snippet: {
+        authorProfileImageUrl?: string;
+        authorDisplayName: string;
+        textDisplay: string;
+        likeCount: number;
+      }
+    };
+    totalReplyCount: number;
+  }
+}
 // Props interface for the component
 interface YouTubeVideosProps {
   query: string;
   maxResults?: number;
+}
+
+interface UserExperience {
+  scenario: string;
+  impact: string;
+  frequencyPattern: string;
+  sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed';
+}
+
+interface EmotionalTrigger {
+  trigger: string;
+  context: string;
+  responsePattern: string;
+  dominantEmotion: string;
+  intensity: number;
 }
 
 // Ensure VideoStatistics type is strict
@@ -73,8 +110,6 @@ const ensureVideoStatistics = (stats: Partial<VideoStatistics>): VideoStatistics
   likeCount: stats.likeCount || '0',
   commentCount: stats.commentCount || '0'
 });
-
-
 
 // Helper functions
 const validateArray = <T,>(data: T[] | undefined | null): T[] => {
@@ -147,7 +182,7 @@ const AnalysisCard = memo(({ title, description, items, score, scoreLabel, senti
 ));
 
 // Specialized card components
-const PainPointCard = memo(({ point }: { point: any }) => (
+const PainPointCard = memo(({ point }: { point: PainPoint }) => (
   <AnalysisCard
     title={point.title}
     description={point.description}
@@ -157,10 +192,12 @@ const PainPointCard = memo(({ point }: { point: any }) => (
     score={point.frequency * 10}
     scoreLabel="Frequency Score"
     sentiment={point.sentiment}
+    
   />
 ));
+PainPointCard.displayName = 'PainPointCard';
 
-const ExperienceCard = memo(({ exp }: { exp: any }) => (
+const ExperienceCard = memo(({ exp }: { exp: UserExperience }) => (
   <AnalysisCard
     title={`${exp.scenario.substring(0, 40)}...`}
     description={exp.scenario}
@@ -171,8 +208,9 @@ const ExperienceCard = memo(({ exp }: { exp: any }) => (
     sentiment={exp.sentiment}
   />
 ));
+ExperienceCard.displayName = 'ExperienceCard';
 
-const TriggerCard = memo(({ trigger }: { trigger: any }) => (
+const TriggerCard = memo(({ trigger }: { trigger: EmotionalTrigger }) => (
   <AnalysisCard
     title={trigger.trigger}
     description={trigger.context}
@@ -184,51 +222,8 @@ const TriggerCard = memo(({ trigger }: { trigger: any }) => (
     scoreLabel="Intensity"
   />
 ));
+TriggerCard.displayName = 'TriggerCard';
 
-// Generic analysis section component
-const AnalysisSection = <T,>({
-  icon,
-  title,
-  items,
-  renderItem,
-  emptyMessage,
-  isLoading = false
-}: {
-  icon: React.ReactNode;
-  title: string;
-  items: T[];
-  renderItem: (item: T, index: number) => React.ReactNode;
-  emptyMessage: string;
-  isLoading?: boolean;
-}) => (
-  <section className="mt-8">
-    <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
-      {icon}
-      {title}
-    </h2>
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {isLoading ? (
-        [...Array(3)].map((_, i) => (
-          <div key={i} className="bg-white/10 backdrop-blur-lg rounded-lg p-6 h-64">
-            <Skeleton className="h-8 w-3/4 mb-4" />
-            <Skeleton className="h-4 w-full mb-2" />
-            <Skeleton className="h-4 w-full mb-2" />
-            <Skeleton className="h-4 w-3/4" />
-          </div>
-        ))
-      ) : items.length > 0 ? (
-        items.map((item, index) => renderItem(item, index))
-      ) : (
-        <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 flex items-center justify-center">
-          <div className="text-center">
-            <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-amber-500" />
-            <p>{emptyMessage}</p>
-          </div>
-        </div>
-      )}
-    </div>
-  </section>
-);
 
 // Video card component for better separation of concerns
 const VideoCard = memo(({ 
@@ -309,7 +304,7 @@ const VideoCard = memo(({
 ));
 
 // Comment item component
-const CommentItem = memo(({ comment }: { comment: any }) => (
+const CommentItem = memo(({ comment }: { comment: CommentItem }) => (
   <div className="p-4 border rounded-lg transition-all hover:bg-white/5">
     <div className="flex items-start gap-3">
       {comment.snippet.topLevelComment.snippet.authorProfileImageUrl && (
@@ -342,6 +337,7 @@ const CommentItem = memo(({ comment }: { comment: any }) => (
     </div>
   </div>
 ));
+CommentItem.displayName = 'CommentItem';
 
 // Main YouTube component
 const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query, maxResults = 8 }) => {
@@ -484,8 +480,8 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query, maxResults = 8 }) 
         setSelectedVideo(null);
         setComments(null);
         setCommentAnalysis(null);
-
-        const data = await searchYouTubeVideos(query);
+        
+        const data = await searchYouTubeVideos(query, undefined);
         setVideos(data.items);
         setNextPageToken(data.nextPageToken);
 
@@ -548,7 +544,7 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query, maxResults = 8 }) 
         <h2 className="text-2xl font-bold">YouTube Videos</h2>
         <div className="flex items-center">
           <p className="text-sm text-muted-foreground mr-2">
-            {videos.length > 0 ? `${videos.length} results for "${query}"` : ''}
+           {videos.length > 0 ? `${videos.length} results for "${query}"` : ''}
           </p>
           {nextPageToken && !loadingMore && (
             <Button
