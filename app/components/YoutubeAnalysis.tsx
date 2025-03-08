@@ -23,8 +23,7 @@ import {
   CommentAnalysis
 } from '@/app/types/youtube';
 import { 
-  searchYouTubeVideos, 
-  getVideoStatistics,
+  searchYouTubeVideos,  
   getVideoComments,
   analyzeVideoComments
 } from '@/app/api/youtubeAnalytics';
@@ -38,8 +37,7 @@ import {
   DialogTitle,
   DialogClose,
   DialogDescription
-} from "@/app/components/ui/dialog";
-import { Progress } from "@/app/components/ui/progress";
+} from "@/app/components/ui/dialog"; 
 import { Skeleton } from "@/app/components/ui/skeleton";
 import { Badge } from "@/app/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/app/components/ui/tooltip";
@@ -543,7 +541,7 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query, maxResults = 8 }) 
         <h2 className="text-2xl font-bold">YouTube Videos</h2>
         <div className="flex items-center">
           <p className="text-sm text-muted-foreground mr-2">
-           {videos.length > 0 ? `${videos.length} results for "${query}"` : ''}
+           {videos.length > 0 ? `${videos.length} results for &quot;${query}&quot;` : ''}
           </p>
           {nextPageToken && !loadingMore && (
             <Button
@@ -712,11 +710,18 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query, maxResults = 8 }) 
                 </TabsContent>
                 
                 <TabsContent value="emotional-triggers">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {validateArray(commentAnalysis.data.analysis.emotionalTriggers).map((trigger, index) => (
-                      <TriggerCard key={index} trigger={trigger} />
-                    ))}
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {validateArray(commentAnalysis.data.analysis.emotionalTriggers).map((triggerData, index) => {
+                const enhancedTrigger: EmotionalTrigger = {
+                trigger: triggerData.trigger,
+                context: triggerData.context,
+                responsePattern: triggerData.responsePattern,
+                intensity: triggerData.intensity,
+                dominantEmotion: (triggerData as any).dominantEmotion || "Unknown"
+                };
+                return <TriggerCard key={index} trigger={enhancedTrigger} />;
+                })}
+                </div>
                 </TabsContent>
               </Tabs>
 

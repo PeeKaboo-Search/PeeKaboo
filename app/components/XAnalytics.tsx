@@ -224,8 +224,8 @@ const BrandSentimentSection = ({ analysis }: SectionProps) => (
         <CardContent className="p-6">
           <h3 className="font-medium mb-2">Key Brand Attributes</h3>
           <div className="space-y-2 mt-3">
-            {analysis.contentPatterns.slice(0, 3).map((pattern, idx) => (
-              <div key={idx} className="flex items-center gap-2">
+            {analysis.contentPatterns.slice(0, 3).map((pattern, index) => (
+              <div key={index} className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-primary"></div>
                 <span className="text-sm">{pattern.pattern}</span>
               </div>
@@ -260,8 +260,8 @@ const ConsumerTrendsSection = ({ analysis }: SectionProps) => (
             <div className="mt-4">
               <h4 className="text-sm font-medium mb-2">Examples from Users:</h4>
               <ul className="list-disc pl-4 text-sm text-muted-foreground">
-                {pattern.examples.map((example, i) => (
-                  <li key={i}>{example}</li>
+                {pattern.examples.map((example, idx) => (
+                  <li key={idx}>{example}</li>
                 ))}
               </ul>
             </div>
@@ -352,7 +352,7 @@ const DemandForecastingSection = ({ analysis }: SectionProps) => (
 
 // Crisis Detection Section
 const CrisisDetectionSection = ({ analysis, data }: SectionProps) => {
-  // Check for negative sentiment and high engagement as potential crisis indicators
+  // Check for negative sentiment and high confidence as potential crisis indicators
   const isCrisisDetected =
     analysis.sentimentAnalysis.label === "negative" &&
     analysis.sentimentAnalysis.confidence > 0.7;
@@ -484,7 +484,7 @@ const CampaignPerformanceSection = ({ analysis }: SectionProps) => {
 const CompetitorAnalysisSection = ({ analysis, query, competitors = [] }: SectionProps) => {
   // Use the competitors from props or use default values if none provided
   const competitorList = competitors.length > 0 
-    ? competitors.map((name, i) => ({ 
+    ? competitors.map((name) => ({ 
         name, 
         sentiment: (Math.random() * 2 - 1) * 0.5, 
         engagement: Math.floor(Math.random() * 1000) + 500 
