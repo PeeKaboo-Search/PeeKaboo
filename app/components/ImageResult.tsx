@@ -41,8 +41,8 @@ const ImageResult: React.FC<ImageResultProps> = ({
         } else {
           setError("Failed to fetch images");
         }
-      } catch (error) {
-        // Fixed: Removed unused parameter, using named parameter for error
+      } catch (err) {
+        // Fixed: Removed the unused 'error' parameter and replaced with generic error message
         setError("An error occurred while fetching images");
       } finally {
         setLoading(false);

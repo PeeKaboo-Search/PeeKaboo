@@ -135,6 +135,8 @@ const getSentimentColor = (sentiment?: 'positive' | 'negative' | 'neutral' | 'mi
       return 'text-gray-400';
   }
 };
+
+// Fix 1: Add displayName to AnalysisCard
 const AnalysisCard = memo(({ title, description, items, score, scoreLabel, sentiment }: AnalysisCardProps) => (
   <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full flex flex-col">
     <div className="flex justify-between items-center mb-4">
@@ -177,6 +179,7 @@ const AnalysisCard = memo(({ title, description, items, score, scoreLabel, senti
     )}
   </div>
 ));
+AnalysisCard.displayName = 'AnalysisCard';
 
 // Specialized card components
 const PainPointCard = memo(({ point }: { point: PainPoint }) => (
@@ -221,8 +224,7 @@ const TriggerCard = memo(({ trigger }: { trigger: EmotionalTrigger }) => (
 ));
 TriggerCard.displayName = 'TriggerCard';
 
-
-// Video card component for better separation of concerns
+// Fix 2: Add displayName to VideoCard
 const VideoCard = memo(({ 
   video, 
   statistics, 
@@ -299,6 +301,7 @@ const VideoCard = memo(({
     </CardContent>
   </Card>
 ));
+VideoCard.displayName = 'VideoCard';
 
 // Comment item component
 const CommentItem = memo(({ comment }: { comment: CommentItem }) => (
@@ -337,7 +340,8 @@ const CommentItem = memo(({ comment }: { comment: CommentItem }) => (
 CommentItem.displayName = 'CommentItem';
 
 // Main YouTube component
-const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query, maxResults = 8 }) => {
+const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
+  // Fix 3: Remove unused maxResults parameter from function parameters
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [statistics, setStatistics] = useState<Record<string, VideoStatistics>>({});
   const [loading, setLoading] = useState(true);
@@ -541,7 +545,7 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query, maxResults = 8 }) 
         <h2 className="text-2xl font-bold">YouTube Videos</h2>
         <div className="flex items-center">
           <p className="text-sm text-muted-foreground mr-2">
-           {videos.length > 0 ? `${videos.length} results for &quot;${query}&quot;` : ''}
+           {videos.length > 0 ? `${videos.length} results for "${query}"` : ''}
           </p>
           {nextPageToken && !loadingMore && (
             <Button
@@ -712,14 +716,17 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query, maxResults = 8 }) 
                 <TabsContent value="emotional-triggers">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {validateArray(commentAnalysis.data.analysis.emotionalTriggers).map((triggerData, index) => {
-                const enhancedTrigger: EmotionalTrigger = {
-                trigger: triggerData.trigger,
-                context: triggerData.context,
-                responsePattern: triggerData.responsePattern,
-                intensity: triggerData.intensity,
-                dominantEmotion: (triggerData as any).dominantEmotion || "Unknown"
-                };
-                return <TriggerCard key={index} trigger={enhancedTrigger} />;
+                  // Fix 6: Replace 'any' with a proper type
+                  const enhancedTrigger: EmotionalTrigger = {
+                    trigger: triggerData.trigger,
+                    context: triggerData.context,
+                    responsePattern: triggerData.responsePattern,
+                    intensity: triggerData.intensity,
+                    dominantEmotion: 'dominantEmotion' in triggerData ? 
+                      triggerData.dominantEmotion as string : 
+                      "Unknown"
+                  };
+                  return <TriggerCard key={index} trigger={enhancedTrigger} />;
                 })}
                 </div>
                 </TabsContent>
@@ -761,5 +768,7 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query, maxResults = 8 }) 
     </div>
   );
 };
+
+YouTubeVideos.displayName = 'YouTubeVideos';
 
 export default memo(YouTubeVideos);
