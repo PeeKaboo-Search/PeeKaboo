@@ -4,7 +4,6 @@ import { fetchMarketingInsights } from "@/app/api/redditAnalysis";
 import { Activity, Brain, Target } from "lucide-react";
 import { Progress } from "@/app/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
-import Separator from "@/app/components/ui/separator";
 import "@/app/styles/reddit-analysis.css";
 
 // Define interfaces for the missing types

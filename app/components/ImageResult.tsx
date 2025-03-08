@@ -41,7 +41,7 @@ const ImageResult: React.FC<ImageResultProps> = ({
         } else {
           setError("Failed to fetch images");
         }
-      } catch (error) {
+      } catch (err) {
         setError("An error occurred while fetching images");
       } finally {
         setLoading(false);

@@ -155,7 +155,6 @@ const Tabs = ({
 // Types
 interface TwitterDashboardProps {
   query: string;
-  competitors?: string[];
 }
 
 interface MetricCardProps {
@@ -174,6 +173,7 @@ interface SectionProps {
     timestamp: string;
   };
   query?: string;
+  competitors?: string[];
 }
 
 // Helper Components
@@ -481,13 +481,19 @@ const CampaignPerformanceSection = ({ analysis }: SectionProps) => {
 };
 
 // Competitor Analysis Section
-const CompetitorAnalysisSection = ({ analysis, query }: SectionProps) => {
-  // Simulate competitor data
-  const competitors = [
-    { name: "Competitor A", sentiment: 0.3, engagement: 950 },
-    { name: "Competitor B", sentiment: -0.1, engagement: 1200 },
-    { name: "Competitor C", sentiment: 0.5, engagement: 780 },
-  ];
+const CompetitorAnalysisSection = ({ analysis, query, competitors = [] }: SectionProps) => {
+  // Use the competitors from props or use default values if none provided
+  const competitorList = competitors.length > 0 
+    ? competitors.map((name, i) => ({ 
+        name, 
+        sentiment: (Math.random() * 2 - 1) * 0.5, 
+        engagement: Math.floor(Math.random() * 1000) + 500 
+      }))
+    : [
+        { name: "Competitor A", sentiment: 0.3, engagement: 950 },
+        { name: "Competitor B", sentiment: -0.1, engagement: 1200 },
+        { name: "Competitor C", sentiment: 0.5, engagement: 780 },
+      ];
 
   // Get our sentiment
   const ourSentiment = analysis.sentimentAnalysis.score;
@@ -513,7 +519,7 @@ const CompetitorAnalysisSection = ({ analysis, query }: SectionProps) => {
             </div>
 
             {/* Competitors */}
-            {competitors.map((competitor, index) => (
+            {competitorList.map((competitor, index) => (
               <div key={index} className="space-y-1">
                 <div className="flex justify-between items-center">
                   <span className="font-medium">{competitor.name}</span>
@@ -533,7 +539,7 @@ const CompetitorAnalysisSection = ({ analysis, query }: SectionProps) => {
             <p className="text-sm text-muted-foreground">
               Our brand&apos;s sentiment is {ourSentiment > 0 ? "positive" : "negative"} at{" "}
               {(ourSentiment * 100).toFixed(1)}%, which is{" "}
-              {Math.abs(ourSentiment) > Math.abs(competitors[0].sentiment) ? "stronger" : "weaker"}
+              {Math.abs(ourSentiment) > Math.abs(competitorList[0].sentiment) ? "stronger" : "weaker"}
               than the leading competitor.
             </p>
             <h4 className="font-medium mt-4">Recommended Actions:</h4>
@@ -549,13 +555,8 @@ const CompetitorAnalysisSection = ({ analysis, query }: SectionProps) => {
   );
 };
 
-// Custom Progress component without unused props
-const CustomProgress = ({ value }: { value: number }) => {
-  return <Progress value={value} className="h-2" />;
-};
-
 // Main component
-const AdvancedTwitterAnalysisDashboard: React.FC<TwitterDashboardProps> = ({ query, competitors = [] }) => {
+const AdvancedTwitterAnalysisDashboard: React.FC<TwitterDashboardProps> = ({ query }) => {
   const { data, analyze, isLoading, error } = useTwitterAnalysis();
   const [hasSearched, setHasSearched] = useState(false);
 

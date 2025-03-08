@@ -76,22 +76,6 @@ interface MarketOverviewData {
   channels: string[];
 }
 
-interface AnalysisData {
-  executiveSummary: string;
-  marketOverview: MarketOverviewData;
-  topTriggers: Trigger[];
-  trends: Trend[];
-  consumerInsights: Insight[];
-  industryInsights: Insight[];
-  seasonalTopics: SeasonalTopic[];
-  recommendations: {
-    contentStrategy: string[];
-    timing: string[];
-    platforms: string[];
-    messaging: string[];
-  };
-}
-
 // Helper functions
 const validateArray = <T,>(data: T[] | undefined | null): T[] => {
   return Array.isArray(data) ? data : [];
