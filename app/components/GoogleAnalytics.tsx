@@ -64,17 +64,11 @@ interface SeasonalTopic {
 interface Trigger {
   productFeature: string;
   userNeed: string;
-  
   recommendedProductContent: string[];
   relevance: number;
 }
 
-interface MarketOverviewData {
-  targetAudience: string[];
-  demographics: string[];
-  psychographics: string[];
-  channels: string[];
-}
+// Removed unused MarketOverviewData interface
 
 // Helper functions
 const validateArray = <T,>(data: T[] | undefined | null): T[] => {
@@ -251,7 +245,6 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
         <section>
           <h2 className="text-2xl font-bold mb-4">Market Overview</h2>
           <div className="mb-6" dangerouslySetInnerHTML={{ __html: analysis.executiveSummary }} />
-          
         </section>
 
         {/* Top Triggers Section - Updated for product triggers */}
