@@ -545,7 +545,7 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
         <h2 className="text-2xl font-bold">YouTube Videos</h2>
         <div className="flex items-center">
            <p className="text-sm text-muted-foreground mr-2">
-           {videos.length > 0 ? `${videos.length} results for "${query.replace(/"/g, '&quot;')}"` : ''}
+           {videos.length > 0 ? `${videos.length} results for &quot;${query}&quot;` : ''}
            </p>
           {nextPageToken && !loadingMore && (
             <Button
