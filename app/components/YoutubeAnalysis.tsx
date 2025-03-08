@@ -74,6 +74,8 @@ const ensureVideoStatistics = (stats: Partial<VideoStatistics>): VideoStatistics
   commentCount: stats.commentCount || '0'
 });
 
+
+
 // Helper functions
 const validateArray = <T,>(data: T[] | undefined | null): T[] => {
   return Array.isArray(data) ? data : [];
@@ -101,8 +103,6 @@ const getSentimentColor = (sentiment?: 'positive' | 'negative' | 'neutral' | 'mi
       return 'text-gray-400';
   }
 };
-
-// Analysis card component
 const AnalysisCard = memo(({ title, description, items, score, scoreLabel, sentiment }: AnalysisCardProps) => (
   <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full flex flex-col">
     <div className="flex justify-between items-center mb-4">
@@ -127,15 +127,17 @@ const AnalysisCard = memo(({ title, description, items, score, scoreLabel, senti
     </div>
     {score !== undefined && (
       <div className="mt-4 space-y-2">
-        <Progress 
-          value={score} 
-          className="h-2" 
-          indicatorClassName={
-            score > 75 ? "bg-green-500" : 
-            score > 50 ? "bg-amber-500" : 
-            score > 25 ? "bg-orange-500" : "bg-red-500"
-          }
-        />
+        {/* Fix the Progress component by using correct styling approach */}
+        <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
+          <div 
+            className={`h-full transition-all ${
+              score > 75 ? "bg-green-500" : 
+              score > 50 ? "bg-amber-500" : 
+              score > 25 ? "bg-orange-500" : "bg-red-500"
+            }`}
+            style={{ width: `${score}%` }}
+          />
+        </div>
         <span className="text-sm">
           {scoreLabel}: {score}%
         </span>
@@ -431,10 +433,10 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query, maxResults = 8 }) 
     
     try {
       const commentsData = await getVideoComments(videoId);
-      setComments(commentsData);
+      // Type assertion to ensure commentsData matches CommentThreadResponse
+      setComments(commentsData as CommentThreadResponse);
     } catch (err) {
       console.error('Failed to fetch comments:', err);
-      // We use a separate error state for comments to avoid disrupting the main UI
       setError({
         message: err instanceof Error ? err.message : 'Failed to fetch comments',
         code: 'COMMENTS_ERROR'
@@ -443,7 +445,7 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query, maxResults = 8 }) 
       setCommentsLoading(false);
     }
   };
-
+  
   // Handle comment analysis
   const handleAnalyzeComments = async () => {
     if (!selectedVideo || !videos.length) return;
@@ -459,7 +461,8 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query, maxResults = 8 }) 
         selectedVideoData.snippet.title
       );
       
-      setCommentAnalysis(analysis);
+      // Type assertion to ensure analysis matches CommentAnalysis
+      setCommentAnalysis(analysis as CommentAnalysis);
       setShowAnalysis(true);
     } catch (err) {
       console.error('Failed to analyze comments:', err);

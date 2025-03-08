@@ -4,8 +4,44 @@ import { fetchMarketingInsights } from "@/app/api/redditAnalysis";
 import { TrendingUp, Award, Lightbulb, Activity, Brain, Heart, Target } from "lucide-react";
 import { Progress } from "@/app/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
-import  Separator  from "@/app/components/ui/separator";
+import Separator from "@/app/components/ui/separator";
 import "@/app/styles/reddit-analysis.css";
+
+// Define interfaces for the missing types
+interface PainPoint {
+  issue: string;
+  impact_score: number;
+  frequency: number;
+  verbatim_quotes: string[];
+  suggested_solutions: string[];
+}
+
+interface NicheCommunity {
+  segment: string;
+  engagement_level: number;
+  influence_score: number;
+  demographic_indicators: string[];
+  discussion_themes: string[];
+}
+
+interface EngagementMetrics {
+  upvote_ratio: number;
+  comment_count: number;
+  awards: number;
+}
+
+interface RedditResult {
+  title: string;
+  subreddit: string;
+  snippet: string;
+  engagement_metrics?: EngagementMetrics;
+}
+
+interface MarketingInsight {
+  overview: string;
+  recurring_pain_points: PainPoint[];
+  niche_communities: NicheCommunity[];
+}
 
 interface RedditAnalyticsProps {
   query: string;
@@ -55,7 +91,7 @@ const AnalyticsContent = lazy(() => Promise.resolve({
           <span>Recurring Pain Points</span>
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {insights.recurring_pain_points.map((point, index) => (
+          {insights.recurring_pain_points.map((point: PainPoint, index: number) => (
             <Card key={index} className="analytics-card">
               <CardHeader>
                 <CardTitle>{point.issue}</CardTitle>
@@ -75,7 +111,7 @@ const AnalyticsContent = lazy(() => Promise.resolve({
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium">Key Quotes</h4>
                   <ul className="list-disc pl-4 space-y-1 text-sm text-muted-foreground">
-                    {point.verbatim_quotes.map((quote, i) => (
+                    {point.verbatim_quotes.map((quote: string, i: number) => (
                       <li key={i}>{quote}</li>
                     ))}
                   </ul>
@@ -84,7 +120,7 @@ const AnalyticsContent = lazy(() => Promise.resolve({
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium">Solutions</h4>
                   <ul className="list-disc pl-4 space-y-1 text-sm text-muted-foreground">
-                    {point.suggested_solutions.map((solution, i) => (
+                    {point.suggested_solutions.map((solution: string, i: number) => (
                       <li key={i}>{solution}</li>
                     ))}
                   </ul>
@@ -103,7 +139,7 @@ const AnalyticsContent = lazy(() => Promise.resolve({
           <span>Niche Communities</span>
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {insights.niche_communities.map((community, index) => (
+          {insights.niche_communities.map((community: NicheCommunity, index: number) => (
             <Card key={index} className="analytics-card">
               <CardHeader>
                 <CardTitle>{community.segment}</CardTitle>
@@ -123,7 +159,7 @@ const AnalyticsContent = lazy(() => Promise.resolve({
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium">Demographics</h4>
                   <ul className="list-disc pl-4 space-y-1 text-sm text-muted-foreground">
-                    {community.demographic_indicators.map((indicator, i) => (
+                    {community.demographic_indicators.map((indicator: string, i: number) => (
                       <li key={i}>{indicator}</li>
                     ))}
                   </ul>
@@ -132,7 +168,7 @@ const AnalyticsContent = lazy(() => Promise.resolve({
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium">Discussion Themes</h4>
                   <ul className="list-disc pl-4 space-y-1 text-sm text-muted-foreground">
-                    {community.discussion_themes.map((theme, i) => (
+                    {community.discussion_themes.map((theme: string, i: number) => (
                       <li key={i}>{theme}</li>
                     ))}
                   </ul>
@@ -151,7 +187,7 @@ const AnalyticsContent = lazy(() => Promise.resolve({
           <span>Reddit Discussions</span>
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {results.map((result, index) => (
+          {results.map((result: RedditResult, index: number) => (
             <Card key={index} className="analytics-card">
               <CardHeader>
                 <CardTitle className="text-base">{result.title}</CardTitle>

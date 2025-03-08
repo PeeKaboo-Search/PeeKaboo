@@ -38,29 +38,30 @@ export interface VideoStatistics {
 }
 
 // Comment Types
-export interface CommentSnippet {
-  textDisplay: string;
-  textOriginal: string;
+interface CommentSnippet {
   authorDisplayName: string;
   authorProfileImageUrl?: string;
-  authorChannelUrl?: string;
   likeCount: number;
+  textDisplay: string;
+  textOriginal: string;
   publishedAt: string;
   updatedAt: string;
 }
+
 
 export interface TopLevelComment {
   id: string;
   snippet: CommentSnippet;
 }
 
-export interface CommentThread {
+interface CommentThread {
   id: string;
   snippet: {
-    topLevelComment: TopLevelComment;
+    topLevelComment: {
+      id: string;
+      snippet: CommentSnippet;
+    };
     totalReplyCount: number;
-    canReply?: boolean;
-    isPublic?: boolean;
   };
 }
 
@@ -68,6 +69,8 @@ export interface CommentThreadResponse {
   items: CommentThread[];
   nextPageToken?: string;
 }
+ 
+
 
 // Comment Analysis Types
 export interface PainPoint {
@@ -77,12 +80,11 @@ export interface PainPoint {
   impact: number;
   possibleSolutions: string[];
 }
-
-export interface UserExperience {
-  scenario: string;
+interface UserExperience {
+  sentiment: 'positive' | 'negative' | 'neutral' | 'mixed'; // Add 'mixed' to valid sentiment types
   impact: string;
+  scenario: string;
   frequencyPattern: string;
-  sentiment: 'positive' | 'negative' | 'neutral';
 }
 
 export interface EmotionalTrigger {
