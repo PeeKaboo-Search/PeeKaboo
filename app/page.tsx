@@ -10,9 +10,14 @@ interface ComponentProps {
   query: string;
 }
 
+// Define interface for FacebookAdsAnalytics that expects keyword
+interface MetaAdAnalysisProps {
+  keyword: string;
+}
+
 interface SearchComponentConfig {
   name: string;
-  component: React.LazyExoticComponent<React.ComponentType<ComponentProps>>;
+  component: React.LazyExoticComponent<React.ComponentType<any>>;
 }
 
 interface SearchFormProps {
@@ -25,6 +30,36 @@ interface SearchFormProps {
 interface ResultsSectionProps {
   submittedQuery: string;
   activeComponents: string[];
+}
+
+// Create interfaces for specific data types used in FB ads analysis
+interface MessageStrategy {
+  strategy: string;
+  description: string;
+  prevalence: number;
+  effectiveness: number;
+  examples: string[];
+}
+
+interface VisualTactic {
+  tactic: string;
+  implementation: string;
+  impact: string;
+  frequencyOfUse: number;
+}
+
+interface AudienceSegment {
+  segment: string;
+  approach: string;
+  intensity: number;
+  engagementPotential: string;
+}
+
+interface CTA {
+  cta: string;
+  context: string;
+  strength: number;
+  conversionPotential: string;
 }
 
 const SEARCH_COMPONENTS: SearchComponentConfig[] = [
@@ -91,7 +126,12 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({ submittedQuery, activeC
           layout
           className="result-card"
         >
-          <Component query={submittedQuery} />
+          {/* Handle both query and keyword prop requirements */}
+          {name === 'FacebookAdsAnalysis' ? (
+            <Component keyword={submittedQuery} />
+          ) : (
+            <Component query={submittedQuery} />
+          )}
         </motion.div>
       ))}
     </Suspense>
