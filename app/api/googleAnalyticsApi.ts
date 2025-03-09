@@ -1,103 +1,5 @@
 import { useState } from 'react';
-
-// Types
-interface GoogleResult {
-  title: string;
-  snippet: string;
-  link: string;
-}
-
-interface TrendCard {
-  title: string;
-  description: string;
-  impact: number;
-  audience: string[];
-  platforms: string[];
-  contentIdeas: string[];
-  bestPractices: string[];
-}
- 
-interface InsightCard {
-  title: string;
-  type: 'consumer' | 'industry';
-  keyFindings: string[];
-  implications: string[];
-  opportunities: string[];
-  recommendations: string[];
-}   
-
-interface SeasonalCard {
-  topic: string;
-  timing: string;
-  relevance: number;
-  description: string;
-  marketingAngles: string[];
-  contentSuggestions: string[];
-}
-
-// Modified Trigger interface focused on product triggers
-interface TriggerCard {
-  productFeature: string;
-  userNeed: string;
-  purchaseIntent: number;
-  conversionRate: number;
-  relevance: number;
-  recommendedProductContent: string[];
-}
-
-interface MarketResearchAnalysis {
-  executiveSummary: string;
-  marketOverview: {
-    targetAudience: string[];
-    demographics: string[];
-    psychographics: string[];
-    channels: string[];
-  };
-  trends: TrendCard[];
-  consumerInsights: InsightCard[];
-  industryInsights: InsightCard[];
-  seasonalTopics: SeasonalCard[];
-  // Modified top triggers field focused on product
-  topTriggers: TriggerCard[];
-  recommendations: {
-    contentStrategy: string[];
-    timing: string[];
-    platforms: string[];
-    messaging: string[];
-  };
-}
-
-interface GoogleSearchData {
-  success: boolean;
-  data?: {
-    results: GoogleResult[];
-    analysis: MarketResearchAnalysis;
-    timestamp: string;
-  };
-  error?: string;
-}
-
-// Google Search API response interfaces
-interface GoogleSearchItem {
-  title?: string;
-  snippet?: string;
-  link?: string;
-}
-
-interface GoogleSearchResponse {
-  items?: GoogleSearchItem[];
-}
-
-// Groq API response interfaces
-interface GroqChoice {
-  message?: {
-    content?: string;
-  };
-}
-
-interface GroqResponse {
-  choices?: GroqChoice[];
-}
+import "@/app/types/google"
 
 // Configuration
 const CONFIG = {
@@ -282,7 +184,7 @@ export class MarketResearchService {
             },
           ],
           temperature: 0.7,
-          max_tokens: 4000,
+          max_tokens: 4500,
           response_format: { type: 'json_object' },
         }),
       }

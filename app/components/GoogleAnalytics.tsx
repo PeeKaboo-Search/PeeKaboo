@@ -4,73 +4,14 @@ import React, { useEffect, useState, memo } from "react";
 import { 
   TrendingUp, Calendar,
   Lightbulb, Eye, 
-  KeyRound // For product triggers
+  KeyRound  
 } from "lucide-react";
 import { Progress } from "@/app/components/ui/progress";
 import { useMarketResearch } from "@/app/api/googleAnalyticsApi";
 import "@/app/styles/GoogleAnalytics.css"
+import "@/app/types/google"
+ 
 
-// Types
-interface MarketResearchProps {
-  query: string;
-}
-
-interface CardProps {
-  title: string;
-  description: string;
-  items?: string[];
-  score?: number;
-  scoreLabel?: string;
-  timing?: string;
-}
-
-interface SectionProps<T> {
-  icon: React.ReactNode;
-  title: string;
-  items: T[];
-  renderItem: (item: T, index: number) => React.ReactNode;
-  emptyMessage: string;
-}
-
-// Define interfaces for each data type
-interface Trend {
-  title: string;
-  description: string;
-  audience: string[];
-  platforms: string[];
-  contentIdeas: string[];
-  bestPractices: string[];
-  impact: number;
-}
-
-interface Insight {
-  title: string;
-  keyFindings: string[];
-  implications: string[];
-  opportunities: string[];
-  recommendations: string[];
-}
-
-interface SeasonalTopic {
-  topic: string;
-  description: string;
-  marketingAngles: string[];
-  contentSuggestions: string[];
-  relevance: number;
-  timing: string;
-}
-
-// Updated Trigger interface to match the new product-focused structure
-interface Trigger {
-  productFeature: string;
-  userNeed: string;
-  recommendedProductContent: string[];
-  relevance: number;
-}
-
-// Removed unused MarketOverviewData interface
-
-// Helper functions
 const validateArray = <T,>(data: T[] | undefined | null): T[] => {
   return Array.isArray(data) ? data : [];
 };
