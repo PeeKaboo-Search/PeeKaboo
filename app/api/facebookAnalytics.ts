@@ -164,8 +164,8 @@ export class MetaAdAnalysisService {
         
         try {
           parsedAnalysis = JSON.parse(analysis) as AnalysisData;
-        } catch (_) {
-          // Changed from parseError to _ to indicate unused variable
+        } catch {
+          // Removed the unused variable completely
           return { 
             success: false, 
             error: 'Failed to parse analysis result', 
@@ -512,8 +512,8 @@ IMPORTANT: Return VALID JSON only with no additional text before or after the JS
         try {
           const errorData = await response.json();
           errorMessage += ` - ${JSON.stringify(errorData)}`;
-        } catch (_) {
-          // Changed from "e" to "_" to indicate unused variable
+        } catch {
+          // Removed the unused variable completely
           // Unable to parse error JSON
         }
         throw new Error(errorMessage);
