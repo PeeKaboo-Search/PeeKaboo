@@ -16,44 +16,63 @@ interface QuoraAnswer {
 }
 
 interface QuoraAPIResponse {
-  data: Array<any>;
+  data: Array<QuoraAnswerRaw>;
   pageInfo?: {
     hasNextPage?: boolean;
     endCursor?: string;
   };
 }
 
+// Define interface for raw Quora answer data from API
+interface QuoraAnswerRaw {
+  content?: string;
+  author?: {
+    name?: string;
+    surname?: string;
+    url?: string;
+    credentials?: string | null;
+    followers?: string | number;
+    profileImage?: string;
+  };
+  url?: string;
+  upvotes?: string | number;
+  comments?: string | number;
+}
+
 // Enhanced interface to include structured marketing analysis
 interface AnalysisResult {
   success: boolean;
   data?: {
-    analysis: {
-      overview: string;
-      painPoints: Array<{
-        title: string;
-        description: string;
-        frequency: number;
-        impact: number;
-        possibleSolutions: string[];
-      }>;
-      userExperiences: Array<{
-        scenario: string;
-        impact: string;
-        frequencyPattern: string;
-        sentiment: 'positive' | 'negative' | 'neutral';
-      }>;
-      emotionalTriggers: Array<{
-        trigger: string;
-        context: string;
-        intensity: number;
-        responsePattern: string;
-      }>;
-      marketImplications: string;
-    };
+    analysis: AnalysisData;
     sources: QuoraAnswer[];
     timestamp: string;
   };
   error?: string;
+}
+
+// Define the structure for analysis data
+interface AnalysisData {
+  overview: string;
+  painPoints: Array<{
+    title: string;
+    description: string;
+    frequency: number;
+    impact: number;
+    possibleSolutions: string[];
+  }>;
+  userExperiences: Array<{
+    scenario: string;
+    impact: string;
+    frequencyPattern: string;
+    sentiment: 'positive' | 'negative' | 'neutral';
+  }>;
+  emotionalTriggers: Array<{
+    trigger: string;
+    context: string;
+    intensity: number;
+    responsePattern: string;
+  }>;
+  marketImplications: string;
 }
 
 export class QuoraAnalysisService {
@@ -118,7 +137,7 @@ export class QuoraAnalysisService {
       return {
         success: true,
         data: {
-          analysis: JSON.parse(analysis),
+          analysis: JSON.parse(analysis) as AnalysisData,
           sources: answers,
           timestamp: new Date().toISOString(),
         },
@@ -173,7 +192,7 @@ export class QuoraAnalysisService {
     }
   }
 
-  private static parseQuoraAnswer(item: any): QuoraAnswer {
+  private static parseQuoraAnswer(item: QuoraAnswerRaw): QuoraAnswer {
     return {
       content: QuoraAnalysisService.sanitizeText(item.content || ''),
       author: {
@@ -289,7 +308,7 @@ Ensure the analysis is data-driven, uses professional marketing terminology, and
   }
 
   // Utility methods remain the same
-  private static parseNumber(value: any): number {
+  private static parseNumber(value: string | number | undefined): number {
     if (typeof value === 'number') return value;
     if (typeof value === 'string') {
       const parsed = parseInt(value.replace(/[^0-9-]/g, ''), 10);
@@ -301,7 +320,7 @@ Ensure the analysis is data-driven, uses professional marketing terminology, and
   private static sanitizeText(text: string, maxLength: number = 1000): string {
     if (!text) return '';
     
-    let sanitized = text
+    const sanitized = text
       .replace(/\s+/g, ' ')
       .trim();
     

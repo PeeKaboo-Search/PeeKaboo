@@ -96,6 +96,7 @@ const AnalysisCard = memo(({
     )}
   </div>
 ));
+AnalysisCard.displayName = 'AnalysisCard';
 
 const SectionHeader = memo(({ 
   icon, 
@@ -109,6 +110,7 @@ const SectionHeader = memo(({
     {title}
   </div>
 ));
+SectionHeader.displayName = 'SectionHeader';
 
 // Main Component
 const QuoraAnalyticsDashboard: React.FC<QuoraAnalyticsProps> = ({ query, className = '' }) => {
@@ -311,5 +313,7 @@ const QuoraAnalyticsDashboard: React.FC<QuoraAnalyticsProps> = ({ query, classNa
     </div>
   );
 };
+
+QuoraAnalyticsDashboard.displayName = 'QuoraAnalyticsDashboard';
 
 export default memo(QuoraAnalyticsDashboard);

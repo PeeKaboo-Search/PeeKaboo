@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import "@/app/styles/images.css";
 import { searchImages } from "@/app/api/imageSearchApi";
 
@@ -40,7 +41,9 @@ const ImageResult: React.FC<ImageResultProps> = ({
         } else {
           setError("Failed to fetch images");
         }
-      } catch (err) {
+      } catch (error) {
+        // Fixed: Using the error parameter properly
+        console.error("Image search error:", error);
         setError("An error occurred while fetching images");
       } finally {
         setLoading(false);
@@ -99,10 +102,12 @@ const ImageResult: React.FC<ImageResultProps> = ({
               {images.map((image, index) => (
                 <div key={index} className="image-card">
                   <div className="image-wrapper">
-                    <img
+                    <Image
                       src={image.link}
                       alt={image.title || `Result ${index + 1}`}
                       loading="lazy"
+                      width={200}
+                      height={150}
                     />
                   </div>
                   <div className="image-title-container">
@@ -128,7 +133,7 @@ const ImageResult: React.FC<ImageResultProps> = ({
           </div>
         </div>
       ) : (
-        <div className="no-results">No results found for "{query}".</div>
+        <div className="no-results">No results found for &quot;{query}&quot;.</div>
       )}
     </div>
   );

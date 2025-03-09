@@ -1,47 +1,78 @@
 "use client";
 
 import React, { useState, useEffect, memo } from 'react';
-import { FacebookAdsAnalysisService } from '@/app/api/facebookAds';
+import Image from 'next/image'; // Import Next.js Image component
+import { MetaAdAnalysisService } from '@/app/api/facebookAnalytics';
 import { 
-  BarChart, Brain, LineChart, 
-  Target, MessageCircle, Image
+  MessageSquare, Eye, Target, 
+  Users, Award, ArrowRight, Sparkles 
 } from 'lucide-react';
 import { Progress } from "@/app/components/ui/progress"; 
+
 // Types
-interface ExtractedAdData {
-  id: string;
+interface MetaAdContent {
+  adId: string;
   pageId: string;
   pageName: string;
-  text: string;
-  images: string[];
-  videos: {
-    preview: string;
-    sdUrl?: string;
-    hdUrl?: string;
-  }[];
+  content: string;
   title?: string;
-  caption?: string;
-  startDate: Date;
-  endDate: Date;
+  imageUrl?: string;
+  linkUrl?: string;
+  active: boolean;
+  creationTime?: string;
 }
 
-interface AnalysisResult {
-  overview: string;
-  emotionalTone: string;
-  targetAudience: string;
-  keyMessages: string[];
+interface MessagingStrategy {
+  strategy: string;
+  description: string;
+  prevalence: number;
   effectiveness: number;
-  suggestions: string[];
+  examples: string[];
+}
+
+interface VisualTactic {
+  tactic: string;
+  implementation: string;
+  impact: string;
+  frequencyOfUse: number;
+}
+
+interface AudienceTargeting {
+  segment: string;
+  approach: string;
+  intensity: number;
+  engagementPotential: string;
+}
+
+interface CallToActionEffectiveness {
+  cta: string;
+  context: string;
+  strength: number;
+  conversionPotential: string;
 }
 
 interface AnalysisData {
-  ads: ExtractedAdData[];
-  analysis: AnalysisResult;
+  overview: string;
+  messagingStrategies: MessagingStrategy[];
+  visualTactics: VisualTactic[];
+  audienceTargeting: AudienceTargeting[];
+  competitiveAdvantage: string;
+  callToActionEffectiveness: CallToActionEffectiveness[];
+  recommendedCounterStrategies: string;
+}
+
+interface AnalysisResult {
+  analysis: AnalysisData;
+  sources: MetaAdContent[];
   timestamp: string;
 }
 
-interface FacebookAdsAnalyticsProps {
-  query: string;
+interface MetaAdAnalysisProps {
+  keyword: string;
+  countryCode?: string;
+  platform?: string;
+  adType?: string;
+  limit?: number;
   className?: string;
 }
 
@@ -51,26 +82,41 @@ const AnalysisCard = memo(({
   content, 
   metric,
   metricLabel,
+  secondMetric,
+  secondMetricLabel,
   items 
 }: { 
   title: string;
   content: string;
   metric?: number;
   metricLabel?: string;
+  secondMetric?: number;
+  secondMetricLabel?: string;
   items?: string[];
 }) => (
   <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg">
     <h3 className="text-xl font-semibold mb-4">{title}</h3>
     <p className="mb-4">{content}</p>
+    
     {metric !== undefined && (
-      <div className="space-y-2">
+      <div className="space-y-2 mb-3">
         <Progress value={metric * 10} className="h-2" />
         <span className="text-sm">
           {metricLabel}: {metric}/10
         </span>
       </div>
     )}
-    {items && (
+    
+    {secondMetric !== undefined && (
+      <div className="space-y-2 mb-3">
+        <Progress value={secondMetric * 10} className="h-2" />
+        <span className="text-sm">
+          {secondMetricLabel}: {secondMetric}/10
+        </span>
+      </div>
+    )}
+    
+    {items && items.length > 0 && (
       <ul className="mt-4 space-y-2">
         {items.map((item, index) => (
           <li key={index} className="text-sm">{item}</li>
@@ -79,6 +125,7 @@ const AnalysisCard = memo(({
     )}
   </div>
 ));
+AnalysisCard.displayName = 'AnalysisCard';
 
 const SectionHeader = memo(({ 
   icon, 
@@ -92,74 +139,39 @@ const SectionHeader = memo(({
     {title}
   </div>
 ));
-
-const AdMediaGallery = memo(({ ad }: { ad: ExtractedAdData }) => {
-  const hasImages = ad.images && ad.images.length > 0;
-  const hasVideos = ad.videos && ad.videos.length > 0;
-  
-  if (!hasImages && !hasVideos) return null;
-  
-  return (
-    <div className="mt-4">
-      {hasImages && (
-        <div className="grid grid-cols-2 gap-2">
-          {ad.images.slice(0, 4).map((imageUrl, index) => (
-            <img 
-              key={`img-${index}`}
-              src={imageUrl}
-              alt={`Ad image ${index + 1}`}
-              className="w-full h-32 object-cover rounded"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = "/api/placeholder/200/150";
-              }}
-            />
-          ))}
-        </div>
-      )}
-      
-      {hasVideos && (
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          {ad.videos.slice(0, 2).map((video, index) => (
-            <div key={`video-${index}`} className="relative">
-              <img 
-                src={video.preview || "/api/placeholder/200/150"}
-                alt={`Video preview ${index + 1}`}
-                className="w-full h-32 object-cover rounded"
-              />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-});
+SectionHeader.displayName = 'SectionHeader';
 
 // Main Component
-const FacebookAdsAnalyticsDashboard: React.FC<FacebookAdsAnalyticsProps> = ({ query, className = '' }) => {
+const MetaAdAnalysisDashboard: React.FC<MetaAdAnalysisProps> = ({ 
+  keyword,
+  countryCode = 'US',
+  platform = 'facebook,instagram',
+  adType = 'all',
+  limit = 10,
+  className = '' 
+}) => {
   const [state, setState] = useState<{
     loading: boolean;
     error?: string;
-    data?: AnalysisData;
+    data?: AnalysisResult;
   }>({
     loading: true
   });
 
   useEffect(() => {
     const fetchAnalysis = async () => {
-      if (!query) return;
+      if (!keyword) return;
 
       setState(prev => ({ ...prev, loading: true }));
 
       try {
-        const result = await FacebookAdsAnalysisService.analyzeFacebookAds(query);
+        const result = await MetaAdAnalysisService.analyzeCompetitorAds(
+          keyword,
+          countryCode,
+          platform,
+          adType,
+          limit
+        );
         
         if (result.success && result.data) {
           setState({
@@ -175,13 +187,13 @@ const FacebookAdsAnalyticsDashboard: React.FC<FacebookAdsAnalyticsProps> = ({ qu
       } catch (error) {
         setState({
           loading: false,
-          error: error instanceof Error ? error.message : 'Failed to analyze Facebook ads'
+          error: error instanceof Error ? error.message : 'Failed to analyze Meta ads'
         });
       }
     };
 
     fetchAnalysis();
-  }, [query]);
+  }, [keyword, countryCode, platform, adType, limit]);
 
   if (state.loading) {
     return (
@@ -194,12 +206,6 @@ const FacebookAdsAnalyticsDashboard: React.FC<FacebookAdsAnalyticsProps> = ({ qu
   if (state.error) {
     return (
       <div className="text-center text-red-500 p-4">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Error
-        </div>
         {state.error}
       </div>
     );
@@ -214,8 +220,8 @@ const FacebookAdsAnalyticsDashboard: React.FC<FacebookAdsAnalyticsProps> = ({ qu
   return (
     <div className={`max-w-7xl mx-auto px-4 py-8 ${className}`}>
       <header className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Facebook Ads Analysis</h1>
-        <p className="text-lg opacity-70">Analysis for: {query}</p>
+        <h1 className="text-3xl font-bold mb-2">Meta Ad Competitor Analysis</h1>
+        <p className="text-lg opacity-70">Analysis for: {keyword}</p>
       </header>
 
       <div className="space-y-8">
@@ -232,91 +238,161 @@ const FacebookAdsAnalyticsDashboard: React.FC<FacebookAdsAnalyticsProps> = ({ qu
           </div>
         </section>
 
-        {/* Emotional Tone & Target Audience */}
+        {/* Messaging Strategies */}
         <section>
           <SectionHeader 
-            icon={<Brain className="w-6 h-6" />} 
-            title="Audience Insights" 
+            icon={<MessageSquare className="w-6 h-6" />} 
+            title="Messaging Strategies" 
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <AnalysisCard
-              title="Emotional Tone"
-              content={data.analysis.emotionalTone}
-            />
-            <AnalysisCard
-              title="Target Audience"
-              content={data.analysis.targetAudience}
-            />
+            {data.analysis.messagingStrategies.map((strategy, index) => (
+              <AnalysisCard
+                key={`strategy-${index}`}
+                title={strategy.strategy}
+                content={strategy.description}
+                metric={strategy.prevalence}
+                metricLabel="Prevalence"
+                secondMetric={strategy.effectiveness}
+                secondMetricLabel="Effectiveness"
+                items={strategy.examples}
+              />
+            ))}
           </div>
         </section>
 
-        {/* Key Messages */}
+        {/* Visual Tactics */}
         <section>
           <SectionHeader 
-            icon={<MessageCircle className="w-6 h-6" />} 
-            title="Key Messages" 
+            icon={<Eye className="w-6 h-6" />} 
+            title="Visual Tactics" 
+          />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {data.analysis.visualTactics.map((tactic, index) => (
+              <AnalysisCard
+                key={`tactic-${index}`}
+                title={tactic.tactic}
+                content={tactic.implementation}
+                metric={tactic.frequencyOfUse}
+                metricLabel="Frequency of Use"
+                items={[`Impact: ${tactic.impact}`]}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* Audience Targeting */}
+        <section>
+          <SectionHeader 
+            icon={<Users className="w-6 h-6" />} 
+            title="Audience Targeting" 
+          />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {data.analysis.audienceTargeting.map((audience, index) => (
+              <AnalysisCard
+                key={`audience-${index}`}
+                title={audience.segment}
+                content={audience.approach}
+                metric={audience.intensity}
+                metricLabel="Targeting Intensity"
+                items={[`Engagement Potential: ${audience.engagementPotential}`]}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* Competitive Advantage */}
+        <section>
+          <SectionHeader 
+            icon={<Award className="w-6 h-6" />} 
+            title="Competitive Advantage" 
           />
           <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6">
-            <ul className="space-y-4">
-              {data.analysis.keyMessages.map((message, index) => (
-                <li key={index} className="flex items-start gap-2">
-                  <span className="text-blue-400 font-bold">{index + 1}.</span>
-                  <span>{message}</span>
-                </li>
-              ))}
-            </ul>
+            <div className="prose max-w-none">
+              {data.analysis.competitiveAdvantage}
+            </div>
           </div>
         </section>
 
-        {/* Effectiveness & Suggestions */}
+        {/* Call to Action Effectiveness */}
         <section>
           <SectionHeader 
-            icon={<BarChart className="w-6 h-6" />} 
-            title="Performance Analysis" 
+            icon={<ArrowRight className="w-6 h-6" />} 
+            title="Call to Action Effectiveness" 
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <AnalysisCard
-              title="Effectiveness Score"
-              content="Analysis of overall campaign effectiveness based on ad content and targeting"
-              metric={data.analysis.effectiveness}
-              metricLabel="Effectiveness"
-            />
-            <AnalysisCard
-              title="Improvement Suggestions"
-              content="Recommendations for enhancing ad performance"
-              items={data.analysis.suggestions}
-            />
+            {data.analysis.callToActionEffectiveness.map((cta, index) => (
+              <AnalysisCard
+                key={`cta-${index}`}
+                title={cta.cta}
+                content={cta.context}
+                metric={cta.strength}
+                metricLabel="Strength"
+                items={[`Conversion Potential: ${cta.conversionPotential}`]}
+              />
+            ))}
           </div>
         </section>
 
-        {/* Ad Examples */}
+        {/* Recommended Counter Strategies */}
         <section>
           <SectionHeader 
-            icon={<Image className="w-6 h-6" />} 
-            title="Analyzed Ads" 
+            icon={<Sparkles className="w-6 h-6" />} 
+            title="Recommended Counter Strategies" 
+          />
+          <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6">
+            <div className="prose max-w-none">
+              {data.analysis.recommendedCounterStrategies}
+            </div>
+          </div>
+        </section>
+
+        {/* Source Ads */}
+        <section>
+          <SectionHeader 
+            icon={<Target className="w-6 h-6" />} 
+            title="Source Ads" 
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {data.ads.map((ad, index) => (
+            {data.sources.map((ad, index) => (
               <div key={`ad-${index}`} className="bg-white/10 backdrop-blur-lg rounded-lg p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="font-medium">{ad.pageName}</div>
-                  <div className="text-sm opacity-70">
-                    {new Date(ad.startDate).toLocaleDateString()} - {new Date(ad.endDate).toLocaleDateString()}
+                {ad.imageUrl && (
+                  <div className="mb-4 relative w-full h-64">
+                    <Image 
+                      src={ad.imageUrl} 
+                      alt={`Ad from ${ad.pageName}`} 
+                      fill
+                      style={{ objectFit: 'cover' }}
+                      className="rounded-md"
+                    />
+                  </div>
+                )}
+                {ad.title && (
+                  <h4 className="font-medium mb-2">{ad.title}</h4>
+                )}
+                <div className="mb-4">{ad.content}</div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-blue-400">
+                    {ad.pageName}
+                  </span>
+                  <div className="flex items-center gap-4">
+                    <span>{ad.active ? "Active" : "Inactive"}</span>
+                    {ad.linkUrl && (
+                      <a 
+                        href={ad.linkUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300"
+                      >
+                        View Landing Page →
+                      </a>
+                    )}
                   </div>
                 </div>
-                {ad.title && <h4 className="text-lg font-semibold mb-2">{ad.title}</h4>}
-                <div className="mb-4">{ad.text}</div>
-                <AdMediaGallery ad={ad} />
-                <div className="mt-4 text-sm">
-                  <a 
-                    href={`https://www.facebook.com/ads/library/?id=${ad.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-400 hover:text-blue-300"
-                  >
-                    View in Facebook Ad Library →
-                  </a>
-                </div>
+                {ad.creationTime && (
+                  <div className="text-xs opacity-70 mt-2">
+                    Created: {new Date(ad.creationTime).toLocaleDateString()}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -330,4 +406,6 @@ const FacebookAdsAnalyticsDashboard: React.FC<FacebookAdsAnalyticsProps> = ({ qu
   );
 };
 
-export default memo(FacebookAdsAnalyticsDashboard);
+MetaAdAnalysisDashboard.displayName = 'MetaAdAnalysisDashboard';
+
+export default memo(MetaAdAnalysisDashboard);

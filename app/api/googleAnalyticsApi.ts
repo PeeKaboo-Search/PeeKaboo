@@ -77,6 +77,28 @@ interface GoogleSearchData {
   error?: string;
 }
 
+// Google Search API response interfaces
+interface GoogleSearchItem {
+  title?: string;
+  snippet?: string;
+  link?: string;
+}
+
+interface GoogleSearchResponse {
+  items?: GoogleSearchItem[];
+}
+
+// Groq API response interfaces
+interface GroqChoice {
+  message?: {
+    content?: string;
+  };
+}
+
+interface GroqResponse {
+  choices?: GroqChoice[];
+}
+
 // Configuration
 const CONFIG = {
   REQUEST_TIMEOUT: 60000,
@@ -226,12 +248,12 @@ export class MarketResearchService {
       throw new Error(`Google Search API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data = await response.json() as GoogleSearchResponse;
     if (!data?.items || !Array.isArray(data.items)) {
       throw new Error('Invalid Google Search API response format');
     }
 
-    return data.items.map((item: any) => ({
+    return data.items.map((item: GoogleSearchItem) => ({
       title: item.title || 'No title available',
       snippet: item.snippet || 'No snippet available',
       link: item.link || '#',
@@ -275,14 +297,14 @@ export class MarketResearchService {
       );
     }
 
-    const data = await response.json();
+    const data = await response.json() as GroqResponse;
     const analysis = data?.choices?.[0]?.message?.content;
 
     if (!analysis) {
       throw new Error('No analysis generated from Groq API');
     }
 
-    return JSON.parse(analysis);
+    return JSON.parse(analysis) as MarketResearchAnalysis;
   }
 
   public static async researchMarket(query: string): Promise<GoogleSearchData> {

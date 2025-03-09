@@ -72,7 +72,7 @@ export interface ProcessedAnswer {
 export interface QuoraPost {
   title: string;
   url: string;
-  topics: string[]; // Add this line
+  topics: string[];
   followers: number;
   topAnswer: {
     text: string;
@@ -170,13 +170,22 @@ export interface QuoraAnalysisOptions {
 }
 
 /**
+ * API Response Type
+ */
+export interface ApiErrorResponse {
+  status: number;
+  message: string;
+  details?: unknown;
+}
+
+/**
  * Error Types
  */
 export class QuoraApiError extends Error {
   constructor(
     message: string,
     public statusCode?: number,
-    public response?: any
+    public response?: ApiErrorResponse
   ) {
     super(message);
     this.name = 'QuoraApiError';
@@ -187,7 +196,7 @@ export class AnalysisError extends Error {
   constructor(
     message: string,
     public code: string,
-    public details?: any
+    public details?: unknown
   ) {
     super(message);
     this.name = 'AnalysisError';

@@ -65,6 +65,74 @@ export interface MarketingInsight {
   };
 }
 
+// Interfaces for Reddit API responses
+interface RedditAuthResponse {
+  access_token: string;
+}
+
+interface RedditPostData {
+  title: string;
+  subreddit: string;
+  selftext: string;
+  permalink: string;
+  url: string;
+  upvote_ratio: number;
+  num_comments: number;
+  total_awards_received: number;
+}
+
+interface RedditPost {
+  kind: string;
+  data: RedditPostData;
+}
+
+interface RedditSearchResponse {
+  data: {
+    children: RedditPost[];
+  };
+}
+
+interface RedditCommentData {
+  body: string;
+  score: number;
+  author: string;
+  stickied: boolean;
+}
+
+interface RedditComment {
+  kind: string;
+  data: RedditCommentData;
+}
+
+interface RedditCommentsResponse {
+  [index: number]: {
+    data: {
+      children: RedditComment[];
+    };
+  };
+}
+
+// Interface for the data sent to Groq API
+interface GroqInputItem {
+  title: string;
+  subreddit: string;
+  content: string;
+  comments: string;
+  engagement: {
+    upvote_ratio?: number;
+    comment_count?: number;
+  };
+}
+
+// Interface for Groq API response
+interface GroqResponse {
+  choices: {
+    message: {
+      content: string;
+    };
+  }[];
+}
+
 export const fetchMarketingInsights = async (
   query: string
 ): Promise<{ results: RedditResult[]; insights: MarketingInsight } | null> => {
@@ -91,7 +159,7 @@ export const fetchMarketingInsights = async (
       throw new Error(`Reddit Authentication error: ${authResponse.status}`);
     }
 
-    const authData = await authResponse.json();
+    const authData = await authResponse.json() as RedditAuthResponse;
     const accessToken = authData.access_token;
 
     // Focus on most relevant subreddits and get only 5 posts
@@ -108,9 +176,7 @@ export const fetchMarketingInsights = async (
       if (totalPosts >= 5) break;
       
       const searchResponse = await fetch(
-
         `https://oauth.reddit.com/r/${subreddit}/search?q=${encodeURIComponent(query)}&limit=5&sort=relevance`,
-
         {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -121,11 +187,11 @@ export const fetchMarketingInsights = async (
 
       if (!searchResponse.ok) continue;
 
-      const searchData = await searchResponse.json();
+      const searchData = await searchResponse.json() as RedditSearchResponse;
       
       // Filter posts with actual content
       const relevantPosts = searchData.data.children
-        .filter((post: any) => 
+        .filter((post: RedditPost) => 
           post.data.selftext && 
           post.data.selftext.length > 50 &&
           post.data.num_comments > 0
@@ -147,18 +213,18 @@ export const fetchMarketingInsights = async (
         
         if (!commentsResponse.ok) continue;
         
-        const commentsData = await commentsResponse.json();
+        const commentsData = await commentsResponse.json() as RedditCommentsResponse;
         
         // Extract top 5 comments (if available)
         const topComments = commentsData[1]?.data?.children
-          .filter((comment: any) => 
+          .filter((comment: RedditComment) => 
             comment.kind === 't1' && 
             comment.data?.body && 
             !comment.data.stickied
           )
-          .sort((a: any, b: any) => b.data.score - a.data.score)
+          .sort((a: RedditComment, b: RedditComment) => b.data.score - a.data.score)
           .slice(0, 5)
-          .map((comment: any) => ({
+          .map((comment: RedditComment) => ({
             body: comment.data.body,
             score: comment.data.score,
             author: comment.data.author
@@ -186,7 +252,7 @@ export const fetchMarketingInsights = async (
     }
 
     // Prepare a more focused dataset for Groq to reduce token usage
-    const groqInputData = results.map(post => ({
+    const groqInputData: GroqInputItem[] = results.map(post => ({
       title: post.title,
       subreddit: post.subreddit,
       content: post.snippet,
@@ -274,7 +340,7 @@ export const fetchMarketingInsights = async (
       throw new Error(`Groq API error: ${insightResponse.status}`);
     }
 
-    const insightData = await insightResponse.json();
+    const insightData = await insightResponse.json() as GroqResponse;
     const insights: MarketingInsight = JSON.parse(insightData.choices[0].message.content);
     return { results, insights };
   } catch (error) {

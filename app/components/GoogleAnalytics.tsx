@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, memo } from "react";
 import { 
-  TrendingUp, Target, Calendar,
-  Lightbulb, Users, Eye, 
+  TrendingUp, Calendar,
+  Lightbulb, Eye, 
   KeyRound // For product triggers
 } from "lucide-react";
 import { Progress } from "@/app/components/ui/progress";
@@ -64,41 +64,11 @@ interface SeasonalTopic {
 interface Trigger {
   productFeature: string;
   userNeed: string;
-  
   recommendedProductContent: string[];
   relevance: number;
 }
 
-interface MarketOverviewData {
-  targetAudience: string[];
-  demographics: string[];
-  psychographics: string[];
-  channels: string[];
-}
-
-interface AnalysisData {
-  executiveSummary: string;
-  marketOverview: MarketOverviewData;
-  topTriggers: Trigger[];
-  trends: Trend[];
-  consumerInsights: Insight[];
-  industryInsights: Insight[];
-  seasonalTopics: SeasonalTopic[];
-  recommendations: {
-    contentStrategy: string[];
-    timing: string[];
-    platforms: string[];
-    messaging: string[];
-  };
-}
-
-interface ResearchData {
-  success: boolean;
-  error?: string;
-  data?: {
-    analysis: AnalysisData;
-  };
-}
+// Removed unused MarketOverviewData interface
 
 // Helper functions
 const validateArray = <T,>(data: T[] | undefined | null): T[] => {
@@ -133,6 +103,8 @@ const ResearchCard = memo(({ title, description, items, score, scoreLabel, timin
   </div>
 ));
 
+ResearchCard.displayName = 'ResearchCard';
+
 // Specialized card components
 const TrendCard = memo(({ trend }: { trend: Trend }) => (
   <ResearchCard
@@ -149,6 +121,8 @@ const TrendCard = memo(({ trend }: { trend: Trend }) => (
   />
 ));
 
+TrendCard.displayName = 'TrendCard';
+
 const InsightCard = memo(({ insight }: { insight: Insight }) => (
   <ResearchCard
     title={insight.title}
@@ -160,6 +134,8 @@ const InsightCard = memo(({ insight }: { insight: Insight }) => (
     ]}
   />
 ));
+
+InsightCard.displayName = 'InsightCard';
 
 const SeasonalCard = memo(({ topic }: { topic: SeasonalTopic }) => (
   <ResearchCard
@@ -175,6 +151,8 @@ const SeasonalCard = memo(({ topic }: { topic: SeasonalTopic }) => (
   />
 ));
 
+SeasonalCard.displayName = 'SeasonalCard';
+
 // Updated Trigger Card component for product triggers
 const TriggerCard = memo(({ trigger }: { trigger: Trigger }) => (
   <ResearchCard
@@ -188,27 +166,7 @@ const TriggerCard = memo(({ trigger }: { trigger: Trigger }) => (
   />
 ));
 
-// Market overview component
-const MarketOverview = memo(({ overview }: { overview: MarketOverviewData }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-    <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4">
-      <h3 className="text-lg font-semibold">Target Audience</h3>
-      <p className="text-sm mt-2">{overview.targetAudience.join(", ")}</p>
-    </div>
-    <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4">
-      <h3 className="text-lg font-semibold">Demographics</h3>
-      <p className="text-sm mt-2">{overview.demographics.join(", ")}</p>
-    </div>
-    <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4">
-      <h3 className="text-lg font-semibold">Psychographics</h3>
-      <p className="text-sm mt-2">{overview.psychographics.join(", ")}</p>
-    </div>
-    <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4">
-      <h3 className="text-lg font-semibold">Key Channels</h3>
-      <p className="text-sm mt-2">{overview.channels.join(", ")}</p>
-    </div>
-  </div>
-));
+TriggerCard.displayName = 'TriggerCard';
 
 // Generic section component
 const ResearchSection = <T,>({
@@ -287,7 +245,6 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
         <section>
           <h2 className="text-2xl font-bold mb-4">Market Overview</h2>
           <div className="mb-6" dangerouslySetInnerHTML={{ __html: analysis.executiveSummary }} />
-          
         </section>
 
         {/* Top Triggers Section - Updated for product triggers */}
@@ -340,11 +297,11 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
           )}
           emptyMessage="No seasonal topics available"
         />
-
-       
       </div>
     </div>
   );
 };
+
+MarketResearchDashboard.displayName = 'MarketResearchDashboard';
 
 export default memo(MarketResearchDashboard);

@@ -5,10 +5,26 @@ import { motion, AnimatePresence } from "framer-motion";
 import { searchAnimations } from "app/styles/animation/search-animation";
 import "app/styles/page.css";
 
-interface SearchComponentConfig {
-  name: string;
-  component: React.LazyExoticComponent<React.ComponentType<any>>;
+// Component prop interfaces
+interface QueryComponentProps {
+  query: string;
 }
+
+interface KeywordComponentProps {
+  keyword: string;
+}
+
+type SearchComponentConfig = 
+  | {
+      name: string;
+      component: React.LazyExoticComponent<React.ComponentType<QueryComponentProps>>;
+      propType: 'query';
+    }
+  | {
+      name: string;
+      component: React.LazyExoticComponent<React.ComponentType<KeywordComponentProps>>;
+      propType: 'keyword';
+    };
 
 interface SearchFormProps {
   query: string;
@@ -23,15 +39,51 @@ interface ResultsSectionProps {
 }
 
 const SEARCH_COMPONENTS: SearchComponentConfig[] = [
-  { name: 'ImageResult', component: lazy(() => import("app/components/ImageResult")) },
-  { name: 'GoogleAnalytics', component: lazy(() => import("app/components/GoogleAnalytics")) },
-  { name: 'PlayStoreAnalytics', component: lazy(() => import("app/components/PlayStoreAnalytics")) },
-  { name: 'RedditAnalytics', component: lazy(() => import("app/components/RedditAnalytics"))},
-  { name: 'YoutubeAnalysis', component: lazy(() => import("app/components/YoutubeAnalysis")) },
-  { name: 'QuoraAnalysis', component: lazy(() => import("app/components/QuoraAnalysis")) },
-  { name: 'XAnalytics', component: lazy(() => import("app/components/XAnalytics")) },
-  { name: 'FacebookAdsAnalysis', component: lazy(() => import("app/components/FacebookAdsAnalytics")) },
-  { name: 'StrategyAnalysis', component: lazy(() => import("app/components/StrategyAnalysis")) },
+  { 
+    name: 'ImageResult', 
+    component: lazy(() => import("app/components/ImageResult")), 
+    propType: 'query' 
+  },
+  { 
+    name: 'GoogleAnalytics', 
+    component: lazy(() => import("app/components/GoogleAnalytics")), 
+    propType: 'query' 
+  },
+  { 
+    name: 'PlayStoreAnalytics', 
+    component: lazy(() => import("app/components/PlayStoreAnalytics")), 
+    propType: 'query' 
+  },
+  { 
+    name: 'RedditAnalytics', 
+    component: lazy(() => import("app/components/RedditAnalytics")), 
+    propType: 'query' 
+  },
+  { 
+    name: 'YoutubeAnalysis', 
+    component: lazy(() => import("app/components/YoutubeAnalysis")), 
+    propType: 'query' 
+  },
+  { 
+    name: 'QuoraAnalysis', 
+    component: lazy(() => import("app/components/QuoraAnalysis")), 
+    propType: 'query' 
+  },
+  { 
+    name: 'XAnalytics', 
+    component: lazy(() => import("app/components/XAnalytics")), 
+    propType: 'query' 
+  },
+  { 
+    name: 'FacebookAdsAnalysis', 
+    component: lazy(() => import("app/components/FacebookAdsAnalytics")), 
+    propType: 'keyword' 
+  },
+  { 
+    name: 'StrategyAnalysis', 
+    component: lazy(() => import("app/components/StrategyAnalysis")), 
+    propType: 'query' 
+  },
 ];
 
 const SearchForm: React.FC<SearchFormProps> = ({ query, setQuery, handleSearch, isSearching }) => (
@@ -79,20 +131,38 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({ submittedQuery, activeC
     className="results-container"
   >
     <Suspense fallback={<div className="results-loader">Loading components...</div>}>
-      {SEARCH_COMPONENTS.filter(comp => activeComponents.includes(comp.name)).map(({ name, component: Component }) => (
-        <motion.div
-          key={name}
-          variants={searchAnimations.fadeUp}
-          layout
-          className="result-card"
-        >
-          <Component query={submittedQuery} />
-        </motion.div>
-      ))}
+      {SEARCH_COMPONENTS.filter(comp => activeComponents.includes(comp.name)).map((config) => {
+        if (config.propType === 'query') {
+          const Component = config.component;
+          return (
+            <motion.div
+              key={config.name}
+              variants={searchAnimations.fadeUp}
+              layout
+              className="result-card"
+            >
+              <Component query={submittedQuery} />
+            </motion.div>
+          );
+        }
+        
+        const Component = config.component;
+        return (
+          <motion.div
+            key={config.name}
+            variants={searchAnimations.fadeUp}
+            layout
+            className="result-card"
+          >
+            <Component keyword={submittedQuery} />
+          </motion.div>
+        );
+      })}
     </Suspense>
   </motion.div>
 );
 
+// Page component remains the same as in previous correct implementation
 const Page: React.FC = () => {
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");

@@ -1,764 +1,391 @@
 import React, { useEffect, useState, memo } from "react";
-import {
-  MessageCircle,
-  TrendingUp,
-  Heart,
-  Zap,
-  AlertTriangle,
-  Users,
-  BarChart,
-  LineChart,
-  Tag,
-  Eye,
-  AlertCircle,
-  Award,
-  Layers,
+import { 
+  BarChart, MessageCircle, 
+  Lightbulb, TrendingUp, 
+  Calendar, Target
 } from "lucide-react";
 import { Progress } from "@/app/components/ui/progress";
-import { Card, CardHeader, CardTitle, CardContent } from "@/app/components/ui/card";
 import { useTwitterAnalysis } from "@/app/api/xAnalytics";
 
-// Define comprehensive types for the analysis data
-interface ContentPattern {
-  pattern: string;
-  description: string;
-  frequency: number;
-  examples: string[];
-}
-
-interface SentimentAnalysis {
-  score: number;
-  confidence: number;
-  label: string;
-}
-
-interface MarketInsights {
-  userSentiment: string;
-  actionableInsights: string[];
-}
-
-// Unified Tweet interface with all required properties
-interface Tweet {
-  content: string;
-  engagement: number;
-  created_at: string;
-  reason?: string;
-}
-
-// Add this after the Tweet interface definition
-interface TopTweet {
-  content: string;
-  engagement: number;
-  reason?: string;
-}
-
-// Single Analysis interface to avoid duplication
-interface Analysis {
-  overview: string;
-  sentimentAnalysis: SentimentAnalysis;
-  contentPatterns: ContentPattern[];
-  marketInsights: MarketInsights;
-  engagement: {
-    topTweets: Tweet[]; // This should use the complete Tweet interface with created_at
-  };
-}
-
-interface SimplifiedTweet {
-  content: string;
-  engagement: number;
-  created_at: string;
-}
-
-// Create our own Tabs components since they're missing
-const TabsContent = ({
-  value,
-  className = "",
-  children,
-}: {
-  value: string;
-  className?: string;
-  children: React.ReactNode;
-}) => (
-  <div role="tabpanel" data-value={value} className={className}>
-    {children}
-  </div>
-);
-
-const TabsTrigger = ({
-  value,
-  children,
-  className = "",
-}: {
-  value: string;
-  children: React.ReactNode;
-  className?: string;
-}) => (
-  <button
-    role="tab"
-    data-value={value}
-    className={`px-3 py-2 text-sm font-medium transition-all focus:outline-none ${className}`}
-  >
-    {children}
-  </button>
-);
-
-const TabsList = ({
-  className = "",
-  children,
-}: {
-  className?: string;
-  children: React.ReactNode;
-}) => (
-  <div role="tablist" className={`flex space-x-1 rounded-lg p-1 ${className}`}>
-    {children}
-  </div>
-);
-
-const Tabs = ({
-  defaultValue,
-  className = "",
-  children,
-}: {
-  defaultValue: string;
-  className?: string;
-  children: React.ReactNode;
-}) => {
-  const [activeTab, setActiveTab] = useState(defaultValue);
-
-  useEffect(() => {
-    // Find all tab triggers and add click handlers
-    const triggers = document.querySelectorAll('[role="tab"]');
-    triggers.forEach((trigger) => {
-      trigger.addEventListener("click", () => {
-        const value = trigger.getAttribute("data-value");
-        if (value) setActiveTab(value);
-      });
-    });
-
-    // Hide/show tab content based on active tab
-    const updateActiveContent = () => {
-      const panels = document.querySelectorAll('[role="tabpanel"]');
-      panels.forEach((panel) => {
-        if (panel.getAttribute("data-value") === activeTab) {
-          panel.classList.remove("hidden");
-        } else {
-          panel.classList.add("hidden");
-        }
-      });
-
-      // Update active trigger styles
-      triggers.forEach((trigger) => {
-        if (trigger.getAttribute("data-value") === activeTab) {
-          trigger.classList.add("bg-white/10");
-        } else {
-          trigger.classList.remove("bg-white/10");
-        }
-      });
-    };
-
-    updateActiveContent();
-  }, [activeTab, children]);
-
-  return <div className={className}>{children}</div>;
+const validateArray = <T,>(data: T[] | undefined | null): T[] => {
+  return Array.isArray(data) ? data : [];
 };
 
-// Types
-interface TwitterDashboardProps {
-  query: string;
-  competitors?: string[];
-}
-
-interface MetricCardProps {
+// Base card component
+const AnalysisCard = memo(({ title, description, items, score, scoreLabel, timing }: {
   title: string;
-  value: string | number;
-  icon: React.ReactNode;
-  description?: string;
-}
-
-// Define types for our section components
-interface SectionProps {
-  analysis: Analysis;
-  data?: {
-    analysis: Analysis;
-    sources: SimplifiedTweet[];
-    timestamp: string;
-  };
-  query?: string;
-}
-
-// Helper Components
-const MetricCard = memo(({ title, value, icon, description }: MetricCardProps) => (
-  <Card className="bg-white/10 backdrop-blur-lg">
-    <CardContent className="p-6 flex justify-between items-start">
-      <div>
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        <h3 className="text-2xl font-bold mt-2">{value}</h3>
-        {description && (
-          <p className="text-sm text-muted-foreground mt-1">{description}</p>
-        )}
-      </div>
-      <div className="text-primary">{icon}</div>
-    </CardContent>
-  </Card>
-));
-
-// Brand Sentiment Section
-const BrandSentimentSection = ({ analysis }: SectionProps) => (
-  <section className="space-y-4">
-    <h2 className="text-2xl font-bold flex items-center gap-2">
-      <Tag className="w-6 h-6" />
-      Brand Sentiment Analysis
-    </h2>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <MetricCard
-        title="Sentiment Score"
-        value={`${(analysis.sentimentAnalysis.score * 100).toFixed(1)}%`}
-        icon={<Heart className="w-6 h-6" />}
-        description={`Confidence: ${(analysis.sentimentAnalysis.confidence * 100).toFixed(1)}%`}
-      />
-      <Card className="bg-white/10 backdrop-blur-lg">
-        <CardContent className="p-6">
-          <h3 className="font-medium mb-2">Overall Brand Perception</h3>
-          <div className="text-2xl font-bold capitalize">
-            {analysis.sentimentAnalysis.label}
-          </div>
-          <p className="text-sm text-muted-foreground mt-2">
-            {analysis.marketInsights.userSentiment}
-          </p>
-        </CardContent>
-      </Card>
-      <Card className="bg-white/10 backdrop-blur-lg">
-        <CardContent className="p-6">
-          <h3 className="font-medium mb-2">Key Brand Attributes</h3>
-          <div className="space-y-2 mt-3">
-            {analysis.contentPatterns.slice(0, 3).map((pattern, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-primary"></div>
-                <span className="text-sm">{pattern.pattern}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+  description: string | React.ReactNode;
+  items?: string[];
+  score?: number;
+  scoreLabel?: string;
+  timing?: string;
+}) => (
+  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg">
+    <div className="flex justify-between items-center mb-4">
+      <h3 className="text-xl font-semibold">{title}</h3>
+      {timing && <span className="text-sm opacity-70">{timing}</span>}
     </div>
-  </section>
-);
-
-// Consumer Trends Section
-const ConsumerTrendsSection = ({ analysis }: SectionProps) => (
-  <section className="space-y-4">
-    <h2 className="text-2xl font-bold flex items-center gap-2">
-      <BarChart className="w-6 h-6" />
-      Consumer Trends & Insights
-    </h2>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {analysis.contentPatterns.map((pattern, index) => (
-        <Card key={index} className="bg-white/10 backdrop-blur-lg">
-          <CardContent className="p-6">
-            <h3 className="font-bold text-lg mb-2">{pattern.pattern}</h3>
-            <p className="text-sm text-muted-foreground mb-4">{pattern.description}</p>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Trend Strength</span>
-                <span>{pattern.frequency}/10</span>
-              </div>
-              <Progress value={pattern.frequency * 10} className="h-2" />
-            </div>
-            <div className="mt-4">
-              <h4 className="text-sm font-medium mb-2">Examples from Users:</h4>
-              <ul className="list-disc pl-4 text-sm text-muted-foreground">
-                {pattern.examples.map((example, i) => (
-                  <li key={i}>{example}</li>
-                ))}
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  </section>
-);
-
-// Influencer Tracking Section
-const InfluencerTrackingSection = ({ analysis, data }: SectionProps) => {
-  // Sort sources by engagement to find potential influencers
-  const potentialInfluencers = data?.sources
-    ? [...data.sources]
-        .sort((a, b) => b.engagement - a.engagement)
-        .slice(0, 3)
-    : [];
-
-  return (
-    <section className="space-y-4">
-      <h2 className="text-2xl font-bold flex items-center gap-2">
-        <Award className="w-6 h-6" />
-        Influencer & KOL Tracking
-      </h2>
-      <div className="grid grid-cols-1 gap-4">
-        {potentialInfluencers.map((influencer, index) => (
-          <Card key={index} className="bg-white/10 backdrop-blur-lg">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="font-bold">Key Opinion Leader #{index + 1}</h3>
-                  <p className="text-sm text-primary">Engagement Score: {influencer.engagement}</p>
-                </div>
-              </div>
-              <p className="text-muted-foreground mb-2">"{influencer.content}"</p>
-              <p className="text-sm text-muted-foreground">
-                Posted: {new Date(influencer.created_at).toLocaleDateString()}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </section>
-  );
-};
-
-// Demand Forecasting Section
-const DemandForecastingSection = ({ analysis }: SectionProps) => (
-  <section className="space-y-4">
-    <h2 className="text-2xl font-bold flex items-center gap-2">
-      <LineChart className="w-6 h-6" />
-      Demand Forecasting & Product Interest
-    </h2>
-    <Card className="bg-white/10 backdrop-blur-lg">
-      <CardContent className="p-6">
-        <h3 className="font-bold text-lg mb-4">Projected Interest Trends</h3>
-        <div className="space-y-4">
-          {analysis.contentPatterns.map((pattern, index) => (
-            <div key={index} className="space-y-2">
-              <div className="flex justify-between">
-                <span className="font-medium">{pattern.pattern}</span>
-                <span className="text-sm text-muted-foreground">
-                  {pattern.frequency > 7 ? "Rising" : pattern.frequency > 4 ? "Stable" : "Declining"}
-                </span>
-              </div>
-              <Progress value={pattern.frequency * 10} className="h-2" />
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-    <Card className="bg-white/10 backdrop-blur-lg">
-      <CardContent className="p-6">
-        <h3 className="font-bold text-lg mb-3">Market Recommendations</h3>
-        <ul className="space-y-2">
-          {analysis.marketInsights.actionableInsights.map((insight, index) => (
-            <li key={index} className="flex items-start gap-2">
-              <span className="text-primary">•</span>
-              <span className="text-muted-foreground">{insight}</span>
-            </li>
+    <div className="space-y-4">
+      {typeof description === 'string' ? (
+        <p dangerouslySetInnerHTML={{ __html: description }} />
+      ) : (
+        description
+      )}
+      {items && items.length > 0 && (
+        <ul className="space-y-2 mt-4">
+          {items.map((item, idx) => (
+            <li key={idx} className="text-sm" dangerouslySetInnerHTML={{ __html: item }} />
           ))}
         </ul>
-      </CardContent>
-    </Card>
+      )}
+    </div>
+    {score !== undefined && (
+      <div className="mt-4 space-y-2">
+        <Progress value={score} className="h-2" />
+        <span className="text-sm">
+          {scoreLabel}: {score}%
+        </span>
+      </div>
+    )}
+  </div>
+));
+
+AnalysisCard.displayName = 'AnalysisCard';
+
+// Sentiment Analysis Card
+const SentimentCard = memo(({ sentiment }: { 
+  sentiment: { 
+    score: number; 
+    label: string; 
+    confidence: number;
+    keywords: string[];
+  } 
+}) => {
+  // Convert sentiment score (-1 to 1) to percentage (0 to 100)
+  const sentimentPercentage = ((sentiment.score + 1) / 2) * 100;
+  
+  // Determine color based on sentiment
+  const getSentimentColor = () => {
+    if (sentiment.label === 'positive') return 'text-green-400';
+    if (sentiment.label === 'negative') return 'text-red-400';
+    return 'text-blue-400';
+  };
+
+  return (
+    <AnalysisCard
+      title="Sentiment Analysis"
+      description={
+        <div>
+          <p className={`text-lg font-medium ${getSentimentColor()}`}>
+            {sentiment.label.toUpperCase()} SENTIMENT
+          </p>
+          <p className="mt-2">Confidence: {(sentiment.confidence * 100).toFixed(1)}%</p>
+          <div className="mt-3">
+            <p className="font-medium">Key sentiment drivers:</p>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {sentiment.keywords.map((keyword, idx) => (
+                <span key={idx} className="px-2 py-1 bg-white/20 rounded-full text-xs">
+                  {keyword}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      }
+      score={sentimentPercentage}
+      scoreLabel="Sentiment Score"
+    />
+  );
+});
+
+SentimentCard.displayName = 'SentimentCard';
+
+// Content Pattern Card
+const PatternCard = memo(({ pattern }: { 
+  pattern: {
+    pattern: string;
+    description: string;
+    frequency: number;
+    examples: string[];
+    relevance: number;
+  }
+}) => (
+  <AnalysisCard
+    title={pattern.pattern}
+    description={pattern.description}
+    items={[
+      `<strong>Examples:</strong> ${pattern.examples.join(", ")}`,
+      `<strong>Frequency:</strong> ${pattern.frequency}/10`,
+      `<strong>Marketing Relevance:</strong> ${pattern.relevance}/10`
+    ]}
+    score={pattern.relevance * 10}
+    scoreLabel="Relevance"
+  />
+));
+
+PatternCard.displayName = 'PatternCard';
+
+// Top Tweet Card
+const TweetCard = memo(({ tweet }: { 
+  tweet: {
+    content: string;
+    engagement: number;
+    reason: string;
+    influence_score: number;
+  }
+}) => (
+  <AnalysisCard
+    title="High Impact Tweet"
+    description={`"${tweet.content}"`}
+    items={[
+      `<strong>Engagement:</strong> ${tweet.engagement}`,
+      `<strong>Influence Score:</strong> ${tweet.influence_score.toFixed(1)}`,
+      `<strong>Why It Works:</strong> ${tweet.reason}`
+    ]}
+    score={(tweet.influence_score / 100) * 100}
+    scoreLabel="Influence"
+  />
+));
+
+TweetCard.displayName = 'TweetCard';
+
+// Marketing Insight Card
+const InsightCard = memo(({ insights }: { 
+  insights: {
+    userSentiment: string;
+    actionableInsights: string[];
+    marketingRecommendations: {
+      contentStrategy: string[];
+      engagementTactics: string[];
+      brandPositioning: string;
+    };
+  }
+}) => (
+  <AnalysisCard
+    title="Marketing Insights"
+    description={insights.userSentiment}
+    items={[
+      "<strong>Content Strategy:</strong>",
+      ...insights.marketingRecommendations.contentStrategy.map(strategy => `• ${strategy}`),
+      "<strong>Engagement Tactics:</strong>",
+      ...insights.marketingRecommendations.engagementTactics.map(tactic => `• ${tactic}`),
+      "<strong>Brand Positioning:</strong>",
+      `• ${insights.marketingRecommendations.brandPositioning}`,
+      "<strong>Actionable Insights:</strong>",
+      ...insights.actionableInsights.map(insight => `• ${insight}`)
+    ]}
+  />
+));
+
+InsightCard.displayName = 'InsightCard';
+
+// Competitor Analysis Card
+const CompetitorCard = memo(({ competitors }: { 
+  competitors: Array<{
+    name: string;
+    frequency: number;
+    sentiment: string;
+  }>
+}) => (
+  <AnalysisCard
+    title="Competitor Analysis"
+    description="Competitor mentions and sentiment analysis:"
+    items={competitors.map(comp => 
+      `<strong>${comp.name}:</strong> Mentioned ${comp.frequency} times with ${comp.sentiment} sentiment`
+    )}
+  />
+));
+
+CompetitorCard.displayName = 'CompetitorCard';
+
+// Temporal Analysis Card
+const TemporalCard = memo(({ temporal }: { 
+  temporal: {
+    patterns: {
+      timeOfDay: string[];
+      dayOfWeek: string[];
+    };
+    trends: {
+      emerging: string[];
+      fading: string[];
+    };
+  }
+}) => (
+  <AnalysisCard
+    title="Timing & Trends"
+    description="Optimal posting times and trending topics:"
+    items={[
+      "<strong>Best Times:</strong> " + temporal.patterns.timeOfDay.join(", "),
+      "<strong>Best Days:</strong> " + temporal.patterns.dayOfWeek.join(", "),
+      "<strong>Emerging Trends:</strong>",
+      ...temporal.trends.emerging.map(trend => `• ${trend}`),
+      "<strong>Fading Trends:</strong>",
+      ...temporal.trends.fading.map(trend => `• ${trend}`)
+    ]}
+  />
+));
+
+TemporalCard.displayName = 'TemporalCard';
+
+// Generic section component
+const AnalysisSection = <T,>({
+  icon,
+  title,
+  items,
+  renderItem,
+  emptyMessage
+}: {
+  icon: React.ReactNode;
+  title: string;
+  items: T[];
+  renderItem: (item: T, index: number) => React.ReactNode;
+  emptyMessage: string;
+}) => (
+  <section className="mt-8">
+    <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
+      {icon}
+      {title}
+    </h2>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {items.length > 0 ? (
+        items.map((item, index) => renderItem(item, index))
+      ) : (
+        <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6">
+          <p>{emptyMessage}</p>
+        </div>
+      )}
+    </div>
   </section>
 );
 
-// Crisis Detection Section
-const CrisisDetectionSection = ({ analysis, data }: SectionProps) => {
-  // Check for negative sentiment and high engagement as potential crisis indicators
-  const isCrisisDetected =
-    analysis.sentimentAnalysis.label === "negative" &&
-    analysis.sentimentAnalysis.confidence > 0.7;
-
-  // Find negative tweets with high engagement
-  const negativeTweets = data?.sources
-    ? data.sources
-        .filter((tweet) => {
-          // Simple negative keyword detection
-          const negativeWords = ["bad", "terrible", "awful", "disappointed", "issue", "problem", "fail"];
-          return negativeWords.some((word) => tweet.content.toLowerCase().includes(word));
-        })
-        .sort((a, b) => b.engagement - a.engagement)
-        .slice(0, 2)
-    : [];
-
-  return (
-    <section className="space-y-4">
-      <h2 className="text-2xl font-bold flex items-center gap-2">
-        <AlertTriangle className="w-6 h-6" />
-        Crisis Detection & Management
-      </h2>
-      <Card className={`bg-white/10 backdrop-blur-lg ${isCrisisDetected ? "border-red-500" : ""}`}>
-        <CardContent className="p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className={`w-3 h-3 rounded-full ${isCrisisDetected ? "bg-red-500" : "bg-green-500"}`}></div>
-            <h3 className="font-bold text-lg">
-              {isCrisisDetected ? "Potential Crisis Detected" : "No Crisis Detected"}
-            </h3>
-          </div>
-          <p className="text-muted-foreground mb-4">
-            {isCrisisDetected
-              ? "Negative sentiment detected with high confidence. Immediate action recommended."
-              : "No significant negative sentiment patterns detected at this time."}
-          </p>
-          {isCrisisDetected && (
-            <div className="mt-4">
-              <h4 className="text-sm font-medium mb-2">Recommended Actions:</h4>
-              <ul className="list-disc pl-4 text-sm text-muted-foreground">
-                <li>Monitor social channels for escalating concerns</li>
-                <li>Prepare response strategy for identified issues</li>
-                <li>Engage with users expressing concerns directly</li>
-              </ul>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {negativeTweets.length > 0 && (
-        <div className="space-y-3 mt-4">
-          <h3 className="font-medium">Posts to Monitor:</h3>
-          {negativeTweets.map((tweet, index) => (
-            <Card key={index} className="bg-white/10 backdrop-blur-lg border-l-4 border-l-amber-500">
-              <CardContent className="p-4">
-                <p className="text-muted-foreground mb-2">{tweet.content}</p>
-                <p className="text-sm text-amber-500">Engagement: {tweet.engagement}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-};
-
-// Campaign Performance Section
-const CampaignPerformanceSection = ({ analysis }: SectionProps) => {
-  // Simulate campaign performance metrics based on existing data
-  const campaignMetrics = {
-    overall: analysis.sentimentAnalysis.score > 0 ? "Positive" : "Needs Improvement",
-    engagement: Math.round(
-      analysis.engagement.topTweets.reduce((acc: number, tweet) => acc + tweet.engagement, 0) /
-      analysis.engagement.topTweets.length
-    ),
-    reachEstimate: Math.round(Math.random() * 10000) + 5000,
-    conversionRate: ((Math.random() * 5) + 1).toFixed(2) + "%",
+// Main Twitter Analysis Dashboard Component
+const TwitterAnalysisDashboard = memo(({ 
+  query,
+  options
+}: { 
+  query: string;
+  options?: {
+    competitors?: string[];
+    industry?: string;
+    marketSegment?: string;
   };
-
-  return (
-    <section className="space-y-4">
-      <h2 className="text-2xl font-bold flex items-center gap-2">
-        <Layers className="w-6 h-6" />
-        Ad Campaign Performance
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
-          title="Campaign Sentiment"
-          value={campaignMetrics.overall}
-          icon={<Heart className="w-6 h-6" />}
-        />
-        <MetricCard
-          title="Avg Engagement"
-          value={campaignMetrics.engagement}
-          icon={<Eye className="w-6 h-6" />}
-        />
-        <MetricCard
-          title="Estimated Reach"
-          value={campaignMetrics.reachEstimate.toLocaleString()}
-          icon={<Users className="w-6 h-6" />}
-        />
-        <MetricCard
-          title="Est. Conversion"
-          value={campaignMetrics.conversionRate}
-          icon={<TrendingUp className="w-6 h-6" />}
-        />
-      </div>
-
-      <Card className="bg-white/10 backdrop-blur-lg mt-4">
-        <CardContent className="p-6">
-          <h3 className="font-bold text-lg mb-3">Top Performing Content</h3>
-          <div className="space-y-4">
-            {analysis.engagement.topTweets.map((tweet, index) => (
-              <div key={index} className="pb-3 border-b border-gray-700 last:border-0">
-                <p className="text-sm text-muted-foreground mb-2">{tweet.content}</p>
-                <div className="flex justify-between text-sm">
-                  <span className="text-primary">{tweet.engagement} engagements</span>
-                  <span className="text-muted-foreground">{tweet.reason || 'High engagement'}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </section>
-  );
-};
-
-
-// Competitor Analysis Section
-const CompetitorAnalysisSection = ({ analysis, query }: SectionProps) => {
-  // Simulate competitor data
-  const competitors = [
-    { name: "Competitor A", sentiment: 0.3, engagement: 950 },
-    { name: "Competitor B", sentiment: -0.1, engagement: 1200 },
-    { name: "Competitor C", sentiment: 0.5, engagement: 780 },
-  ];
-
-  // Get our sentiment and create comparison
-  const ourSentiment = analysis.sentimentAnalysis.score;
-  const ourEngagement =
-    analysis.engagement.topTweets.reduce((acc: number, tweet) => acc + tweet.engagement, 0) /
-    analysis.engagement.topTweets.length;
-
-  return (
-    <section className="space-y-4">
-      <h2 className="text-2xl font-bold flex items-center gap-2">
-        <Users className="w-6 h-6" />
-        Competitor Analysis
-      </h2>
-
-      <Card className="bg-white/10 backdrop-blur-lg">
-        <CardContent className="p-6">
-          <h3 className="font-bold text-lg mb-4">Sentiment Comparison</h3>
-          <div className="space-y-4">
-            {/* Our brand */}
-            <div className="space-y-1">
-              <div className="flex justify-between items-center">
-                <span className="font-medium">{query} (Our Brand)</span>
-                <span>{(ourSentiment * 100).toFixed(1)}%</span>
-              </div>
-              <Progress value={(ourSentiment + 1) * 50} className="h-2" />
-            </div>
-
-            {/* Competitors */}
-            {competitors.map((competitor, index) => (
-              <div key={index} className="space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">{competitor.name}</span>
-                  <span>{(competitor.sentiment * 100).toFixed(1)}%</span>
-                </div>
-                <Progress value={(competitor.sentiment + 1) * 50} className="h-2" />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-white/10 backdrop-blur-lg">
-        <CardContent className="p-6">
-          <h3 className="font-bold text-lg mb-3">Competitive Advantage</h3>
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Our brand's sentiment is {ourSentiment > 0 ? "positive" : "negative"} at{" "}
-              {(ourSentiment * 100).toFixed(1)}%, which is{" "}
-              {Math.abs(ourSentiment) > Math.abs(competitors[0].sentiment) ? "stronger" : "weaker"}
-              than the leading competitor.
-            </p>
-            <h4 className="font-medium mt-4">Recommended Actions:</h4>
-            <ul className="list-disc pl-4 text-sm text-muted-foreground">
-              <li>Focus on our unique content patterns that differentiate from competitors</li>
-              <li>Address areas where competitors have stronger sentiment</li>
-              <li>Leverage our top-performing content themes in marketing</li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
-    </section>
-  );
-};
-
-// Define interface for YouTube-specific types
-// These are the interfaces that were causing errors in YoutubeAnalysis.tsx
-interface CommentSnippet {
-  authorDisplayName: string;
-  authorProfileImageUrl?: string;
-  authorChannelId?: string;
-  textDisplay: string;
-  textOriginal: string;
-  likeCount: number;
-  publishedAt: string;
-  updatedAt: string;
-}
-
-interface Comment {
-  id: string;
-  snippet: CommentSnippet;
-}
-
-interface CommentThread {
-  id: string;
-  snippet: {
-    topLevelComment: Comment;
-    totalReplyCount: number;
-  };
-}
-
-interface CommentThreadResponse {
-  items: CommentThread[];
-  nextPageToken?: string;
-}
-
-// Define the user experience types that were causing errors
-type SentimentType = "positive" | "negative" | "neutral";
-
-interface UserExperience {
-  sentiment: SentimentType; // Fixed: Removed "mixed" from the type
-  impact: string;
-  scenario: string;
-  frequencyPattern: string;
-}
-
-interface CommentAnalysisData {
-  analysis: {
-    overview: string;
-    sentimentAnalysis: {
-      overall: "positive" | "negative" | "neutral" | "mixed";
-      score: number;
-      distribution: {
-        positive: number;
-        negative: number;
-        neutral: number;
-      };
-      trends: {
-        period: string;
-        sentiment: number;
-      }[];
-    };
-    painPoints: {
-      issue: string;
-      frequency: number;
-      impact: string;
-      examples: string[];
-    }[];
-    userExperiences: UserExperience[]; // Fixed: Updated to match the correct type
-    emotionalTriggers: {
-      trigger: string;
-      sentiment: "positive" | "negative" | "neutral";
-      frequency: number;
-      examples: string[];
-    }[];
-    marketImplications: {
-      insight: string;
-      recommendations: string[];
-    };
-  };
-}
-
-interface CommentAnalysis {
-  success: boolean;
-  data?: CommentAnalysisData;
-  error?: string;
-}
-
-// Helpers for YouTube component
-const setComments = (commentsData: CommentThreadResponse) => {
-  // Fixed function to handle the comments data with the correct type
-  // This is now type-safe
-};
-
-const setCommentAnalysis = (analysis: CommentAnalysis) => {
-  // Fixed function to handle the analysis data with the correct type
-  // This is now type-safe
-};
-
-// For the Progress component error, we need to update usage and remove indicatorClassName
-const CustomProgress = ({ value }: { value: number }) => {
-  // Removed the indicatorClassName property as it doesn't exist
-  return <Progress value={value} className="h-2" />;
-};
-
-const AdvancedTwitterAnalysisDashboard: React.FC<TwitterDashboardProps> = ({ query, competitors = [] }) => {
-  const { data, analyze, isLoading, error } = useTwitterAnalysis();
+}) => {
+  const { data, isLoading, error, analyze } = useTwitterAnalysis();
   const [hasSearched, setHasSearched] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       if (!query.trim() || hasSearched) return;
-      await analyze(query);
+      await analyze(query, options);
       setHasSearched(true);
     };
+
     fetchData();
-  }, [query, analyze, hasSearched]);
+  }, [query, options, analyze, hasSearched]);
 
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+        <div className="rounded-full h-12 w-12 border-b-2 border-white" />
       </div>
     );
   }
 
-  if (error || !data) {
+  if (error || !data?.analysis) {
     return (
       <div className="text-center text-red-500 p-4">
-        {error || "Failed to fetch Twitter data"}
+        {error || "Failed to fetch Twitter analysis data"}
       </div>
     );
   }
-  const analysisWithFixedTweets = {
-    ...data.analysis,
-    engagement: {
-      ...data.analysis.engagement,
-      topTweets: data.analysis.engagement.topTweets.map(tweet => {
-        if ('created_at' in tweet && typeof tweet.created_at === 'string') {
-          return tweet as Tweet;
-        } else {
-          return {
-            ...tweet,
-            created_at: new Date().toISOString() // Explicitly typed as string
-          } as Tweet;
-        }
-      })
-    }
-  };
-  
-  const fixedData = {
-    ...data,
-    analysis: analysisWithFixedTweets as Analysis // Add explicit type assertion
-  };
+
+  const { analysis } = data;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-      <header className="space-y-2 mb-6">
-        <h1 className="text-3xl font-bold">Advanced Twitter Analytics Dashboard</h1>
-        <p className="text-lg text-muted-foreground">Analysis for: {query}</p>
-        <p className="text-muted-foreground">{fixedData.analysis.overview}</p>
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Twitter Analysis Dashboard</h1>
+        <p className="text-lg opacity-70">Analysis for: {query}</p>
+        <div className="mt-4 p-4 bg-white/10 rounded-lg">
+          <h2 className="text-xl font-semibold mb-2">Executive Summary</h2>
+          <p>{analysis.overview}</p>
+        </div>
       </header>
 
-      <Tabs defaultValue="brand-sentiment" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
-          <TabsTrigger value="brand-sentiment">Brand Sentiment</TabsTrigger>
-          <TabsTrigger value="competitor">Competitor Analysis</TabsTrigger>
-          <TabsTrigger value="consumer-trends">Consumer Trends</TabsTrigger>
-          <TabsTrigger value="influencers">Influencers</TabsTrigger>
-          <TabsTrigger value="demand">Demand Forecast</TabsTrigger>
-          <TabsTrigger value="campaign">Campaign Performance</TabsTrigger>
-          <TabsTrigger value="crisis">Crisis Detection</TabsTrigger>
-        </TabsList>
+      <div className="space-y-8">
+        {/* Sentiment Analysis */}
+        <section className="mt-8">
+          <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
+            <BarChart className="w-6 h-6" />
+            Sentiment Analysis
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <SentimentCard sentiment={analysis.sentimentAnalysis} />
+          </div>
+        </section>
 
-        <TabsContent value="brand-sentiment" className="pt-4">
-          <BrandSentimentSection analysis={fixedData.analysis} />
-        </TabsContent>
+        {/* Content Patterns */}
+        <AnalysisSection
+          icon={<MessageCircle className="w-6 h-6" />}
+          title="Content Patterns"
+          items={validateArray(analysis.contentPatterns)}
+          renderItem={(pattern, index) => (
+            <PatternCard key={index} pattern={pattern} />
+          )}
+          emptyMessage="No content patterns available"
+        />
 
-        <TabsContent value="competitor" className="pt-4">
-          <CompetitorAnalysisSection analysis={fixedData.analysis} query={query} />
-        </TabsContent>
+        {/* Top Tweets */}
+        <AnalysisSection
+          icon={<TrendingUp className="w-6 h-6" />}
+          title="High Impact Tweets"
+          items={validateArray(analysis.engagement?.topTweets)}
+          renderItem={(tweet, index) => (
+            <TweetCard key={index} tweet={tweet} />
+          )}
+          emptyMessage="No top tweets available"
+        />
 
-        <TabsContent value="consumer-trends" className="pt-4">
-          <ConsumerTrendsSection analysis={fixedData.analysis} />
-        </TabsContent>
+        {/* Marketing Insights */}
+        <AnalysisSection
+          icon={<Target className="w-6 h-6" />}
+          title="Marketing Strategy"
+          items={[analysis.marketInsights]}
+          renderItem={(insights, index) => (
+            <InsightCard key={index} insights={insights} />
+          )}
+          emptyMessage="No marketing insights available"
+        />
 
-        <TabsContent value="influencers" className="pt-4">
-          <InfluencerTrackingSection analysis={fixedData.analysis} data={fixedData} />
-        </TabsContent>
+        {/* Competitor Analysis */}
+        {analysis.marketInsights?.competitorAnalysis && 
+        analysis.marketInsights.competitorAnalysis.length > 0 && (
+          <AnalysisSection
+            icon={<Lightbulb className="w-6 h-6" />}
+            title="Competitor Analysis"
+            items={[analysis.marketInsights.competitorAnalysis]}
+            renderItem={(competitors, index) => (
+              <CompetitorCard key={index} competitors={competitors} />
+            )}
+            emptyMessage="No competitor data available"
+          />
+        )}
 
-        <TabsContent value="demand" className="pt-4">
-          <DemandForecastingSection analysis={fixedData.analysis} />
-        </TabsContent>
-
-        <TabsContent value="campaign" className="pt-4">
-          <CampaignPerformanceSection analysis={fixedData.analysis} />
-        </TabsContent>
-
-        <TabsContent value="crisis" className="pt-4">
-          <CrisisDetectionSection analysis={fixedData.analysis} data={fixedData} />
-        </TabsContent>
-      </Tabs>
+        {/* Temporal Analysis */}
+        <AnalysisSection
+          icon={<Calendar className="w-6 h-6" />}
+          title="Timing & Trends"
+          items={[analysis.temporalAnalysis]}
+          renderItem={(temporal, index) => (
+            <TemporalCard key={index} temporal={temporal} />
+          )}
+          emptyMessage="No temporal analysis available"
+        />
+      </div>
     </div>
   );
-};
+});
 
-export default AdvancedTwitterAnalysisDashboard;
+TwitterAnalysisDashboard.displayName = 'TwitterAnalysisDashboard';
+
+export default TwitterAnalysisDashboard;
