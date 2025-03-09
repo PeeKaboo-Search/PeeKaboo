@@ -42,7 +42,7 @@ interface AnalysisResult {
     timestamp: string;
   };
   error?: string;
-  rawResponse?: any; // For debugging purposes
+  rawResponse?: unknown; // Changed from any to unknown
 }
 
 // Content extracted from ads for analysis
@@ -164,7 +164,8 @@ export class MetaAdAnalysisService {
         
         try {
           parsedAnalysis = JSON.parse(analysis) as AnalysisData;
-        } catch (parseError) {
+        } catch (_) {
+          // Changed from parseError to _ to indicate unused variable
           return { 
             success: false, 
             error: 'Failed to parse analysis result', 
@@ -511,7 +512,8 @@ IMPORTANT: Return VALID JSON only with no additional text before or after the JS
         try {
           const errorData = await response.json();
           errorMessage += ` - ${JSON.stringify(errorData)}`;
-        } catch (e) {
+        } catch (_) {
+          // Changed from "e" to "_" to indicate unused variable
           // Unable to parse error JSON
         }
         throw new Error(errorMessage);

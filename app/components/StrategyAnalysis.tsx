@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, memo } from "react";
 import { 
-  TrendingUp, Calendar,
+  TrendingUp,
   Lightbulb, BarChart, 
   Target, Building2,
   Clock, DollarSign,

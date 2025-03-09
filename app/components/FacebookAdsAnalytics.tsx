@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, memo } from 'react';
+import Image from 'next/image'; // Import Next.js Image component
 import { MetaAdAnalysisService } from '@/app/api/facebookAnalytics';
 import { 
   MessageSquare, Eye, Target, 
@@ -355,11 +356,13 @@ const MetaAdAnalysisDashboard: React.FC<MetaAdAnalysisProps> = ({
             {data.sources.map((ad, index) => (
               <div key={`ad-${index}`} className="bg-white/10 backdrop-blur-lg rounded-lg p-6">
                 {ad.imageUrl && (
-                  <div className="mb-4">
-                    <img 
+                  <div className="mb-4 relative w-full h-64">
+                    <Image 
                       src={ad.imageUrl} 
                       alt={`Ad from ${ad.pageName}`} 
-                      className="w-full h-auto rounded-md"
+                      fill
+                      style={{ objectFit: 'cover' }}
+                      className="rounded-md"
                     />
                   </div>
                 )}
