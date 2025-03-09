@@ -1,21 +1,48 @@
 import { useState } from 'react';
-import "@/app/types/google";
 
-// Define missing interfaces
-interface GoogleSearchItem {
-  title?: string;
-  snippet?: string;
-  link?: string;
-}
-
-interface GoogleSearchResponse {
-  items?: GoogleSearchItem[];
-}
-
+// Types
 interface GoogleResult {
   title: string;
   snippet: string;
   link: string;
+}
+
+interface TrendCard {
+  title: string;
+  description: string;
+  impact: number;
+  audience: string[];
+  platforms: string[];
+  contentIdeas: string[];
+  bestPractices: string[];
+}
+ 
+interface InsightCard {
+  title: string;
+  type: 'consumer' | 'industry';
+  keyFindings: string[];
+  implications: string[];
+  opportunities: string[];
+  recommendations: string[];
+}   
+
+interface SeasonalCard {
+  topic: string;
+  timing: string;
+  relevance: number;
+  description: string;
+  marketingAngles: string[];
+  contentSuggestions: string[];
+}
+
+// Modified Trigger interface focused on product triggers
+interface TriggerCard {
+  productFeature: string;
+  userNeed: string;
+  purchaseIntent: number;
+  conversionRate: number;
+  relevance: number;
+  recommendedProductContent: string[];
 }
 
 interface MarketResearchAnalysis {
@@ -26,45 +53,12 @@ interface MarketResearchAnalysis {
     psychographics: string[];
     channels: string[];
   };
-  trends: Array<{
-    title: string;
-    description: string;
-    impact: string;
-    audience: string[];
-    platforms: string[];
-    contentIdeas: string[];
-    bestPractices: string[];
-  }>;
-  consumerInsights: Array<{
-    title: string;
-    type: string;
-    keyFindings: string[];
-    implications: string[];
-    opportunities: string[];
-    recommendations: string[];
-  }>;
-  industryInsights: Array<{
-    title: string;
-    type: string;
-    keyFindings: string[];
-    implications: string[];
-    opportunities: string[];
-    recommendations: string[];
-  }>;
-  seasonalTopics: Array<{
-    topic: string;
-    timing: string;
-    relevance: string;
-    description: string;
-    marketingAngles: string[];
-    contentSuggestions: string[];
-  }>;
-  topTriggers: Array<{
-    productFeature: string;
-    userNeed: string;
-    relevance: string;
-    recommendedProductContent: string[];
-  }>;
+  trends: TrendCard[];
+  consumerInsights: InsightCard[];
+  industryInsights: InsightCard[];
+  seasonalTopics: SeasonalCard[];
+  // Modified top triggers field focused on product
+  topTriggers: TriggerCard[];
   recommendations: {
     contentStrategy: string[];
     timing: string[];
@@ -73,28 +67,36 @@ interface MarketResearchAnalysis {
   };
 }
 
-interface GoogleSearchDataSuccess {
-  success: true;
-  data: {
+interface GoogleSearchData {
+  success: boolean;
+  data?: {
     results: GoogleResult[];
     analysis: MarketResearchAnalysis;
     timestamp: string;
   };
+  error?: string;
 }
 
-interface GoogleSearchDataError {
-  success: false;
-  error: string;
+// Google Search API response interfaces
+interface GoogleSearchItem {
+  title?: string;
+  snippet?: string;
+  link?: string;
 }
 
-type GoogleSearchData = GoogleSearchDataSuccess | GoogleSearchDataError;
+interface GoogleSearchResponse {
+  items?: GoogleSearchItem[];
+}
+
+// Groq API response interfaces
+interface GroqChoice {
+  message?: {
+    content?: string;
+  };
+}
 
 interface GroqResponse {
-  choices?: Array<{
-    message?: {
-      content?: string;
-    };
-  }>;
+  choices?: GroqChoice[];
 }
 
 // Configuration
@@ -280,7 +282,7 @@ export class MarketResearchService {
             },
           ],
           temperature: 0.7,
-          max_tokens: 4500,
+          max_tokens: 4000,
           response_format: { type: 'json_object' },
         }),
       }
@@ -322,11 +324,11 @@ export class MarketResearchService {
         try {
           const results = await this.fetchGoogleResults(query);
           if (results.length === 0) {
-            return { success: false, error: 'No search results found' } as GoogleSearchDataError;
+            return { success: false, error: 'No search results found' };
           }
 
           const analysis = await this.generateAnalysis(query, results);
-          const response: GoogleSearchDataSuccess = {
+          const response: GoogleSearchData = {
             success: true,
             data: {
               results,
@@ -336,9 +338,6 @@ export class MarketResearchService {
           };
 
           return response;
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-          return { success: false, error: errorMessage } as GoogleSearchDataError;
         } finally {
           this.activeRequests.delete(query);
         }
@@ -349,7 +348,7 @@ export class MarketResearchService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       console.error('Market research error:', error);
-      return { success: false, error: errorMessage } as GoogleSearchDataError;
+      return { success: false, error: errorMessage };
     }
   }
 }
@@ -360,7 +359,7 @@ export const useMarketResearch = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const research = async (query: string): Promise<GoogleSearchData> => {
+  const research = async (query: string) => {
     setIsLoading(true);
     setError(null);
 
@@ -371,7 +370,7 @@ export const useMarketResearch = () => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       setError(errorMessage);
-      return { success: false, error: errorMessage } as GoogleSearchDataError;
+      return { success: false, error: errorMessage };
     } finally {
       setIsLoading(false);
     }
