@@ -1,5 +1,101 @@
 import { useState } from 'react';
-import "@/app/types/google"
+import "@/app/types/google";
+
+// Define missing interfaces
+interface GoogleSearchItem {
+  title?: string;
+  snippet?: string;
+  link?: string;
+}
+
+interface GoogleSearchResponse {
+  items?: GoogleSearchItem[];
+}
+
+interface GoogleResult {
+  title: string;
+  snippet: string;
+  link: string;
+}
+
+interface MarketResearchAnalysis {
+  executiveSummary: string;
+  marketOverview: {
+    targetAudience: string[];
+    demographics: string[];
+    psychographics: string[];
+    channels: string[];
+  };
+  trends: Array<{
+    title: string;
+    description: string;
+    impact: string;
+    audience: string[];
+    platforms: string[];
+    contentIdeas: string[];
+    bestPractices: string[];
+  }>;
+  consumerInsights: Array<{
+    title: string;
+    type: string;
+    keyFindings: string[];
+    implications: string[];
+    opportunities: string[];
+    recommendations: string[];
+  }>;
+  industryInsights: Array<{
+    title: string;
+    type: string;
+    keyFindings: string[];
+    implications: string[];
+    opportunities: string[];
+    recommendations: string[];
+  }>;
+  seasonalTopics: Array<{
+    topic: string;
+    timing: string;
+    relevance: string;
+    description: string;
+    marketingAngles: string[];
+    contentSuggestions: string[];
+  }>;
+  topTriggers: Array<{
+    productFeature: string;
+    userNeed: string;
+    relevance: string;
+    recommendedProductContent: string[];
+  }>;
+  recommendations: {
+    contentStrategy: string[];
+    timing: string[];
+    platforms: string[];
+    messaging: string[];
+  };
+}
+
+interface GoogleSearchDataSuccess {
+  success: true;
+  data: {
+    results: GoogleResult[];
+    analysis: MarketResearchAnalysis;
+    timestamp: string;
+  };
+}
+
+interface GoogleSearchDataError {
+  success: false;
+  error: string;
+}
+
+type GoogleSearchData = GoogleSearchDataSuccess | GoogleSearchDataError;
+
+interface GroqResponse {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+}
 
 // Configuration
 const CONFIG = {
@@ -226,11 +322,11 @@ export class MarketResearchService {
         try {
           const results = await this.fetchGoogleResults(query);
           if (results.length === 0) {
-            return { success: false, error: 'No search results found' };
+            return { success: false, error: 'No search results found' } as GoogleSearchDataError;
           }
 
           const analysis = await this.generateAnalysis(query, results);
-          const response: GoogleSearchData = {
+          const response: GoogleSearchDataSuccess = {
             success: true,
             data: {
               results,
@@ -240,6 +336,9 @@ export class MarketResearchService {
           };
 
           return response;
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+          return { success: false, error: errorMessage } as GoogleSearchDataError;
         } finally {
           this.activeRequests.delete(query);
         }
@@ -250,7 +349,7 @@ export class MarketResearchService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       console.error('Market research error:', error);
-      return { success: false, error: errorMessage };
+      return { success: false, error: errorMessage } as GoogleSearchDataError;
     }
   }
 }
@@ -261,7 +360,7 @@ export const useMarketResearch = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const research = async (query: string) => {
+  const research = async (query: string): Promise<GoogleSearchData> => {
     setIsLoading(true);
     setError(null);
 
@@ -272,7 +371,7 @@ export const useMarketResearch = () => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       setError(errorMessage);
-      return { success: false, error: errorMessage };
+      return { success: false, error: errorMessage } as GoogleSearchDataError;
     } finally {
       setIsLoading(false);
     }
