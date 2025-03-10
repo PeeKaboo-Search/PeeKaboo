@@ -38,6 +38,7 @@ interface ResultsSectionProps {
   activeComponents: string[];
 }
 
+// Updated YouTubeAnalysis import to match the component name correctly
 const SEARCH_COMPONENTS: SearchComponentConfig[] = [
   { 
     name: 'ImageResult', 
@@ -60,8 +61,8 @@ const SEARCH_COMPONENTS: SearchComponentConfig[] = [
     propType: 'query' 
   },
   { 
-    name: 'YoutubeAnalysis', 
-    component: lazy(() => import("app/components/YoutubeAnalysis")), 
+    name: 'YouTubeVideos', // Updated to match the actual component name from your code
+    component: lazy(() => import("app/components/YTvideos").then(module => ({ default: module.default }))),
     propType: 'query' 
   },
   { 
