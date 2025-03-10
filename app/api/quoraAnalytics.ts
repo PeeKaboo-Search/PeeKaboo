@@ -77,7 +77,7 @@ interface AnalysisData {
 
 export class QuoraAnalysisService {
   private static readonly TIMEOUT = 30000;
-  private static readonly RAPIDAPI_KEY = process.env.NEXT_PUBLIC_RAPIDAPI_KEY;
+  private static readonly RAPIDAPI_KEY = process.env.NEXT_PUBLIC_QRAPIDAPI_KEY;
   private static readonly GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY;
 
   // Existing fetchWithTimeout method remains the same
