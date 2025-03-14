@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, Suspense, lazy } from "react";
-import { fetchMarketingInsights } from "@/app/api/redditAnalysis";
+import { fetchMarketingInsights, MarketingInsight, RedditResult } from "@/app/api/redditAnalysis";
 import { TrendingUp, Award, Lightbulb, Activity, Brain, Heart, Target } from "lucide-react";
 import { Progress } from "@/app/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";

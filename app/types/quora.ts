@@ -1,8 +1,4 @@
-// types/index.ts
 
-/**
- * Base Types
- */
 export interface BasePost {
   title: string;
   url: string;
@@ -20,6 +16,39 @@ export interface Answer {
   upvotes: number;
   numComments: number;
   createdAt: string;
+}
+
+/**
+ * Analytics Types
+ */
+export interface Trend {
+  title: string;
+  description: string;
+  percentage: number;
+}
+
+export interface Competitor {
+  name: string;
+  strength: string;
+  score: number;
+}
+
+export interface AnalyticsSummary {
+  overview: string;
+  trends: Trend[];
+  competitors: Competitor[];
+  opportunities: string[];
+}
+
+export interface GoogleResult {
+  title: string;
+  link: string;
+  snippet: string;
+}
+
+export interface AnalyticsData {
+  results: GoogleResult[];
+  summary: AnalyticsSummary;
 }
 
 /**
@@ -59,20 +88,11 @@ export interface GroqResponse {
   }>;
 }
 
-export interface ProcessedAnswer {
-  text: string;
-  author: string;
-  authorProfile: string;
-  upvotes: number;
-  numComments: number;
-  createdAt: string;
-}
-
 // app/types/quora.ts
 export interface QuoraPost {
   title: string;
   url: string;
-  topics: string[]; // Add this line
+  topics: string[];
   followers: number;
   topAnswer: {
     text: string;
@@ -94,6 +114,16 @@ export interface QuoraPost {
   }>;
   createdAt: string;
 }
+
+export interface ProcessedAnswer {
+  text: string;
+  author: string;
+  authorProfile: string;
+  upvotes: number;
+  numComments: number;
+  createdAt: string;
+}
+
 export interface AnalysisResult {
   success: boolean;
   data?: {
@@ -108,7 +138,7 @@ export interface AnalysisResult {
  * Component Types
  */
 export interface ExtendedQuoraPost extends QuoraPost {
-  sentiment?: number;  // Sentiment score between -1 and 1
+  sentiment?: number;
 }
 
 export interface QuoraAnalysisResponse {
@@ -138,7 +168,7 @@ export interface AnalysisState {
 }
 
 export interface SentimentIndicatorProps {
-  sentiment?: number;  // Sentiment score between -1 and 1
+  sentiment?: number;
 }
 
 export interface AnswerCardProps {
@@ -225,7 +255,7 @@ export interface AnalysisTopic {
 export interface AnalysisTheme {
   topic: string;
   sentiment: SentimentScore;
-  strength: number;  // 0 to 1
+  strength: number;
   keywords: string[];
 }
 
@@ -256,6 +286,6 @@ export interface CacheEntry<T> {
 }
 
 export interface CacheOptions {
-  ttl: number;  // Time to live in milliseconds
+  ttl: number;
   maxEntries?: number;
 }
