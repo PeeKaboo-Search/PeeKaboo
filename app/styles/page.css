@@ -170,7 +170,7 @@ body {
 }
 
 /* Icon mappings */
-.glass-toggle[data-component="youtubeanalysis"]::after {
+.glass-toggle[data-component="youtubevideos"]::after {
   background-image: url('/icons/youtube-icon.svg');
 }
 
