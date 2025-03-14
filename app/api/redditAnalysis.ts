@@ -94,12 +94,12 @@ export const fetchMarketingInsights = async (
     const authData = await authResponse.json();
     const accessToken = authData.access_token;
 
-    // Enhanced Reddit Search with Broader Coverage
+    // Focus on most relevant subreddits and get only 5 posts
     const subreddits = [
       'technology', 'products', 'business', 'marketing',
-      'startups', 'entrepreneurship', 'productmanagement',
-      'B2B', 'SaaS', 'digitalmarketing'
+      'startups', 'entrepreneurship', 'productmanagement'
     ];
+    
     const results: RedditResult[] = [];
     let totalPosts = 0;
 
@@ -108,7 +108,7 @@ export const fetchMarketingInsights = async (
       if (totalPosts >= 5) break;
       
       const searchResponse = await fetch(
-        `https://oauth.reddit.com/r/${subreddit}/search?q=${encodeURIComponent(query)}&limit=20&sort=relevance&t=year`,
+        `https://oauth.reddit.com/r/${subreddit}/search?q=${encodeURIComponent(query)}&limit=5&sort=relevance`,
         {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -247,12 +247,8 @@ export const fetchMarketingInsights = async (
       }
     }
 
-    Tiktok is banned in India.
-    Give me Creative ideas only, not Generic Ideas.
-    And use Complex Marketing Language.
-    Ensure detailed HTML formatting for all text fields.
-    Focus on actionable insights, psychological factors, and market dynamics.
-    Give 6 pain points, 3 niche communities, and 3 emotional triggers.`;
+    Give creative, not generic ideas. Use professional marketing terminology.
+    Provide 6 pain points, 3 niche communities, and 3 emotional triggers.`;
 
     const insightResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
