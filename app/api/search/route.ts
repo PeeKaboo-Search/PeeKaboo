@@ -15,7 +15,7 @@ export async function GET(request: { url: string | URL; }) {
       num: 26, // adjust as needed
     });
 
-    // Remove the 'installs' field from each result
+    // Remove stalls' field from each result
     const filteredResults = results.map((app: any) => {
       const { installs, ...rest } = app;
       return rest;
