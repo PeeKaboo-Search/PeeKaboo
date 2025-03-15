@@ -9,7 +9,8 @@ import {
   Loader2, 
   ChevronRight,
   AlertTriangle,
-  Info
+  Info,
+  ArrowRight
 } from 'lucide-react';
 import { searchApps, getAppReviews, analyzeAppReviews } from '@/app/api/playstoreAnalyticsApi';
 import { Card, CardContent } from '@/app/components/ui/card';
@@ -65,7 +66,7 @@ const RatingStars = ({ rating }: { rating: number }) => {
   );
 };
 
-// AppCard component
+// AppCard component with larger icons
 const AppCard = memo(({ 
   app, 
   isSelected, 
@@ -76,22 +77,22 @@ const AppCard = memo(({
   onClick: () => void
 }) => (
   <Card
-    className={`app-card flex-shrink-0 w-64 cursor-pointer snap-start transition-all hover:shadow-lg
+    className={`app-card flex-shrink-0 w-72 cursor-pointer snap-start transition-all hover:shadow-lg
       ${isSelected ? 'ring-2 ring-primary shadow-md' : ''}`}
     onClick={onClick}
   >
     <CardContent className="p-4">
-      <div className="flex items-center gap-3">
-        <div className="relative w-16 h-16 flex-shrink-0">
+      <div className="flex flex-col items-center gap-3">
+        <div className="relative w-24 h-24 flex-shrink-0">
           <Image
             src={app.app_icon}
             alt={app.app_name}
             fill
-            sizes="(max-width: 768px) 64px, 64px"
+            sizes="(max-width: 768px) 96px, 96px"
             className="object-cover rounded-lg"
           />
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 text-center min-w-0">
           <h3 className="font-semibold line-clamp-2">{app.app_name}</h3>
           <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{app.app_id}</p>
         </div>
@@ -216,6 +217,7 @@ const AppAnalytics: React.FC<AppAnalyticsProps> = ({ query }) => {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [error, setError] = useState<ErrorState | null>(null);
   const [selectedApp, setSelectedApp] = useState<string | null>(null);
+  const [appSelectionComplete, setAppSelectionComplete] = useState<boolean>(false);
   
   // Scrolling state
   const [isDragging, setIsDragging] = useState<boolean>(false);
@@ -252,20 +254,26 @@ const AppAnalytics: React.FC<AppAnalyticsProps> = ({ query }) => {
   };
 
   // Handle app selection
-  const handleAppSelect = async (appId: string) => {
-    if (appId === selectedApp) return;
-    
+  const handleAppSelect = (appId: string) => {
+    if (appId === selectedApp && appSelectionComplete) return;
     setSelectedApp(appId);
+  };
+  
+  // Handle proceeding to analysis after app selection
+  const handleProceedToAnalysis = async () => {
+    if (!selectedApp) return;
+    
+    setAppSelectionComplete(true);
     setReviewsLoading(true);
     setAnalysisLoading(true);
     
     try {
-      const appReviews = await getAppReviews(appId);
+      const appReviews = await getAppReviews(selectedApp);
       setReviews(appReviews);
       
-      const selectedAppInfo = apps.find(app => app.app_id === appId);
+      const selectedAppInfo = apps.find(app => app.app_id === selectedApp);
       if (selectedAppInfo) {
-        const appAnalysis = await analyzeAppReviews(appId, selectedAppInfo.app_name);
+        const appAnalysis = await analyzeAppReviews(selectedApp, selectedAppInfo.app_name);
         setAnalysis(appAnalysis);
       }
     } catch (err) {
@@ -278,6 +286,13 @@ const AppAnalytics: React.FC<AppAnalyticsProps> = ({ query }) => {
       setAnalysisLoading(false);
     }
   };
+  
+  // Handle going back to app selection
+  const handleBackToSelection = () => {
+    setAppSelectionComplete(false);
+    setReviews([]);
+    setAnalysis(null);
+  };
 
   // Initial data fetching
   useEffect(() => {
@@ -286,6 +301,7 @@ const AppAnalytics: React.FC<AppAnalyticsProps> = ({ query }) => {
         setLoading(true);
         setError(null);
         setSelectedApp(null);
+        setAppSelectionComplete(false);
         setReviews([]);
         setAnalysis(null);
         
@@ -293,7 +309,7 @@ const AppAnalytics: React.FC<AppAnalyticsProps> = ({ query }) => {
         setApps(appData);
         
         if (appData.length > 0) {
-          handleAppSelect(appData[0].app_id);
+          setSelectedApp(appData[0].app_id);
         }
       } catch (err) {
         setError({
@@ -310,6 +326,19 @@ const AppAnalytics: React.FC<AppAnalyticsProps> = ({ query }) => {
     }
   }, [query]);
 
+  // Scroll to left and right buttons for app slider
+  const scrollLeft20 = () => {
+    if (appsSliderRef.current) {
+      appsSliderRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight20 = () => {
+    if (appsSliderRef.current) {
+      appsSliderRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+    }
+  };
+
   // Render loading state
   if (loading && !apps.length) {
     return (
@@ -322,7 +351,7 @@ const AppAnalytics: React.FC<AppAnalyticsProps> = ({ query }) => {
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-white/5 rounded-lg overflow-hidden">
               <div className="p-4 flex items-center gap-3">
-                <Skeleton className="w-16 h-16 rounded-lg" />
+                <Skeleton className="w-24 h-24 rounded-lg" />
                 <div className="space-y-2 flex-1">
                   <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="h-3 w-1/2" />
@@ -349,41 +378,105 @@ const AppAnalytics: React.FC<AppAnalyticsProps> = ({ query }) => {
         </div>
       )}
 
-      {/* Apps carousel */}
-      <div 
-        className="apps-slider relative overflow-x-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
-        ref={appsSliderRef}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
-        onMouseMove={handleMouseMove}
-      >
-        <div className="flex gap-4 py-2 px-2">
-          {apps.map((app) => (
-            <AppCard
-              key={`app-${app.app_id}`}
-              app={app}
-              isSelected={selectedApp === app.app_id}
-              onClick={() => handleAppSelect(app.app_id)}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* App Analysis Section */}
-      {selectedApp && (
-        <div className="app-analysis-section mt-8">
-          {analysisLoading ? (
-            <div className="flex items-center justify-center p-12">
+      {/* App Selection Step */}
+      {!appSelectionComplete && (
+        <>
+          <div className="mb-2">
+            <h3 className="text-lg font-semibold mb-2">Select an app to analyze</h3>
+            <p className="text-muted-foreground text-sm">
+            Choose an app below to analyze its reviews and get comprehensive insights.
+            </p>
+          </div>
+          
+          {/* Apps carousel with navigation buttons */}
+          <div className="relative">
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-background/80 backdrop-blur-sm"
+              onClick={scrollLeft20}
+            >
+              <ChevronRight className="h-4 w-4 rotate-180" />
+            </Button>
+            
+            <div 
+              className="apps-slider relative overflow-x-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent mx-8 px-2"
+              ref={appsSliderRef}
+              onMouseDown={handleMouseDown}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseLeave}
+              onMouseMove={handleMouseMove}
+            >
+              <div className="flex gap-6 py-4 px-2">
+                {apps.map((app) => (
+                  <AppCard
+                    key={`app-${app.app_id}`}
+                    app={app}
+                    isSelected={selectedApp === app.app_id}
+                    onClick={() => handleAppSelect(app.app_id)}
+                  />
+                ))}
+              </div>
+            </div>
+            
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-background/80 backdrop-blur-sm"
+              onClick={scrollRight20}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {/* App selection confirmation */}
+          {selectedApp && (
+            <div className="flex justify-center mt-6">
+              <Button 
+                onClick={handleProceedToAnalysis}
+                className="px-8 py-2 flex items-center gap-2"
+              >
+                Analyze Selected App
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+      
+      {/* App Analysis Content (shown after selection) */}
+      {appSelectionComplete && selectedApp && (
+        <div className="app-analysis-section">
+          {/* Header with back button */}
+          <div className="flex items-center justify-between mb-6">
+            <Button 
+              variant="outline" 
+              onClick={handleBackToSelection}
+              className="flex items-center gap-1"
+            >
+              <ChevronRight className="h-4 w-4 rotate-180" />
+              Back to Selection
+            </Button>
+            <h3 className="text-lg font-semibold">
+              {apps.find(app => app.app_id === selectedApp)?.app_name} Analysis
+            </h3>
+          </div>
+          
+          {/* Loading states */}
+          {(reviewsLoading || analysisLoading) && (
+            <div className="flex items-center justify-center p-16">
               <div className="flex flex-col items-center gap-4">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
                 <p className="text-muted-foreground">Analyzing app reviews...</p>
               </div>
             </div>
-          ) : analysis?.success ? (
-            <div className="space-y-6">
+          )}
+          
+          {/* Analysis Content */}
+          {!reviewsLoading && !analysisLoading && analysis?.success && (
+            <div className="space-y-8">
               {/* Sentiment Overview */}
-              <Card>
+              <Card className="overflow-hidden border-2 border-primary/10">
                 <CardContent className="p-6">
                   <h3 className="text-xl font-bold mb-4">Sentiment Analysis</h3>
                   <p className="text-muted-foreground mb-6">{analysis.data?.analysis.overview}</p>
@@ -517,56 +610,51 @@ const AppAnalytics: React.FC<AppAnalyticsProps> = ({ query }) => {
                   </div>
                 </CardContent>
               </Card>
-            </div>
-          ) : (
-            <div className="p-8 flex items-center justify-center">
-              <p className="text-muted-foreground">
-                {analysis?.error || "Couldn't load analysis. Please try again."}
-              </p>
+              
+              {/* Reviews Section */}
+              <div className="mt-8">
+                <h3 className="text-xl font-bold mb-4">Recent Reviews</h3>
+                {reviews.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {reviews.slice(0, 4).map((review) => (
+                      <ReviewCard 
+                        key={review.review_id} 
+                        review={{
+                          ...review,
+                          sentiment: analysis?.data?.sources.find(source => 
+                            source.content === review.review_text
+                          )?.sentiment
+                        }} 
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-8 flex items-center justify-center">
+                    <p className="text-muted-foreground">No reviews available.</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
           
-          {/* Reviews Section */}
-          <div className="mt-8">
-            <h3 className="text-xl font-bold mb-4">Recent Reviews</h3>
-            {reviewsLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[...Array(4)].map((_, i) => (
-                  <Card key={i}>
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex justify-between">
-                        <Skeleton className="h-4 w-32" />
-                        <Skeleton className="h-4 w-20" />
-                      </div>
-                      <Skeleton className="h-16 w-full" />
-                      <div className="flex justify-between">
-                        <Skeleton className="h-3 w-24" />
-                        <Skeleton className="h-3 w-24" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+          {/* Error or no analysis available */}
+          {!reviewsLoading && !analysisLoading && !analysis?.success && (
+            <div className="p-8 flex items-center justify-center">
+              <div className="text-center">
+                <AlertTriangle className="h-10 w-10 text-yellow-500 mx-auto mb-4" />
+                <p className="text-muted-foreground text-lg">
+                  {analysis?.error || "Couldn't load analysis. Please try again."}
+                </p>
+                <Button 
+                  onClick={handleProceedToAnalysis} 
+                  variant="outline" 
+                  className="mt-4"
+                >
+                  Retry Analysis
+                </Button>
               </div>
-            ) : reviews.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {reviews.slice(0, 4).map((review) => (
-                  <ReviewCard 
-                    key={review.review_id} 
-                    review={{
-                      ...review,
-                      sentiment: analysis?.data?.sources.find(source => 
-                        source.content === review.review_text
-                      )?.sentiment
-                    }} 
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="p-8 flex items-center justify-center">
-                <p className="text-muted-foreground">No reviews available.</p>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>

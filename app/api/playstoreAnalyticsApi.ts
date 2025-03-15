@@ -1,26 +1,23 @@
 import axios from 'axios';
 import { z } from 'zod';
 
-// Zod schemas for app data - updated to match actual API response
+// Zod schemas for app data
 const AppBasicSchema = z.object({
   app_id: z.string(),
   app_name: z.string(),
   app_icon: z.string().optional()
 });
 
-const PhotosSchema = z.union([
-  z.object({
-    app_icon: z.string()
-  }),
-  z.array(z.any())
-]).transform(val => {
-  // Handle both array and object formats
+// Simplified photos schema that properly handles app_icon extraction
+const PhotosSchema = z.any().transform(val => {
+  // Handle different response formats to extract app_icon
   if (Array.isArray(val)) {
-    // Extract app_icon from array if possible
     const iconObj = val.find(item => item && typeof item === 'object' && 'app_icon' in item);
-    return { app_icon: iconObj?.app_icon || '' };
+    return iconObj?.app_icon || '';
+  } else if (val && typeof val === 'object' && 'app_icon' in val) {
+    return val.app_icon;
   }
-  return val;
+  return '';
 });
 
 const AppDetailsSchema = z.object({
@@ -36,7 +33,7 @@ const AppDetailsSchema = z.object({
   price_currency: z.string().nullable(),
   is_paid: z.boolean(),
   rating: z.number(),
-  photos: PhotosSchema,
+  photos: z.any(), // Accept any format since we'll process it separately
   trailer: z.string().nullable(),
   num_downloads_exact: z.number(),
   app_content_rating: z.string(),
@@ -192,7 +189,7 @@ async function fetchWithTimeout(
   }
 }
 
-// Search for apps by query term
+// Step 1: Search for apps by query term with proper image handling
 export async function searchApps(query: string, region: string = 'US', language: string = 'en'): Promise<AppBasic[]> {
   try {
     const url = `https://store-apps.p.rapidapi.com/search?q=${encodeURIComponent(query)}&region=${region}&language=${language}`;
@@ -200,7 +197,7 @@ export async function searchApps(query: string, region: string = 'US', language:
     const options = {
       method: 'GET',
       headers: {
-        'x-rapidapi-key': RAPIDAPI_KEY,
+        'x-rapidapi-key': RAPIDAPI_KEY || '',
         'x-rapidapi-host': RAPIDAPI_HOST
       }
     };
@@ -208,11 +205,22 @@ export async function searchApps(query: string, region: string = 'US', language:
     const response = await axios.get(url, options);
     const validatedResponse = SearchResponseSchema.parse(response.data);
     
-    // Return simplified app information
+    // Return app information with properly extracted icons
     return validatedResponse.data.apps.map(app => {
-      const appIcon = typeof app.photos === 'object' && 'app_icon' in app.photos 
-        ? app.photos.app_icon 
-        : '';
+      // Process photos to extract app_icon properly
+      let appIcon = '';
+      
+      // Handle photos as array
+      if (Array.isArray(app.photos)) {
+        const iconObj = app.photos.find(item => item && typeof item === 'object' && 'app_icon' in item);
+        if (iconObj && 'app_icon' in iconObj) {
+          appIcon = iconObj.app_icon;
+        }
+      } 
+      // Handle photos as object
+      else if (app.photos && typeof app.photos === 'object' && 'app_icon' in app.photos) {
+        appIcon = app.photos.app_icon;
+      }
       
       return {
         app_id: app.app_id,
@@ -229,28 +237,43 @@ export async function searchApps(query: string, region: string = 'US', language:
   }
 }
 
-// Get reviews for a specific app
+// Step 2: Get reviews for a specific app
 export async function getAppReviews(
   appId: string, 
-  limit: number = 50, 
-  sortBy: string = 'NEWEST', 
+  limit: number = 10, 
+  sortBy: string = 'MOST_RELEVANT', // Changed default to MOST_RELEVANT
   rating: string = 'ANY', 
   region: string = 'us', 
   language: string = 'en'
 ): Promise<Review[]> {
   try {
+    if (!appId.trim()) {
+      throw new ApiError('App ID cannot be empty', 'INVALID_APP_ID');
+    }
+
     const url = `https://store-apps.p.rapidapi.com/app-reviews?app_id=${appId}&limit=${limit}&sort_by=${sortBy}&device=PHONE&rating=${rating}&region=${region}&language=${language}`;
     
     const options = {
       method: 'GET',
       headers: {
-        'x-rapidapi-key': RAPIDAPI_KEY,
+        'x-rapidapi-key': RAPIDAPI_KEY || '',
         'x-rapidapi-host': RAPIDAPI_HOST
       }
     };
     
-    const response = await axios.get(url, options);
-    const validatedResponse = ReviewResponseSchema.parse(response.data);
+    // Use fetchWithTimeout instead of axios for better error handling
+    const response = await fetchWithTimeout(
+      url,
+      options,
+      TIMEOUT
+    );
+    
+    if (!response.ok) {
+      throw new ApiError(`API responded with status code ${response.status}`, 'API_ERROR');
+    }
+    
+    const responseData = await response.json();
+    const validatedResponse = ReviewResponseSchema.parse(responseData);
     
     return validatedResponse.data.reviews;
   } catch (error) {
@@ -262,20 +285,15 @@ export async function getAppReviews(
   }
 }
 
-// Analyze app reviews
-export async function analyzeAppReviews(appId: string, appName: string): Promise<ReviewAnalysis> {
+// Step 3: Analyze app reviews
+export async function analyzeAppReviews(reviews: Review[], appName: string): Promise<ReviewAnalysis> {
   try {
-    if (!appId.trim()) {
-      return { success: false, error: 'App ID cannot be empty' };
+    if (!reviews || reviews.length === 0) {
+      return { success: false, error: 'No reviews provided for analysis' };
     }
     
     if (!GROQ_API_KEY) {
       return { success: false, error: 'Groq API key not configured' };
-    }
-
-    const reviews = await getAppReviews(appId);
-    if (reviews.length === 0) {
-      return { success: false, error: 'No reviews found for this app' };
     }
 
     // Limit the number of reviews and their length for Groq analysis
@@ -314,6 +332,34 @@ export async function analyzeAppReviews(appId: string, appName: string): Promise
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error('Review analysis error:', error);
+    return { success: false, error: errorMessage };
+  }
+}
+
+// Combined function for step 2 and 3 - Fetch and analyze reviews for a selected app
+export async function fetchAndAnalyzeAppReviews(
+  appId: string,
+  appName: string,
+  limit: number = 50,
+  sortBy: string = 'MOST_RELEVANT', // Changed default to MOST_RELEVANT
+  rating: string = 'ANY',
+  region: string = 'us',
+  language: string = 'en'
+): Promise<ReviewAnalysis> {
+  try {
+    // Step 2: Get reviews for the selected app
+    const reviews = await getAppReviews(appId, limit, sortBy, rating, region, language);
+    
+    if (reviews.length === 0) {
+      return { success: false, error: 'No reviews found for this app' };
+    }
+    
+    // Step 3: Analyze the fetched reviews
+    return await analyzeAppReviews(reviews, appName);
+    
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('Fetch and analyze error:', error);
     return { success: false, error: errorMessage };
   }
 }
@@ -357,7 +403,7 @@ function analyzeSentiment(text: string, rating: number): 'positive' | 'negative'
   
   return 'neutral';
 }
-
+ 
 // Generate analysis using Groq API
 async function generateReviewAnalysis(appName: string, reviewText: string): Promise<string> {
   const url = 'https://api.groq.com/openai/v1/chat/completions';
@@ -486,4 +532,119 @@ function sanitizeText(text: string, maxLength: number = 500): string {
   if (sanitized.length <= maxLength) return sanitized;
   const truncated = sanitized.substring(0, maxLength);
   return truncated.substring(0, truncated.lastIndexOf(' ')) + '...';
+}
+
+// Direct API call for reviews (for testing or direct use)
+export async function getReviewsDirectCall(
+  appId: string = 'com.snapchat.android',
+  limit: number = 10,
+  sortBy: string = 'MOST_RELEVANT',
+  rating: string = 'ANY',
+  region: string = 'us',
+  language: string = 'en'
+): Promise<Review[]> {
+  try {
+    const url = `https://store-apps.p.rapidapi.com/app-reviews?app_id=${appId}&limit=${limit}&sort_by=${sortBy}&device=PHONE&rating=${rating}&region=${region}&language=${language}`;
+    
+    const options = {
+      method: 'GET',
+      headers: {
+        'x-rapidapi-key': RAPIDAPI_KEY || '',
+        'x-rapidapi-host': RAPIDAPI_HOST
+      }
+    };
+    
+    const response = await fetch(url, options);
+    
+    if (!response.ok) {
+      throw new Error(`API responded with status code ${response.status}`);
+    }
+    
+    const result = await response.json();
+    const validatedResponse = ReviewResponseSchema.parse(result);
+    
+    return validatedResponse.data.reviews;
+  } catch (error) {
+    console.error('Direct API call error:', error);
+    throw new Error(`Failed to fetch reviews: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+// Get app details including images
+export async function getAppDetails(appId: string, region: string = 'us', language: string = 'en'): Promise<App> {
+  try {
+    if (!appId.trim()) {
+      throw new ApiError('App ID cannot be empty', 'INVALID_APP_ID');
+    }
+
+    const url = `https://store-apps.p.rapidapi.com/app?app_id=${appId}&region=${region}&language=${language}`;
+    
+    const options = {
+      method: 'GET',
+      headers: {
+        'x-rapidapi-key': RAPIDAPI_KEY || '',
+        'x-rapidapi-host': RAPIDAPI_HOST
+      }
+    };
+    
+    const response = await fetchWithTimeout(url, options, TIMEOUT);
+    
+    if (!response.ok) {
+      throw new ApiError(`API responded with status code ${response.status}`, 'API_ERROR');
+    }
+    
+    const responseData = await response.json();
+    
+    // Extract app details from the response
+    const appData = responseData.data;
+    
+    // Extract screenshots and app icon
+    let appIcon = '';
+    let screenshots: string[] = [];
+    
+    if (appData.photos) {
+      // Handle photos as array
+      if (Array.isArray(appData.photos)) {
+        // Extract app icon
+        const iconObj = appData.photos.find(item => item && typeof item === 'object' && 'app_icon' in item);
+        if (iconObj && 'app_icon' in iconObj) {
+          appIcon = iconObj.app_icon;
+        }
+        
+        // Extract screenshots
+        appData.photos.forEach(photo => {
+          if (photo && typeof photo === 'object' && 'url' in photo) {
+            screenshots.push(photo.url);
+          }
+        });
+      } 
+      // Handle photos as object
+      else if (appData.photos && typeof appData.photos === 'object') {
+        if ('app_icon' in appData.photos) {
+          appIcon = appData.photos.app_icon;
+        }
+        
+        if ('screenshots' in appData.photos && Array.isArray(appData.photos.screenshots)) {
+          screenshots = appData.photos.screenshots.map(screenshot => 
+            typeof screenshot === 'string' ? screenshot : screenshot.url || ''
+          ).filter(Boolean);
+        }
+      }
+    }
+    
+    // Add the extracted images to the app data
+    const enrichedAppData = {
+      ...appData,
+      app_icon: appIcon,
+      screenshots: screenshots
+    };
+    
+    return enrichedAppData as App;
+  } catch (error) {
+    console.error('App details error:', error);
+    throw new ApiError(
+      'Failed to fetch app details',
+      error instanceof Error ? error.message : 'APP_DETAILS_ERROR'
+    );
+  }
 }
