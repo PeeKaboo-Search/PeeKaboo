@@ -1,650 +1,348 @@
-import axios from 'axios';
-import { z } from 'zod';
+// /app/api/playstoreAnalyticsApi.ts
 
-// Zod schemas for app data
-const AppBasicSchema = z.object({
-  app_id: z.string(),
-  app_name: z.string(),
-  app_icon: z.string().optional()
-});
-
-// Simplified photos schema that properly handles app_icon extraction
-const PhotosSchema = z.any().transform(val => {
-  // Handle different response formats to extract app_icon
-  if (Array.isArray(val)) {
-    const iconObj = val.find(item => item && typeof item === 'object' && 'app_icon' in item);
-    return iconObj?.app_icon || '';
-  } else if (val && typeof val === 'object' && 'app_icon' in val) {
-    return val.app_icon;
-  }
-  return '';
-});
-
-const AppDetailsSchema = z.object({
-  app_id: z.string(),
-  app_name: z.string(),
-  app_category: z.string(),
-  app_category_id: z.string(),
-  app_developer: z.string(),
-  num_downloads: z.string(),
-  app_description: z.string(),
-  app_page_link: z.string(),
-  price: z.number(),
-  price_currency: z.string().nullable(),
-  is_paid: z.boolean(),
-  rating: z.number(),
-  photos: z.any(), // Accept any format since we'll process it separately
-  trailer: z.string().nullable(),
-  num_downloads_exact: z.number(),
-  app_content_rating: z.string(),
-  chart_label: z.string().nullable(),
-  chart_rank: z.union([z.string(), z.number()]).nullable(),
-  app_updated_at_timestamp: z.number(),
-  app_updated_at_datetime_utc: z.string(),
-  num_ratings: z.number(),
-  num_reviews: z.number(),
-  app_first_released_at_datetime_utc: z.string(),
-  app_first_released_at_timestamp: z.number(),
-  current_version: z.string().nullable(),
-  current_version_released_at_timestamp: z.number().nullable(),
-  current_version_released_at_datetime_utc: z.string().nullable(),
-  current_version_whatsnew: z.string().optional(),
-  contains_ads: z.boolean(),
-  privacy_policy_link: z.string()
-});
-
-const SearchResponseSchema = z.object({
-  status: z.string(),
-  request_id: z.string(),
-  data: z.object({
-    apps: z.array(AppDetailsSchema)
-  })
-});
-
-const ReviewSchema = z.object({
-  review_id: z.string(),
-  review_text: z.string(),
-  review_rating: z.number(),
-  author_id: z.string(),
-  author_name: z.string(),
-  author_photo: z.string(),
-  author_app_version: z.string().optional(),
-  review_timestamp: z.number(),
-  review_datetime_utc: z.string(),
-  review_likes: z.number(),
-  app_developer_reply: z.string().nullable(),
-  app_developer_reply_timestamp: z.number().nullable(),
-  app_developer_reply_datetime_utc: z.string().nullable()
-});
-
-const ReviewResponseSchema = z.object({
-  status: z.string(),
-  request_id: z.string(),
-  data: z.object({
-    reviews: z.array(ReviewSchema)
-  })
-});
-
-// Enhanced Review Analysis schema with sentiment analysis
-export const ReviewAnalysisSchema = z.object({
-  success: z.boolean(),
-  data: z.object({
-    analysis: z.object({
-      overview: z.string(),
-      sentimentAnalysis: z.object({
-        overall: z.enum(['positive', 'negative', 'neutral', 'mixed']),
-        score: z.number(),
-        distribution: z.object({
-          positive: z.number(),
-          negative: z.number(),
-          neutral: z.number()
-        }),
-        trends: z.array(z.object({
-          topic: z.string(),
-          sentiment: z.enum(['positive', 'negative', 'neutral', 'mixed']),
-          intensity: z.number()
-        }))
-      }),
-      painPoints: z.array(z.object({
-        title: z.string(),
-        description: z.string(),
-        frequency: z.number(),
-        impact: z.number(),
-        sentiment: z.enum(['positive', 'negative', 'neutral', 'mixed']),
-        possibleSolutions: z.array(z.string())
-      })),
-      userExperiences: z.array(z.object({
-        scenario: z.string(),
-        impact: z.string(),
-        frequencyPattern: z.string(),
-        sentiment: z.enum(['positive', 'negative', 'neutral', 'mixed'])
-      })),
-      emotionalTriggers: z.array(z.object({
-        trigger: z.string(),
-        context: z.string(),
-        intensity: z.number(),
-        responsePattern: z.string(),
-        dominantEmotion: z.string()
-      })),
-      marketImplications: z.string()
-    }),
-    sources: z.array(z.object({
-      content: z.string(),
-      rating: z.number(),
-      sentiment: z.enum(['positive', 'negative', 'neutral', 'mixed']).optional()
-    })),
-    timestamp: z.string()
-  }).optional(),
-  error: z.string().optional()
-});
-
-// Type aliases
-export type App = z.infer<typeof AppDetailsSchema>;
-export type AppBasic = z.infer<typeof AppBasicSchema>;
-export type SearchResponse = z.infer<typeof SearchResponseSchema>;
-export type Review = z.infer<typeof ReviewSchema>;
-export type ReviewResponse = z.infer<typeof ReviewResponseSchema>;
-export type ReviewAnalysis = z.infer<typeof ReviewAnalysisSchema>;
-
-// Constants
-const RAPIDAPI_KEY = process.env.NEXT_PUBLIC_PRAPID_API_KEY;
-const RAPIDAPI_HOST = 'store-apps.p.rapidapi.com';
-const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY;
-const TIMEOUT = 30000;
-const MAX_REVIEWS_TO_ANALYZE = 50;
-const MAX_REVIEW_LENGTH = 500;
-
-class ApiError extends Error {
-  code: string;
-  constructor(message: string, code: string) {
-    super(message);
-    this.code = code;
-  }
+export interface AppBasic {
+  app_id: string;
+  app_name: string;
+  app_icon: string;
+  app_category?: string;
+  rating?: number;
 }
 
-// Helper function for fetch with timeout
-async function fetchWithTimeout(
-  url: string,
-  options: RequestInit,
-  timeout: number
-): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-  
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-    return response;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if (error instanceof Error) {
-      if (error.name === 'AbortError') {
-        throw new Error('Request timed out');
-      }
-    }
-    throw error;
-  }
-}
-
-// Step 1: Search for apps by query term with proper image handling
-export async function searchApps(query: string, region: string = 'US', language: string = 'en'): Promise<AppBasic[]> {
-  try {
-    const url = `https://store-apps.p.rapidapi.com/search?q=${encodeURIComponent(query)}&region=${region}&language=${language}`;
-    
-    const options = {
-      method: 'GET',
-      headers: {
-        'x-rapidapi-key': RAPIDAPI_KEY || '',
-        'x-rapidapi-host': RAPIDAPI_HOST
-      }
-    };
-    
-    const response = await axios.get(url, options);
-    const validatedResponse = SearchResponseSchema.parse(response.data);
-    
-    // Return app information with properly extracted icons
-    return validatedResponse.data.apps.map(app => {
-      // Process photos to extract app_icon properly
-      let appIcon = '';
-      
-      // Handle photos as array
-      if (Array.isArray(app.photos)) {
-        const iconObj = app.photos.find(item => item && typeof item === 'object' && 'app_icon' in item);
-        if (iconObj && 'app_icon' in iconObj) {
-          appIcon = iconObj.app_icon;
-        }
-      } 
-      // Handle photos as object
-      else if (app.photos && typeof app.photos === 'object' && 'app_icon' in app.photos) {
-        appIcon = app.photos.app_icon;
-      }
-      
-      return {
-        app_id: app.app_id,
-        app_name: app.app_name,
-        app_icon: appIcon
-      };
-    });
-  } catch (error) {
-    console.error('App search error:', error);
-    throw new ApiError(
-      'Failed to fetch apps',
-      error instanceof Error ? error.message : 'SEARCH_ERROR'
-    );
-  }
-}
-
-// Step 2: Get reviews for a specific app
-export async function getAppReviews(
-  appId: string, 
-  limit: number = 10, 
-  sortBy: string = 'MOST_RELEVANT', // Changed default to MOST_RELEVANT
-  rating: string = 'ANY', 
-  region: string = 'us', 
-  language: string = 'en'
-): Promise<Review[]> {
-  try {
-    if (!appId.trim()) {
-      throw new ApiError('App ID cannot be empty', 'INVALID_APP_ID');
-    }
-
-    const url = `https://store-apps.p.rapidapi.com/app-reviews?app_id=${appId}&limit=${limit}&sort_by=${sortBy}&device=PHONE&rating=${rating}&region=${region}&language=${language}`;
-    
-    const options = {
-      method: 'GET',
-      headers: {
-        'x-rapidapi-key': RAPIDAPI_KEY || '',
-        'x-rapidapi-host': RAPIDAPI_HOST
-      }
-    };
-    
-    // Use fetchWithTimeout instead of axios for better error handling
-    const response = await fetchWithTimeout(
-      url,
-      options,
-      TIMEOUT
-    );
-    
-    if (!response.ok) {
-      throw new ApiError(`API responded with status code ${response.status}`, 'API_ERROR');
-    }
-    
-    const responseData = await response.json();
-    const validatedResponse = ReviewResponseSchema.parse(responseData);
-    
-    return validatedResponse.data.reviews;
-  } catch (error) {
-    console.error('App reviews error:', error);
-    throw new ApiError(
-      'Failed to fetch app reviews',
-      error instanceof Error ? error.message : 'REVIEWS_ERROR'
-    );
-  }
-}
-
-// Step 3: Analyze app reviews
-export async function analyzeAppReviews(reviews: Review[], appName: string): Promise<ReviewAnalysis> {
-  try {
-    if (!reviews || reviews.length === 0) {
-      return { success: false, error: 'No reviews provided for analysis' };
-    }
-    
-    if (!GROQ_API_KEY) {
-      return { success: false, error: 'Groq API key not configured' };
-    }
-
-    // Limit the number of reviews and their length for Groq analysis
-    const limitedReviews = reviews
-      .slice(0, MAX_REVIEWS_TO_ANALYZE)
-      .map(review => ({
-        text: sanitizeText(review.review_text, MAX_REVIEW_LENGTH),
-        rating: review.review_rating
-      }))
-      .filter(review => Boolean(review.text))
-      .map(review => `[Rating: ${review.rating}/5] ${review.text}`)
-      .join('\n\n');
-
-    if (!limitedReviews) {
-      return { success: false, error: 'No valid reviews to analyze' };
-    }
-
-    const analysis = await generateReviewAnalysis(appName, limitedReviews);
-
-    // Add sentiment analysis to sources
-    const sourcesWithSentiment = reviews.map(review => ({
-      content: sanitizeText(review.review_text, MAX_REVIEW_LENGTH),
-      rating: review.review_rating,
-      sentiment: analyzeSentiment(review.review_text, review.review_rating)
-    }));
-
-    return {
-      success: true,
-      data: {
-        analysis: JSON.parse(analysis),
-        sources: sourcesWithSentiment,
-        timestamp: new Date().toISOString()
-      }
-    };
-
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error('Review analysis error:', error);
-    return { success: false, error: errorMessage };
-  }
-}
-
-// Combined function for step 2 and 3 - Fetch and analyze reviews for a selected app
-export async function fetchAndAnalyzeAppReviews(
-  appId: string,
-  appName: string,
-  limit: number = 50,
-  sortBy: string = 'MOST_RELEVANT', // Changed default to MOST_RELEVANT
-  rating: string = 'ANY',
-  region: string = 'us',
-  language: string = 'en'
-): Promise<ReviewAnalysis> {
-  try {
-    // Step 2: Get reviews for the selected app
-    const reviews = await getAppReviews(appId, limit, sortBy, rating, region, language);
-    
-    if (reviews.length === 0) {
-      return { success: false, error: 'No reviews found for this app' };
-    }
-    
-    // Step 3: Analyze the fetched reviews
-    return await analyzeAppReviews(reviews, appName);
-    
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error('Fetch and analyze error:', error);
-    return { success: false, error: errorMessage };
-  }
-}
-
-// Sentiment analysis function that takes rating into account
-function analyzeSentiment(text: string, rating: number): 'positive' | 'negative' | 'neutral' | 'mixed' {
-  // Consider rating as primary factor
-  if (rating >= 4) {
-    return 'positive';
-  } else if (rating <= 2) {
-    return 'negative';
-  }
-  
-  // For 3-star ratings, analyze text content
-  const positiveWords = ['great', 'good', 'awesome', 'excellent', 'love', 'amazing', 'best', 'perfect', 'helpful', 'wonderful'];
-  const negativeWords = ['bad', 'worst', 'terrible', 'awful', 'hate', 'disappointing', 'horrible', 'useless', 'poor', 'waste'];
-  
-  const lowerText = text.toLowerCase();
-  let positiveCount = 0;
-  let negativeCount = 0;
-  
-  positiveWords.forEach(word => {
-    const regex = new RegExp(`\\b${word}\\b`, 'gi');
-    const matches = lowerText.match(regex);
-    if (matches) positiveCount += matches.length;
-  });
-  
-  negativeWords.forEach(word => {
-    const regex = new RegExp(`\\b${word}\\b`, 'gi');
-    const matches = lowerText.match(regex);
-    if (matches) negativeCount += matches.length;
-  });
-  
-  if (positiveCount > 0 && negativeCount > 0) {
-    return 'mixed';
-  } else if (positiveCount > negativeCount) {
-    return 'positive';
-  } else if (negativeCount > positiveCount) {
-    return 'negative';
-  }
-  
-  return 'neutral';
-}
- 
-// Generate analysis using Groq API
-async function generateReviewAnalysis(appName: string, reviewText: string): Promise<string> {
-  const url = 'https://api.groq.com/openai/v1/chat/completions';
-  
-  const analysisPrompt = {
-    role: 'system',
-    content: `Analyze the provided app reviews for "${appName}" and generate a comprehensive analysis in the following JSON format:
-
-{
-  "overview": "Executive summary of the review analysis using sophisticated product development and UX terminology",
-  "sentimentAnalysis": {
-    "overall": "positive/negative/neutral/mixed",
-    "score": "Numerical value from -10 to 10, where -10 is extremely negative and 10 is extremely positive",
-    "distribution": {
-      "positive": "Percentage of positive reviews (0-100)",
-      "negative": "Percentage of negative reviews (0-100)",
-      "neutral": "Percentage of neutral reviews (0-100)"
-    },
-    "trends": [
-      {
-        "topic": "Specific aspect of the app being discussed",
-        "sentiment": "positive/negative/neutral/mixed",
-        "intensity": "Numerical value 1-10 indicating strength of sentiment"
-      }
-    ] (exactly 3 items)
-  },
-  "painPoints": [
-    {
-      "title": "Clear, impactful title of the issue or concern",
-      "description": "Detailed analysis of the user feedback using UX and product development terminology",
-      "frequency": "Numerical value 1-10 indicating how often this appears",
-      "impact": "Numerical value 1-10 indicating severity",
-      "sentiment": "positive/negative/neutral/mixed",
-      "possibleSolutions": ["Array of 2-3 potential improvements"]
-    }
-  ] (exactly 3 items),
-  "userExperiences": [
-    {
-      "scenario": "Detailed description of the user experience",
-      "impact": "Analysis of how this experience affects user engagement",
-      "frequencyPattern": "Pattern of occurrence and context",
-      "sentiment": "positive/negative/neutral/mixed"
-    }
-  ] (exactly 3 items),
-  "emotionalTriggers": [
-    {
-      "trigger": "Name of the emotional trigger",
-      "context": "Detailed context where this trigger appears",
-      "intensity": "Numerical value 1-10",
-      "responsePattern": "Typical user response to this trigger",
-      "dominantEmotion": "Primary emotion associated with this trigger"
-    }
-  ] (exactly 3 items),
-  "marketImplications": "Strategic insights for product development based on sentiment patterns"
-}`
+export interface App extends AppBasic {
+  app_category: string;
+  app_category_id: string;
+  app_developer: string;
+  num_downloads: string;
+  app_description: string;
+  app_page_link: string;
+  price: number;
+  price_currency: string | null;
+  is_paid: boolean;
+  rating: number;
+  photos: {
+    app_icon: string;
+    trailer: string | null;
   };
+  num_downloads_exact: number;
+  app_content_rating: string;
+  chart_label: string | null;
+  chart_rank: string | null;
+  app_updated_at_timestamp: number;
+  app_updated_at_datetime_utc: string;
+  num_ratings: number;
+  num_reviews: number;
+  app_first_released_at_datetime_utc: string;
+  app_first_released_at_timestamp: number;
+  current_version: string | null;
+  current_version_released_at_timestamp: number | null;
+  current_version_released_at_datetime_utc: string | null;
+  current_version_whatsnew: string | null;
+  contains_ads: boolean;
+  privacy_policy_link: string | null;
+  app_developer_website: string | null;
+  app_developer_email: string | null;
+}
 
-  const payload = {
-    model: 'deepseek-r1-distill-qwen-32b',
-    messages: [
-      analysisPrompt,
-      {
-        role: 'user',
-        content: reviewText,
-      },
-    ],
-    temperature: 0.7,
-    max_tokens: 2500,
-    response_format: { type: 'json_object' },
-  };
+export interface Review {
+  review_id: string;
+  review_text: string;
+  review_rating: number;
+  author_id: string;
+  author_name: string;
+  author_photo: string;
+  author_app_version: string;
+  review_timestamp: number;
+  review_datetime_utc: string;
+  review_likes: number;
+  app_developer_reply: string | null;
+  app_developer_reply_timestamp: number | null;
+  app_developer_reply_datetime_utc: string | null;
+}
 
-  type GroqResponse = {
-    choices?: Array<{
-      message?: {
-        content?: string;
+export interface ReviewAnalysis {
+  success: boolean;
+  error?: string;
+  data?: {
+    appId: string;
+    appName: string;
+    analysis: {
+      overview: string;
+      sentimentAnalysis: {
+        overall: 'positive' | 'negative' | 'neutral' | 'mixed';
+        score: number;
+        distribution: {
+          positive: number;
+          neutral: number;
+          negative: number;
+        };
+        trends: Array<{
+          topic: string;
+          sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
+          intensity: number;
+        }>;
       };
+      painPoints: Array<{
+        title: string;
+        description: string;
+        frequency: number;
+        impact: number;
+        sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
+        possibleSolutions: string[];
+      }>;
+      userExperiences: Array<{
+        scenario: string;
+        sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
+        impact: string;
+        frequencyPattern: string;
+      }>;
+      marketImplications: string;
+    };
+    sources: Array<{
+      id: string;
+      content: string;
+      sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
     }>;
   };
-
-  try {
-    const response = await fetchWithTimeout(
-      url,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${GROQ_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      },
-      TIMEOUT
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => null);
-      throw new Error(
-        `Groq API error (${response.status}): ${
-          errorData ? JSON.stringify(errorData) : response.statusText
-        }`
-      );
-    }
-
-    const data = await response.json() as GroqResponse;
-    const analysis = data?.choices?.[0]?.message?.content;
-
-    if (!analysis) {
-      throw new Error('No analysis generated from Groq API');
-    }
-
-    return analysis;
-
-  } catch (error) {
-    console.error('Groq API error:', error);
-    throw new Error(
-      `Analysis generation failed: ${
-        error instanceof Error ? error.message : 'Unknown error'
-      }`
-    );
-  }
 }
 
-// Utility function to sanitize text
-function sanitizeText(text: string, maxLength: number = 500): string {
-  if (!text) return '';
-  const sanitized = text.replace(/\s+/g, ' ').trim();
-  if (sanitized.length <= maxLength) return sanitized;
-  const truncated = sanitized.substring(0, maxLength);
-  return truncated.substring(0, truncated.lastIndexOf(' ')) + '...';
-}
+const API_HOST = 'store-apps.p.rapidapi.com';
+const API_KEY = '3fe4222f05mshee7786231fb68c8p1cae9bjsnaeb6f8469718';
+const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || 'your-groq-api-key';
 
-// Direct API call for reviews (for testing or direct use)
-export async function getReviewsDirectCall(
-  appId: string = 'com.snapchat.android',
-  limit: number = 10,
-  sortBy: string = 'MOST_RELEVANT',
-  rating: string = 'ANY',
-  region: string = 'us',
-  language: string = 'en'
-): Promise<Review[]> {
+export const searchApps = async (query: string): Promise<AppBasic[]> => {
   try {
-    const url = `https://store-apps.p.rapidapi.com/app-reviews?app_id=${appId}&limit=${limit}&sort_by=${sortBy}&device=PHONE&rating=${rating}&region=${region}&language=${language}`;
+    const url = `https://${API_HOST}/search?q=${encodeURIComponent(query)}&limit=10`;
     
-    const options = {
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'x-rapidapi-key': RAPIDAPI_KEY || '',
-        'x-rapidapi-host': RAPIDAPI_HOST
+        'x-rapidapi-key': API_KEY,
+        'x-rapidapi-host': API_HOST
       }
-    };
-    
-    const response = await fetch(url, options);
+    });
     
     if (!response.ok) {
-      throw new Error(`API responded with status code ${response.status}`);
+      throw new Error(`Failed to search apps: ${response.status}`);
     }
     
     const result = await response.json();
-    const validatedResponse = ReviewResponseSchema.parse(result);
     
-    return validatedResponse.data.reviews;
-  } catch (error) {
-    console.error('Direct API call error:', error);
-    throw new Error(`Failed to fetch reviews: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-}
-
-// Get app details including images
-export async function getAppDetails(appId: string, region: string = 'us', language: string = 'en'): Promise<App> {
-  try {
-    if (!appId.trim()) {
-      throw new ApiError('App ID cannot be empty', 'INVALID_APP_ID');
+    if (result.status !== "OK" || !result.data || !result.data.apps) {
+      throw new Error('Invalid response format from API');
     }
-
-    const url = `https://store-apps.p.rapidapi.com/app?app_id=${appId}&region=${region}&language=${language}`;
     
-    const options = {
+    return result.data.apps.map((app: any) => ({
+      app_id: app.app_id,
+      app_name: app.app_name,
+      app_icon: app.app_icon || '', // Using direct app_icon field from the response
+      app_category: app.app_category,
+      rating: app.rating
+    }));
+    
+  } catch (error) {
+    console.error('Error searching apps:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to search apps');
+  }
+};
+
+export const getAppDetails = async (appId: string): Promise<App> => {
+  try {
+    const url = `https://${API_HOST}/app-details?app_id=${encodeURIComponent(appId)}`;
+    
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'x-rapidapi-key': RAPIDAPI_KEY || '',
-        'x-rapidapi-host': RAPIDAPI_HOST
+        'x-rapidapi-key': API_KEY,
+        'x-rapidapi-host': API_HOST
       }
-    };
-    
-    const response = await fetchWithTimeout(url, options, TIMEOUT);
+    });
     
     if (!response.ok) {
-      throw new ApiError(`API responded with status code ${response.status}`, 'API_ERROR');
+      throw new Error(`Failed to get app details: ${response.status}`);
     }
     
-    const responseData = await response.json();
+    const result = await response.json();
     
-    // Extract app details from the response
-    const appData = responseData.data;
-    
-    // Extract screenshots and app icon
-    let appIcon = '';
-    let screenshots: string[] = [];
-    
-    if (appData.photos) {
-      // Handle photos as array
-      if (Array.isArray(appData.photos)) {
-        // Extract app icon
-        const iconObj = appData.photos.find(item => item && typeof item === 'object' && 'app_icon' in item);
-        if (iconObj && 'app_icon' in iconObj) {
-          appIcon = iconObj.app_icon;
-        }
-        
-        // Extract screenshots
-        appData.photos.forEach(photo => {
-          if (photo && typeof photo === 'object' && 'url' in photo) {
-            screenshots.push(photo.url);
-          }
-        });
-      } 
-      // Handle photos as object
-      else if (appData.photos && typeof appData.photos === 'object') {
-        if ('app_icon' in appData.photos) {
-          appIcon = appData.photos.app_icon;
-        }
-        
-        if ('screenshots' in appData.photos && Array.isArray(appData.photos.screenshots)) {
-          screenshots = appData.photos.screenshots.map(screenshot => 
-            typeof screenshot === 'string' ? screenshot : screenshot.url || ''
-          ).filter(Boolean);
-        }
-      }
+    if (result.status !== "OK" || !result.data) {
+      throw new Error('Invalid response format from API');
     }
     
-    // Add the extracted images to the app data
-    const enrichedAppData = {
-      ...appData,
-      app_icon: appIcon,
-      screenshots: screenshots
-    };
+    return result.data as App;
     
-    return enrichedAppData as App;
   } catch (error) {
-    console.error('App details error:', error);
-    throw new ApiError(
-      'Failed to fetch app details',
-      error instanceof Error ? error.message : 'APP_DETAILS_ERROR'
-    );
+    console.error('Error getting app details:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to get app details');
   }
-}
+};
+
+export const getAppReviews = async (
+  appId: string, 
+  limit: number = 20, 
+  sortBy: 'MOST_RELEVANT' | 'NEWEST' = 'MOST_RELEVANT',
+  rating: 'ANY' | '1' | '2' | '3' | '4' | '5' = 'ANY'
+): Promise<Review[]> => {
+  try {
+    const url = `https://${API_HOST}/app-reviews?app_id=${encodeURIComponent(appId)}&limit=${limit}&sort_by=${sortBy}&device=PHONE&rating=${rating}&region=us&language=en`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'x-rapidapi-key': API_KEY,
+        'x-rapidapi-host': API_HOST
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to get app reviews: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    if (result.status !== "OK" || !result.data || !result.data.reviews) {
+      throw new Error('Invalid response format from API');
+    }
+    
+    return result.data.reviews as Review[];
+    
+  } catch (error) {
+    console.error('Error getting app reviews:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to get app reviews');
+  }
+};
+
+export const analyzeAppReviews = async (
+  appId: string, 
+  appName: string,
+  numberOfReviews: number = 10
+): Promise<ReviewAnalysis> => {
+  try {
+    const reviews = await getAppReviews(appId, numberOfReviews);
+    
+    if (reviews.length === 0) {
+      return {
+        success: false,
+        error: 'No reviews available for analysis'
+      };
+    }
+    
+    const reviewsForAnalysis = reviews.map(review => ({
+      id: review.review_id,
+      rating: review.review_rating,
+      text: review.review_text,
+      timestamp: review.review_timestamp,
+      date: review.review_datetime_utc,
+      version: review.author_app_version
+    }));
+    
+    const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
+    
+    const groqResponse = await fetch(groqUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: "deepseek-r1-distill-qwen-32b",
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert app review analyst. You will analyze app reviews to provide insights about user sentiment, pain points, and product opportunities. Reply with JSON only.`
+          },
+          {
+            role: "user",
+            content: `Analyze these reviews for the app "${appName}" (ID: ${appId}). Extract key insights, sentiment, and pain points. Format your analysis exactly according to this JSON schema:
+            {
+              "appId": "string",
+              "appName": "string",
+              "analysis": {
+                "overview": "string",
+                "sentimentAnalysis": {
+                  "overall": "positive|negative|neutral|mixed",
+                  "score": number,
+                  "distribution": {
+                    "positive": number,
+                    "neutral": number,
+                    "negative": number
+                  },
+                  "trends": [
+                    {
+                      "topic": "string",
+                      "sentiment": "positive|negative|neutral|mixed",
+                      "intensity": number
+                    }
+                  ]
+                },
+                "painPoints": [
+                  {
+                    "title": "string",
+                    "description": "string",
+                    "frequency": number,
+                    "impact": number,
+                    "sentiment": "positive|negative|neutral|mixed",
+                    "possibleSolutions": ["string"]
+                  }
+                ],
+                "userExperiences": [
+                  {
+                    "scenario": "string",
+                    "sentiment": "positive|negative|neutral|mixed",
+                    "impact": "string",
+                    "frequencyPattern": "string"
+                  }
+                ],
+                "marketImplications": "string"
+              },
+              "sources": [
+                {
+                  "id": "string",
+                  "content": "string",
+                  "sentiment": "positive|negative|neutral|mixed"
+                }
+              ]
+            }
+            
+            Reviews: ${JSON.stringify(reviewsForAnalysis)}`
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 4500,
+        response_format: { type: 'json_object' },
+      })
+    });
+    
+    if (!groqResponse.ok) {
+      console.error('Groq analysis failed:', await groqResponse.text());
+      throw new Error(`Failed to analyze reviews: ${groqResponse.status}`);
+    }
+    
+    const analysisResult = await groqResponse.json();
+    
+    if (!analysisResult.choices || !analysisResult.choices[0]?.message?.content) {
+      throw new Error('Invalid response from Groq');
+    }
+    
+    try {
+      const analysisData = JSON.parse(analysisResult.choices[0].message.content);
+      
+      return {
+        success: true,
+        data: analysisData
+      };
+      
+    } catch (parseError) {
+      console.error('Error parsing analysis JSON:', parseError);
+      return {
+        success: false,
+        error: 'Failed to parse analysis results'
+      };
+    }
+    
+  } catch (error) {
+    console.error('Error analyzing app reviews:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to analyze app reviews'
+    };
+  }
+};
