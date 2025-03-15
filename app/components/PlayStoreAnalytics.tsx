@@ -16,7 +16,7 @@ import { Button } from '@/app/components/ui/button';
 import { Skeleton } from "@/app/components/ui/skeleton";
 import { Progress } from "@/app/components/ui/progress";
 import { Badge } from "@/app/components/ui/badge";
-import type { AppBasic, App, Review, ReviewAnalysis } from '@/app/api/playstoreAnalyticsApi';
+import type { AppBasic, Review, ReviewAnalysis } from '@/app/api/playstoreAnalyticsApi';
 
 // Error state interface
 interface ErrorState {
