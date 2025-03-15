@@ -105,36 +105,82 @@ export interface ReviewAnalysis {
   };
 }
 
+// Define interfaces for API responses
+interface SearchApiResponse {
+  status: string;
+  data: {
+    apps: Array<{
+      app_id: string;
+      app_name: string;
+      app_icon: string;
+      app_category?: string;
+      rating?: number;
+    }>;
+  };
+}
+
+interface ReviewsApiResponse {
+  status: string;
+  data: {
+    reviews: Review[];
+  };
+}
+
+interface ApiResponse<T> {
+  status: string;
+  data: T;
+}
+
+interface ReviewForAnalysis {
+  id: string;
+  rating: number;
+  text: string;
+  timestamp: number;
+  date: string;
+  version: string;
+}
+
+interface GroqResponse {
+  choices?: Array<{
+    message?: {
+      content: string;
+    };
+  }>;
+}
+
 const API_HOST = 'store-apps.p.rapidapi.com';
-const API_KEY = '3fe4222f05mshee7786231fb68c8p1cae9bjsnaeb6f8469718';
-const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || 'your-groq-api-key';
+const API_KEY = process.env.NEXT_PUBLIC_PRAPID_API_KEY;
+const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY;
 
 export const searchApps = async (query: string): Promise<AppBasic[]> => {
   try {
     const url = `https://${API_HOST}/search?q=${encodeURIComponent(query)}&limit=10`;
     
+    // Fix: Use Record<string, string> for headers to satisfy HeadersInit type
+    const headers: Record<string, string> = {
+      'x-rapidapi-key': API_KEY || '',
+      'x-rapidapi-host': API_HOST
+    };
+    
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'x-rapidapi-key': API_KEY,
-        'x-rapidapi-host': API_HOST
-      }
+      headers
     });
     
     if (!response.ok) {
       throw new Error(`Failed to search apps: ${response.status}`);
     }
     
-    const result = await response.json();
+    const result = await response.json() as SearchApiResponse;
     
     if (result.status !== "OK" || !result.data || !result.data.apps) {
       throw new Error('Invalid response format from API');
     }
     
-    return result.data.apps.map((app: any) => ({
+    return result.data.apps.map((app) => ({
       app_id: app.app_id,
       app_name: app.app_name,
-      app_icon: app.app_icon || '', // Using direct app_icon field from the response
+      app_icon: app.app_icon || '',
       app_category: app.app_category,
       rating: app.rating
     }));
@@ -149,25 +195,28 @@ export const getAppDetails = async (appId: string): Promise<App> => {
   try {
     const url = `https://${API_HOST}/app-details?app_id=${encodeURIComponent(appId)}`;
     
+    // Fix: Use Record<string, string> for headers to satisfy HeadersInit type
+    const headers: Record<string, string> = {
+      'x-rapidapi-key': API_KEY || '',
+      'x-rapidapi-host': API_HOST
+    };
+    
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'x-rapidapi-key': API_KEY,
-        'x-rapidapi-host': API_HOST
-      }
+      headers
     });
     
     if (!response.ok) {
       throw new Error(`Failed to get app details: ${response.status}`);
     }
     
-    const result = await response.json();
+    const result = await response.json() as ApiResponse<App>;
     
     if (result.status !== "OK" || !result.data) {
       throw new Error('Invalid response format from API');
     }
     
-    return result.data as App;
+    return result.data;
     
   } catch (error) {
     console.error('Error getting app details:', error);
@@ -184,25 +233,28 @@ export const getAppReviews = async (
   try {
     const url = `https://${API_HOST}/app-reviews?app_id=${encodeURIComponent(appId)}&limit=${limit}&sort_by=${sortBy}&device=PHONE&rating=${rating}&region=us&language=en`;
     
+    // Fix: Use Record<string, string> for headers to satisfy HeadersInit type
+    const headers: Record<string, string> = {
+      'x-rapidapi-key': API_KEY || '',
+      'x-rapidapi-host': API_HOST
+    };
+    
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'x-rapidapi-key': API_KEY,
-        'x-rapidapi-host': API_HOST
-      }
+      headers
     });
     
     if (!response.ok) {
       throw new Error(`Failed to get app reviews: ${response.status}`);
     }
     
-    const result = await response.json();
+    const result = await response.json() as ReviewsApiResponse;
     
     if (result.status !== "OK" || !result.data || !result.data.reviews) {
       throw new Error('Invalid response format from API');
     }
     
-    return result.data.reviews as Review[];
+    return result.data.reviews;
     
   } catch (error) {
     console.error('Error getting app reviews:', error);
@@ -225,7 +277,7 @@ export const analyzeAppReviews = async (
       };
     }
     
-    const reviewsForAnalysis = reviews.map(review => ({
+    const reviewsForAnalysis: ReviewForAnalysis[] = reviews.map(review => ({
       id: review.review_id,
       rating: review.review_rating,
       text: review.review_text,
@@ -236,12 +288,14 @@ export const analyzeAppReviews = async (
     
     const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
     
+    const groqHeaders: Record<string, string> = {
+      'Authorization': `Bearer ${GROQ_API_KEY || ''}`,
+      'Content-Type': 'application/json'
+    };
+    
     const groqResponse = await fetch(groqUrl, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
+      headers: groqHeaders,
       body: JSON.stringify({
         model: "deepseek-r1-distill-qwen-32b",
         messages: [
@@ -316,7 +370,7 @@ export const analyzeAppReviews = async (
       throw new Error(`Failed to analyze reviews: ${groqResponse.status}`);
     }
     
-    const analysisResult = await groqResponse.json();
+    const analysisResult = await groqResponse.json() as GroqResponse;
     
     if (!analysisResult.choices || !analysisResult.choices[0]?.message?.content) {
       throw new Error('Invalid response from Groq');

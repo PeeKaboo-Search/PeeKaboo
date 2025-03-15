@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
 
 const inputVariants = cva(
-  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+  "flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
   {
     variants: {
       variant: {
@@ -12,27 +12,29 @@ const inputVariants = cva(
         ghost: "border-none bg-transparent shadow-none",
         underline: "border-b border-t-0 border-l-0 border-r-0 rounded-none px-0 shadow-none focus-visible:ring-0"
       },
-      size: {
+      inputSize: {
         default: "h-10 px-3 py-2",
         sm: "h-8 px-2 py-1 text-xs",
         lg: "h-12 px-4 py-3 text-lg"
       },
-      state: {
+      status: {
         default: "",
         error: "border-destructive focus-visible:ring-destructive"
       }
     },
     defaultVariants: {
       variant: "default",
-      size: "default",
-      state: "default"
+      inputSize: "default",
+      status: "default"
     }
   }
 );
 
-export interface InputProps
-  extends InputHTMLAttributes<HTMLInputElement>,
-    VariantProps<typeof inputVariants> {
+type InputVariantsProps = VariantProps<typeof inputVariants>;
+
+// Omit the conflicting 'size' property from HTML input attributes
+export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'>, 
+  Omit<InputVariantsProps, 'status'> {
   label?: string;
   helperText?: string;
   error?: boolean | string;
@@ -41,6 +43,8 @@ export interface InputProps
   containerClassName?: string;
   labelClassName?: string;
   helperClassName?: string;
+  // Re-add size but as an optional HTML attribute
+  htmlSize?: number;
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
@@ -50,19 +54,19 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     labelClassName,
     helperClassName,
     variant,
-    size,
-    state,
+    inputSize,
     label,
     helperText,
     error,
     leftIcon,
     rightIcon,
+    htmlSize,
     type = "text",
     ...props
   }, ref) => {
     // Determine if we should show error state
     const isError = Boolean(error);
-    const errorState = isError ? "error" : "default";
+    const errorStatus = isError ? "error" : "default";
     const errorMessage = typeof error === 'string' ? error : helperText;
 
     return (
@@ -88,11 +92,12 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             type={type}
             className={cn(
-              inputVariants({ variant, size, state: errorState }),
+              inputVariants({ variant, inputSize, status: errorStatus }),
               leftIcon && "pl-10",
               rightIcon && "pr-10",
               className
             )}
+            size={htmlSize}
             ref={ref}
             {...props}
           />

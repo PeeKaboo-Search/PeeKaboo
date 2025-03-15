@@ -4,8 +4,6 @@ import React, { useEffect, useState, useRef, memo } from 'react';
 import Image from 'next/image';
 import { 
   Star, 
-  Download, 
-  MessageSquare, 
   Loader2, 
   ChevronRight,
   AlertTriangle,
@@ -16,7 +14,6 @@ import { searchApps, getAppReviews, analyzeAppReviews } from '@/app/api/playstor
 import { Card, CardContent } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Skeleton } from "@/app/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/app/components/ui/tooltip";
 import { Progress } from "@/app/components/ui/progress";
 import { Badge } from "@/app/components/ui/badge";
 import type { AppBasic, App, Review, ReviewAnalysis } from '@/app/api/playstoreAnalyticsApi';
@@ -31,16 +28,6 @@ interface ErrorState {
 interface AppAnalyticsProps {
   query: string;
 }
-
-// Helper functions
-// Format large numbers in a readable way
-const formatNumber = (num: string | number) => {
-  const n = typeof num === 'string' ? parseInt(num) : num;
-  if (isNaN(n)) return 'N/A';
-  if (n >= 1000000) return `${(n/1000000).toFixed(1)}M`;
-  if (n >= 1000) return `${(n/1000).toFixed(1)}K`;
-  return n.toString();
-};
 
 // Format rating to display stars
 const RatingStars = ({ rating }: { rating: number }) => {
@@ -209,7 +196,6 @@ ReviewCard.displayName = 'ReviewCard';
 // Main App Analytics component
 const AppAnalytics: React.FC<AppAnalyticsProps> = ({ query }) => {
   const [apps, setApps] = useState<AppBasic[]>([]);
-  const [appDetails, setAppDetails] = useState<App | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [analysis, setAnalysis] = useState<ReviewAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
