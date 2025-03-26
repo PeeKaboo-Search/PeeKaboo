@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image'; // Import Next.js Image component
 import { createClient } from "@supabase/supabase-js";
 import { X, LogOut, History, User } from "lucide-react";
 
@@ -158,15 +159,19 @@ export const SideHistory: React.FC<SideHistoryProps> = ({
           className="w-full bg-white/10 text-white p-3 rounded-lg flex items-center justify-center hover:bg-white/20 transition-colors"
         >
           {user.user_metadata?.avatar_url ? (
-            <img 
+            <Image 
               src={user.user_metadata.avatar_url} 
               alt="User profile" 
+              width={32} 
+              height={32} 
               className="w-8 h-8 rounded-full mr-2 object-cover"
             />
           ) : (
             <User className="w-8 h-8 mr-2" />
           )}
-          Logout
+          <span className="flex items-center">
+            <LogOut className="mr-2" /> Logout
+          </span>
         </button>
       </div>
     </div>

@@ -107,14 +107,14 @@ export interface ChartOptions {
 }
 
 // Component and Prop Types
-export interface ComponentProps {
+export type ComponentProps = {
   query: string;
   className?: string;
   onDataLoaded?: (data: MarketAnalysisData) => void;
   onError?: (error: Error) => void;
-}
+};
 
-export interface TrendAnalysisProps extends ComponentProps {}
+export type TrendAnalysisProps = ComponentProps;
 
 // Error Handling Types
 export interface APIErrorResponse {
