@@ -3,19 +3,8 @@
 import React, { useState, lazy, Suspense, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { SideHistory } from "@/app/components/SideHistory";
-import { Menu, Save } from "lucide-react";
+import { Menu, X, Save, LogOut } from "lucide-react";
 import "app/styles/page.css";
-
-// Import type definitions for all components to ensure type safety
-import { ImageResultProps } from "app/components/ImageResult";
-import { MarketResearchProps } from "app/components/MarketResearch";
-import { AppAnalyticsProps } from "app/components/AppAnalytics";
-import { RedditAnalyticsProps } from "app/components/RedditAnalytics";
-import { YouTubeVideosProps } from "app/components/YTvideos";
-import { QuoraAnalyticsProps } from "app/components/QuoraAnalysis";
-import { StrategyAnalysisProps } from "app/components/StrategyAnalysis";
-import { FacebookAdsAnalysisProps } from "app/components/FacebookAdsAnalytics";
-import { XAnalyticsProps } from "app/components/XAnalytics";
 
 // Type Definitions
 interface SearchComponentConfig {
@@ -41,45 +30,6 @@ interface User {
   email?: string;
 }
 
-interface WindowInfo {
-  innerWidth: number;
-  innerHeight: number;
-  devicePixelRatio: number;
-  userAgent: string;
-  platform: string;
-}
-
-interface CapturedImage {
-  src: string;
-  base64: string | null;
-  width: number;
-  height: number;
-  alt: string;
-}
-
-interface ComponentInfo {
-  type: string;
-  props: Record<string, unknown>;
-  elementId?: string;
-  elementClass?: string;
-  elementType: string;
-}
-
-interface ApplicationState {
-  query: string;
-  activeComponents: string[];
-  timestamp: string;
-  userContext: { id: string; email?: string } | null;
-  windowInfo: WindowInfo;
-}
-
-interface ComprehensiveSnapshot {
-  applicationState: ApplicationState;
-  componentData: ComponentInfo[];
-  images: CapturedImage[];
-  stylesheets: string;
-}
-
 // Supabase Configuration
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!, 
@@ -89,47 +39,47 @@ const supabase = createClient(
 const SEARCH_COMPONENTS: SearchComponentConfig[] = [
   { 
     name: 'ImageResult', 
-    component: lazy(() => import("app/components/ImageResult").then(module => ({ default: module.default as React.ComponentType<ImageResultProps> }))), 
+    component: lazy(() => import("app/components/ImageResult")), 
     propType: 'query' 
   },
   { 
     name: 'GoogleAnalytics', 
-    component: lazy(() => import("app/components/MarketResearch").then(module => ({ default: module.default as React.ComponentType<MarketResearchProps> }))), 
+    component: lazy(() => import("app/components/GoogleAnalytics")), 
     propType: 'query' 
   },
   { 
     name: 'PlayStoreAnalytics', 
-    component: lazy(() => import("app/components/AppAnalytics").then(module => ({ default: module.default as React.ComponentType<AppAnalyticsProps> }))), 
+    component: lazy(() => import("app/components/PlayStoreAnalytics")), 
     propType: 'query' 
   },
   { 
     name: 'RedditAnalytics', 
-    component: lazy(() => import("app/components/RedditAnalytics").then(module => ({ default: module.default as React.ComponentType<RedditAnalyticsProps> }))), 
+    component: lazy(() => import("app/components/RedditAnalytics")), 
     propType: 'query' 
   },
   { 
     name: 'YouTubeVideos', 
-    component: lazy(() => import("app/components/YTvideos").then(module => ({ default: module.default as React.ComponentType<YouTubeVideosProps> }))),
+    component: lazy(() => import("app/components/YTvideos")), 
     propType: 'query' 
   },
   { 
     name: 'QuoraAnalysis', 
-    component: lazy(() => import("app/components/QuoraAnalysis").then(module => ({ default: module.default as React.ComponentType<QuoraAnalyticsProps> }))), 
+    component: lazy(() => import("app/components/QuoraAnalysis")), 
     propType: 'query' 
   },
   { 
     name: 'XAnalytics', 
-    component: lazy(() => import("app/components/XAnalytics").then(module => ({ default: module.default as React.ComponentType<XAnalyticsProps> }))), 
+    component: lazy(() => import("app/components/XAnalytics")), 
     propType: 'query' 
   },
   { 
     name: 'FacebookAdsAnalysis', 
-    component: lazy(() => import("app/components/FacebookAdsAnalytics").then(module => ({ default: module.default as React.ComponentType<FacebookAdsAnalysisProps> }))), 
+    component: lazy(() => import("app/components/FacebookAdsAnalytics")), 
     propType: 'keyword' 
   },
   { 
     name: 'StrategyAnalysis', 
-    component: lazy(() => import("app/components/StrategyAnalysis").then(module => ({ default: module.default as React.ComponentType<StrategyAnalysisProps> }))), 
+    component: lazy(() => import("app/components/StrategyAnalysis")), 
     propType: 'query' 
   },
 ];
@@ -169,7 +119,7 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({ submittedQuery, activeC
             className="result-card bg-black text-white border border-gray-800"
             data-component={config.name.toLowerCase()}
           >
-            <Component {...props as any} />
+            <Component {...props} />
           </div>
         );
       })}
@@ -231,25 +181,22 @@ const Page: React.FC = () => {
     if (!user) return;
   
     try {
-      const captureComprehensivePage = async (): Promise<string> => {
-        return new Promise((resolve, reject) => {
-          const safeStringify = (obj: unknown) => {
+      const captureComprehensivePage = async () => {
+        return new Promise<string>((resolve, reject) => {
+          const safeStringify = (obj: any) => {
             const cache = new WeakSet();
             return JSON.stringify(obj, (key, value) => {
               if (typeof value === 'object' && value !== null) {
-                if (cache.has(value)) {
-                  return '[Circular]';
-                }
+                if (cache.has(value)) return '[Circular]';
                 cache.add(value);
               }
-
               if (typeof value === 'function') return undefined;
-              
+              if (key === 'Provider' || key === 'context') return undefined;
               return value;
             }, 2);
           };
   
-          const captureImagesBase64 = (): CapturedImage[] => {
+          const captureImagesBase64 = () => {
             return Array.from(document.images).map(img => {
               try {
                 const canvas = document.createElement('canvas');
@@ -264,50 +211,39 @@ const Page: React.FC = () => {
                   height: img.naturalHeight,
                   alt: img.alt
                 };
-              } catch {
-                return {
-                  src: img.src,
-                  base64: null,
-                  width: img.naturalWidth,
-                  height: img.naturalHeight,
-                  alt: img.alt
-                };
+              } catch (e) {
+                return { src: img.src, base64: null };
               }
             });
           };
   
-          const captureApplicationState = (): ApplicationState => {
-            return {
-              query: submittedQuery || '',
-              activeComponents: activeComponents || [],
-              timestamp: new Date().toISOString(),
-              userContext: user ? {
-                id: user.id,
-                email: user.email
-              } : null,
-              windowInfo: {
-                innerWidth: window.innerWidth,
-                innerHeight: window.innerHeight,
-                devicePixelRatio: window.devicePixelRatio,
-                userAgent: navigator.userAgent,
-                platform: navigator.platform
-              }
-            };
-          };
+          const captureApplicationState = () => ({
+            query: submittedQuery || '',
+            activeComponents: activeComponents || [],
+            timestamp: new Date().toISOString(),
+            userContext: user ? { id: user.id, email: user.email } : null,
+            windowInfo: {
+              innerWidth: window.innerWidth,
+              innerHeight: window.innerHeight,
+              devicePixelRatio: window.devicePixelRatio,
+              userAgent: navigator.userAgent,
+              platform: navigator.platform
+            }
+          });
   
-          const captureComponentData = (): ComponentInfo[] => {
-            const componentData: ComponentInfo[] = [];
-
+          const captureComponentData = () => {
+            const componentData: Record<string, unknown>[] = [];
+  
             const extractComponentInfo = (element: Element) => {
               const reactKey = Object.keys(element).find(key => 
                 key.startsWith('__react') && 
-                typeof (element as Record<string, unknown>)[key] === 'object'
+                typeof (element as any)[key] === 'object'
               );
   
               if (reactKey) {
-                const fiber = (element as Record<string, unknown>)[reactKey];
+                const fiber = (element as any)[reactKey];
                 
-                const extractSafeProps = (props: Record<string, unknown>) => {
+                const extractSafeProps = (props: any) => {
                   if (!props) return {};
                   const safeProps: Record<string, unknown> = {};
                   
@@ -327,11 +263,9 @@ const Page: React.FC = () => {
                   return safeProps;
                 };
   
-                const componentInfo: ComponentInfo = {
-                  type: (fiber as { type?: { name?: string; displayName?: string } }).type?.name || 
-                         (fiber as { type?: { name?: string; displayName?: string } }).type?.displayName || 
-                         'Unknown',
-                  props: extractSafeProps((fiber as { memoizedProps?: Record<string, unknown> }).memoizedProps || {}),
+                const componentInfo: Record<string, unknown> = {
+                  type: fiber.type?.name || fiber.type?.displayName || 'Unknown',
+                  props: extractSafeProps(fiber.memoizedProps),
                   elementId: element.id,
                   elementClass: element.className,
                   elementType: element.tagName.toLowerCase()
@@ -347,61 +281,43 @@ const Page: React.FC = () => {
             return componentData;
           };
   
-          const captureStylesheets = (): string => {
-            const styleContents: string[] = [];
-            
-            Array.from(document.styleSheets).forEach(sheet => {
-              try {
-                const rules = Array.from(sheet.cssRules)
-                  .map(rule => {
-                    try {
-                      return rule.cssText;
-                    } catch {
-                      return '/* Unable to capture rule */';
-                    }
-                  })
-                  .join('\n');
-                styleContents.push(rules);
-              } catch {
-                if (sheet.href) {
-                  styleContents.push(`/* External Stylesheet: ${sheet.href} */`);
+          const captureStylesheets = () => {
+            return Array.from(document.styleSheets)
+              .map(sheet => {
+                try {
+                  return Array.from(sheet.cssRules)
+                    .map(rule => rule.cssText)
+                    .join('\n');
+                } catch {
+                  return sheet.href ? `/* External: ${sheet.href} */` : '';
                 }
-              }
-            });
-            
-            return styleContents.join('\n');
+              })
+              .join('\n');
           };
   
-          const createComprehensiveSnapshot = (): string => {
-            const snapshotData: ComprehensiveSnapshot = {
+          try {
+            const snapshotData = {
               applicationState: captureApplicationState(),
               componentData: captureComponentData(),
               images: captureImagesBase64(),
               stylesheets: captureStylesheets()
             };
   
-            const snapshotScript = `
+            const snapshotHTML = `
   <!DOCTYPE html>
   <html>
   <head>
     <meta charset="UTF-8">
-    <title>Peekaboo Comprehensive Snapshot</title>
-    <script id="__PEEKABOO_SNAPSHOT__" type="application/json">
+    <title>Snapshot</title>
+    <script id="SNAPSHOT_DATA" type="application/json">
     ${safeStringify(snapshotData)}
     </script>
   </head>
   <body>
-    <!-- Snapshot preserved from original page -->
     ${document.documentElement.innerHTML}
   </body>
-  </html>
-  `;
+  </html>`;
   
-            return snapshotScript;
-          };
-  
-          try {
-            const snapshotHTML = createComprehensiveSnapshot();
             const blob = new Blob([snapshotHTML], { type: 'text/html' });
             const reader = new FileReader();
             reader.onloadend = () => resolve(reader.result as string);
@@ -414,12 +330,9 @@ const Page: React.FC = () => {
       };
       
       const snapshotData = await captureComprehensivePage();
+      const fileName = `search_reports/${user.id}/${Date.now()}.html`;
       
-      const fileName = `search_reports/${user.id}/${Date.now()}_comprehensive.html`;
-      
-      const snapshotBlob = typeof snapshotData === 'string' && snapshotData.startsWith('data:')
-        ? await (await fetch(snapshotData)).blob()
-        : new Blob([snapshotData], { type: 'text/html' });
+      const snapshotBlob = await (await fetch(snapshotData)).blob();
       
       const { error: uploadError } = await supabase.storage
         .from('search_reports')
@@ -447,10 +360,10 @@ const Page: React.FC = () => {
       
       if (error) throw error;
       
-      alert('Comprehensive snapshot saved successfully!');
+      alert('Snapshot saved!');
     } catch (error) {
-      console.error('Snapshot capture error:', error);
-      alert('Failed to save comprehensive snapshot');
+      console.error('Error saving:', error);
+      alert('Save failed');
     }
   };
 
@@ -458,7 +371,6 @@ const Page: React.FC = () => {
     await supabase.auth.signOut();
   };
 
-  // If no user, show login page
   if (!user) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -466,28 +378,8 @@ const Page: React.FC = () => {
           <h1 className="text-3xl mb-6 text-center">Peekaboo</h1>
           <div className="flex justify-center">
             <button 
-              onClick={() => supabase.auth.signInWithOAuth({ 
-                provider: 'google',
-                options: {
-                  queryParams: {
-                    access_type: 'offline',
-                    prompt: 'consent'
-                  }
-                }
-              })}
-              className="
-                bg-gray-800 
-                text-white 
-                px-6 py-3 
-                rounded-lg 
-                hover:bg-gray-700 
-                transition-colors 
-                duration-300 
-                border 
-                border-gray-700 
-                hover:border-gray-600 
-                shadow-md 
-                hover:shadow-lg"
+              onClick={() => supabase.auth.signInWithOAuth({ provider: 'google' })}
+              className="bg-white text-black px-4 py-2 rounded"
             >
               Sign in with Google
             </button>
@@ -499,7 +391,6 @@ const Page: React.FC = () => {
 
   return (
     <div className="search-container bg-black min-h-screen text-white relative">
-      {/* Side History Drawer */}
       <SideHistory 
         isOpen={isSideHistoryOpen} 
         onClose={() => setIsSideHistoryOpen(false)}
@@ -507,30 +398,21 @@ const Page: React.FC = () => {
         onSignOut={handleSignOut}
       />
 
-      {/* History Toggle Button - Now conditionally rendered */}
       {!isSideHistoryOpen && (
         <button 
           onClick={() => setIsSideHistoryOpen(!isSideHistoryOpen)}
-          className="fixed top-4 left-4 z-50 bg-white/20 backdrop-blur-sm p-2 rounded-full"
+          className="fixed top-4 left-4 z-50 bg-white/20 p-2 rounded-full"
         >
           <Menu className="text-white" />
         </button>
       )}
 
-      {/* Save Button */}
       <div className="floating-save-container absolute right-8 top-8 z-50">
         <button 
           onClick={handleSave} 
-          className="
-            bg-white/10 hover:bg-white/20 
-            backdrop-blur-md 
-            p-3 rounded-full 
-            shadow-lg hover:shadow-xl
-            transition-all duration-300 ease-in-out
-            flex items-center justify-center
-            border border-white/10 hover:border-white/30"
+          className="bg-white/10 p-3 rounded-full border border-white/10"
         >
-          <Save className="text-white/80 hover:text-white w-6 h-6" />
+          <Save className="text-white/80 w-6 h-6" />
         </button>
       </div>
 
@@ -554,27 +436,25 @@ const Page: React.FC = () => {
           <button
             key={name}
             onClick={() => toggleComponent(name)}
-            className={`glass-toggle ${activeComponents.includes(name) 
-              ? 'active bg-white/30 text-white' 
-              : 'bg-black/50 text-white/50'} 
-              w-4 h-4 rounded-full transition-all duration-300 ease-in-out hover:scale-105`}
-            data-component={name.toLowerCase()}
-            aria-label={`Toggle ${name}`}
+            className={`w-4 h-4 rounded-full ${
+              activeComponents.includes(name) 
+                ? 'bg-white/30' 
+                : 'bg-black/50'
+            }`}
           />
         ))}
       </div>
 
       {submittedQuery && (
-        <div className="query-display text-center my-4">
-          Showing results for: <span className="query-text">{submittedQuery}</span>
-        </div>
-      )}
-
-      {submittedQuery && (
-        <ResultsSection 
-          submittedQuery={submittedQuery} 
-          activeComponents={activeComponents} 
-        />
+        <>
+          <div className="query-display text-center my-4">
+            Showing results for: <span className="query-text">{submittedQuery}</span>
+          </div>
+          <ResultsSection 
+            submittedQuery={submittedQuery} 
+            activeComponents={activeComponents} 
+          />
+        </>
       )}
     </div>
   );
