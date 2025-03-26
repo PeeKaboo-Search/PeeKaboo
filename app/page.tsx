@@ -6,10 +6,21 @@ import { SideHistory } from "@/app/components/SideHistory";
 import { Menu, Save } from "lucide-react";
 import "app/styles/page.css";
 
+// Import type definitions for all components to ensure type safety
+import { ImageResultProps } from "app/components/ImageResult";
+import { MarketResearchProps } from "app/components/MarketResearch";
+import { AppAnalyticsProps } from "app/components/AppAnalytics";
+import { RedditAnalyticsProps } from "app/components/RedditAnalytics";
+import { YouTubeVideosProps } from "app/components/YTvideos";
+import { QuoraAnalyticsProps } from "app/components/QuoraAnalysis";
+import { StrategyAnalysisProps } from "app/components/StrategyAnalysis";
+import { FacebookAdsAnalysisProps } from "app/components/FacebookAdsAnalytics";
+import { XAnalyticsProps } from "app/components/XAnalytics";
+
 // Type Definitions
 interface SearchComponentConfig {
   name: string;
-  component: React.LazyExoticComponent<React.ComponentType<unknown>>;
+  component: React.LazyExoticComponent<React.ComponentType<any>>;
   propType: 'query' | 'keyword';
 }
 
@@ -78,47 +89,47 @@ const supabase = createClient(
 const SEARCH_COMPONENTS: SearchComponentConfig[] = [
   { 
     name: 'ImageResult', 
-    component: lazy(() => import("app/components/ImageResult")), 
+    component: lazy(() => import("app/components/ImageResult").then(module => ({ default: module.default as React.ComponentType<ImageResultProps> }))), 
     propType: 'query' 
   },
   { 
     name: 'GoogleAnalytics', 
-    component: lazy(() => import("app/components/GoogleAnalytics")), 
+    component: lazy(() => import("app/components/MarketResearch").then(module => ({ default: module.default as React.ComponentType<MarketResearchProps> }))), 
     propType: 'query' 
   },
   { 
     name: 'PlayStoreAnalytics', 
-    component: lazy(() => import("app/components/PlayStoreAnalytics")), 
+    component: lazy(() => import("app/components/AppAnalytics").then(module => ({ default: module.default as React.ComponentType<AppAnalyticsProps> }))), 
     propType: 'query' 
   },
   { 
     name: 'RedditAnalytics', 
-    component: lazy(() => import("app/components/RedditAnalytics")), 
+    component: lazy(() => import("app/components/RedditAnalytics").then(module => ({ default: module.default as React.ComponentType<RedditAnalyticsProps> }))), 
     propType: 'query' 
   },
   { 
     name: 'YouTubeVideos', 
-    component: lazy(() => import("app/components/YTvideos").then(module => ({ default: module.default }))),
+    component: lazy(() => import("app/components/YTvideos").then(module => ({ default: module.default as React.ComponentType<YouTubeVideosProps> }))),
     propType: 'query' 
   },
   { 
     name: 'QuoraAnalysis', 
-    component: lazy(() => import("app/components/QuoraAnalysis")), 
+    component: lazy(() => import("app/components/QuoraAnalysis").then(module => ({ default: module.default as React.ComponentType<QuoraAnalyticsProps> }))), 
     propType: 'query' 
   },
   { 
     name: 'XAnalytics', 
-    component: lazy(() => import("app/components/XAnalytics")), 
+    component: lazy(() => import("app/components/XAnalytics").then(module => ({ default: module.default as React.ComponentType<XAnalyticsProps> }))), 
     propType: 'query' 
   },
   { 
     name: 'FacebookAdsAnalysis', 
-    component: lazy(() => import("app/components/FacebookAdsAnalytics")), 
+    component: lazy(() => import("app/components/FacebookAdsAnalytics").then(module => ({ default: module.default as React.ComponentType<FacebookAdsAnalysisProps> }))), 
     propType: 'keyword' 
   },
   { 
     name: 'StrategyAnalysis', 
-    component: lazy(() => import("app/components/StrategyAnalysis")), 
+    component: lazy(() => import("app/components/StrategyAnalysis").then(module => ({ default: module.default as React.ComponentType<StrategyAnalysisProps> }))), 
     propType: 'query' 
   },
 ];
@@ -158,7 +169,7 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({ submittedQuery, activeC
             className="result-card bg-black text-white border border-gray-800"
             data-component={config.name.toLowerCase()}
           >
-            <Component {...props} />
+            <Component {...props as any} />
           </div>
         );
       })}
