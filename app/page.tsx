@@ -1,22 +1,15 @@
-'use client';
+"use client";
 
-import React, { useState, lazy, Suspense, useEffect, ComponentType } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import React, { useState, lazy, Suspense, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
 import { SideHistory } from "@/app/components/SideHistory";
-import { Menu, Save } from "lucide-react";
+import { Menu, X, Save, LogOut } from "lucide-react";
 import "app/styles/page.css";
 
 // Type Definitions
-interface SearchComponentProps {
-  query?: string;
-  keyword?: string;
-}
-
-type SearchComponent = ComponentType<SearchComponentProps>;
-
 interface SearchComponentConfig {
   name: string;
-  component: React.LazyExoticComponent<SearchComponent>;
+  component: React.LazyExoticComponent<React.ComponentType<any>>;
   propType: 'query' | 'keyword';
 }
 
@@ -35,94 +28,59 @@ interface ResultsSectionProps {
 interface User {
   id: string;
   email?: string;
+  // Add other user properties as needed
 }
 
-interface WindowInfo {
-  innerWidth: number;
-  innerHeight: number;
-  devicePixelRatio: number;
-  userAgent: string;
-  platform: string;
-}
-
-interface ApplicationState {
-  query: string;
-  activeComponents: string[];
-  timestamp: string;
-  userContext: {
-    id: string;
-    email?: string;
-  } | null;
-  windowInfo: WindowInfo;
-}
-
-interface ImageData {
-  src: string;
-  base64: string | null;
-  width: number;
-  height: number;
-  alt: string;
-}
-
-interface ComponentInfo {
-  type: string;
-  props: Record<string, unknown>;
-  elementId: string;
-  elementClass: string;
-  elementType: string;
-}
-
-interface SnapshotData {
-  applicationState: ApplicationState;
-  componentData: ComponentInfo[];
-  images: ImageData[];
-  stylesheets: string;
-}
+// Supabase Configuration
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!, 
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 const SEARCH_COMPONENTS: SearchComponentConfig[] = [
   { 
     name: 'ImageResult', 
-    component: lazy(() => import("@/app/components/ImageResult")), 
+    component: lazy(() => import("app/components/ImageResult")), 
     propType: 'query' 
   },
   { 
     name: 'GoogleAnalytics', 
-    component: lazy(() => import("@/app/components/GoogleAnalytics")), 
+    component: lazy(() => import("app/components/GoogleAnalytics")), 
     propType: 'query' 
   },
   { 
     name: 'PlayStoreAnalytics', 
-    component: lazy(() => import("@/app/components/PlayStoreAnalytics")), 
+    component: lazy(() => import("app/components/PlayStoreAnalytics")), 
     propType: 'query' 
   },
   { 
     name: 'RedditAnalytics', 
-    component: lazy(() => import("@/app/components/RedditAnalytics")), 
+    component: lazy(() => import("app/components/RedditAnalytics")), 
     propType: 'query' 
   },
   { 
     name: 'YouTubeVideos', 
-    component: lazy(() => import("@/app/components/YTvideos")),
+    component: lazy(() => import("app/components/YTvideos").then(module => ({ default: module.default }))),
     propType: 'query' 
   },
   { 
     name: 'QuoraAnalysis', 
-    component: lazy(() => import("@/app/components/QuoraAnalysis")), 
+    component: lazy(() => import("app/components/QuoraAnalysis")), 
     propType: 'query' 
   },
   { 
     name: 'XAnalytics', 
-    component: lazy(() => import("@/app/components/XAnalytics")), 
+    component: lazy(() => import("app/components/XAnalytics")), 
     propType: 'query' 
   },
   { 
     name: 'FacebookAdsAnalysis', 
-    component: lazy(() => import("@/app/components/FacebookAdsAnalytics")), 
+    component: lazy(() => import("app/components/FacebookAdsAnalytics")), 
     propType: 'keyword' 
   },
   { 
     name: 'StrategyAnalysis', 
-    component: lazy(() => import("@/app/components/StrategyAnalysis")), 
+    component: lazy(() => import("app/components/StrategyAnalysis")), 
     propType: 'query' 
   },
 ];
@@ -136,12 +94,10 @@ const SearchForm: React.FC<SearchFormProps> = ({ query, setQuery, handleSearch, 
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className="search-input bg-black text-white"
-        disabled={isSearching}
       />
       <button
         type="submit"
         className="search-button bg-white text-black"
-        disabled={isSearching}
       >
         {isSearching ? "Searching..." : "Search"}
       </button>
@@ -179,7 +135,6 @@ const Page: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [activeComponents, setActiveComponents] = useState<string[]>([]);
   const [isSideHistoryOpen, setIsSideHistoryOpen] = useState(false);
-  const supabase = createClientComponentClient();
 
   useEffect(() => {
     const checkUser = async () => {
@@ -188,16 +143,16 @@ const Page: React.FC = () => {
     };
     checkUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setUser(session?.user ?? null);
       }
     );
 
     return () => {
-      subscription.unsubscribe();
+      authListener.subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, []);
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -227,12 +182,228 @@ const Page: React.FC = () => {
     if (!user) return;
   
     try {
-      const snapshotData = await capturePageSnapshot();
+      const captureComprehensivePage = async () => {
+        return new Promise<string>((resolve, reject) => {
+          // Safe JSON stringify to handle circular references
+          const safeStringify = (obj: any) => {
+            const cache = new WeakSet();
+            return JSON.stringify(obj, (key, value) => {
+              // Handle React-specific circular references
+              if (typeof value === 'object' && value !== null) {
+                if (cache.has(value)) {
+                  // Circular reference found, return a placeholder
+                  return '[Circular]';
+                }
+                cache.add(value);
+              }
+  
+              // Remove function references and complex objects
+              if (typeof value === 'function') return undefined;
+              
+              // Handle specific React and Next.js objects
+              if (key === 'Provider' || key === 'context') return undefined;
+              
+              // Stringify simple values
+              return value;
+            }, 2);
+          };
+  
+          // Capture images safely
+          const captureImagesBase64 = () => {
+            return Array.from(document.images).map(img => {
+              try {
+                // Use natural dimensions for more accurate capture
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(img, 0, 0);
+                return {
+                  src: img.src,
+                  base64: canvas.toDataURL('image/png'),
+                  width: img.naturalWidth,
+                  height: img.naturalHeight,
+                  alt: img.alt
+                };
+              } catch (e) {
+                return {
+                  src: img.src,
+                  base64: null,
+                  width: img.naturalWidth,
+                  height: img.naturalHeight,
+                  alt: img.alt
+                };
+              }
+            });
+          };
+  
+          // Capture application state safely
+          const captureApplicationState = () => {
+            return {
+              query: submittedQuery || '',
+              activeComponents: activeComponents || [],
+              timestamp: new Date().toISOString(),
+              userContext: user ? {
+                id: user.id,
+                email: user.email
+              } : null,
+              windowInfo: {
+                innerWidth: window.innerWidth,
+                innerHeight: window.innerHeight,
+                devicePixelRatio: window.devicePixelRatio,
+                userAgent: navigator.userAgent,
+                platform: navigator.platform
+              }
+            };
+          };
+  
+          // Capture component data safely
+          const captureComponentData = () => {
+            const componentData: any[] = [];
+  
+            const extractComponentInfo = (element: Element) => {
+              // Find React fiber node safely
+              const reactKey = Object.keys(element).find(key => 
+                key.startsWith('__react') && 
+                typeof (element as any)[key] === 'object'
+              );
+  
+              if (reactKey) {
+                const fiber = (element as any)[reactKey];
+                
+                // Safely extract props and state
+                const extractSafeProps = (props: any) => {
+                  if (!props) return {};
+                  const safeProps: any = {};
+                  
+                  Object.keys(props).forEach(key => {
+                    // Skip functions, complex objects, and known problematic keys
+                    if (typeof props[key] !== 'function' && 
+                        key !== 'children' && 
+                        key !== 'Provider' && 
+                        key !== 'context') {
+                      try {
+                        // Attempt to stringify simple values
+                        safeProps[key] = JSON.parse(JSON.stringify(props[key]));
+                      } catch {
+                        // Fallback to basic type or string representation
+                        safeProps[key] = String(props[key]);
+                      }
+                    }
+                  });
+                  
+                  return safeProps;
+                };
+  
+                // Collect safe component information
+                const componentInfo = {
+                  type: fiber.type?.name || fiber.type?.displayName || 'Unknown',
+                  props: extractSafeProps(fiber.memoizedProps),
+                  elementId: element.id,
+                  elementClass: element.className,
+                  elementType: element.tagName.toLowerCase()
+                };
+  
+                componentData.push(componentInfo);
+              }
+  
+              // Recursively process child elements
+              Array.from(element.children).forEach(extractComponentInfo);
+            };
+  
+            // Start extraction from body
+            extractComponentInfo(document.body);
+            return componentData;
+          };
+  
+          // Capture stylesheets safely
+          const captureStylesheets = () => {
+            const styleContents: string[] = [];
+            
+            Array.from(document.styleSheets).forEach(sheet => {
+              try {
+                // Capture CSS rules safely
+                const rules = Array.from(sheet.cssRules)
+                  .map(rule => {
+                    try {
+                      return rule.cssText;
+                    } catch {
+                      return '/* Unable to capture rule */';
+                    }
+                  })
+                  .join('\n');
+                styleContents.push(rules);
+              } catch {
+                // Fallback for cross-origin stylesheets
+                if (sheet.href) {
+                  styleContents.push(`/* External Stylesheet: ${sheet.href} */`);
+                }
+              }
+            });
+            
+            return styleContents.join('\n');
+          };
+  
+          // Create comprehensive snapshot
+          const createComprehensiveSnapshot = () => {
+            // Capture all data safely
+            const snapshotData = {
+              applicationState: captureApplicationState(),
+              componentData: captureComponentData(),
+              images: captureImagesBase64(),
+              stylesheets: captureStylesheets()
+            };
+  
+            // Create a script tag with the snapshot data
+            const snapshotScript = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Peekaboo Comprehensive Snapshot</title>
+    <script id="__PEEKABOO_SNAPSHOT__" type="application/json">
+    ${safeStringify(snapshotData)}
+    </script>
+  </head>
+  <body>
+    <!-- Snapshot preserved from original page -->
+    ${document.documentElement.innerHTML}
+  </body>
+  </html>
+  `;
+  
+            return snapshotScript;
+          };
+  
+          // Generate and resolve snapshot
+          try {
+            const snapshotHTML = createComprehensiveSnapshot();
+            const blob = new Blob([snapshotHTML], { type: 'text/html' });
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          } catch (error) {
+            reject(error);
+          }
+        });
+      };
+      
+      // Capture the comprehensive page snapshot
+      const snapshotData = await captureComprehensivePage();
+      
+      // Generate unique filename
       const fileName = `search_reports/${user.id}/${Date.now()}_comprehensive.html`;
       
+      // Convert base64 to blob
+      const snapshotBlob = typeof snapshotData === 'string' && snapshotData.startsWith('data:')
+        ? await (await fetch(snapshotData)).blob()
+        : new Blob([snapshotData], { type: 'text/html' });
+      
+      // Upload to Supabase storage
       const { error: uploadError } = await supabase.storage
         .from('search_reports')
-        .upload(fileName, snapshotData, {
+        .upload(fileName, snapshotBlob, {
           cacheControl: '3600',
           upsert: false,
           contentType: 'text/html'
@@ -240,10 +411,12 @@ const Page: React.FC = () => {
       
       if (uploadError) throw uploadError;
       
+      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('search_reports')
         .getPublicUrl(fileName);
       
+      // Save search history
       const { error } = await supabase
         .from('search_history')
         .insert({
@@ -256,22 +429,18 @@ const Page: React.FC = () => {
       
       if (error) throw error;
       
-      alert('Snapshot saved successfully!');
+      alert('Comprehensive snapshot saved successfully!');
     } catch (error) {
-      console.error('Error saving snapshot:', error);
-      alert('Failed to save snapshot');
+      console.error('Snapshot capture error:', error);
+      alert('Failed to save comprehensive snapshot');
     }
-  };
-
-  const capturePageSnapshot = async (): Promise<Blob> => {
-    const html = document.documentElement.outerHTML;
-    return new Blob([html], { type: 'text/html' });
   };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
   };
 
+  // If no user, show login page
   if (!user) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -288,7 +457,7 @@ const Page: React.FC = () => {
                   }
                 }
               })}
-              className="bg-white text-black px-4 py-2 rounded hover:bg-gray-200 transition-colors"
+              className="bg-white text-black px-4 py-2 rounded"
             >
               Sign in with Google
             </button>
@@ -300,6 +469,7 @@ const Page: React.FC = () => {
 
   return (
     <div className="search-container bg-black min-h-screen text-white relative">
+      {/* Side History Drawer */}
       <SideHistory 
         isOpen={isSideHistoryOpen} 
         onClose={() => setIsSideHistoryOpen(false)}
@@ -307,16 +477,17 @@ const Page: React.FC = () => {
         onSignOut={handleSignOut}
       />
 
+      {/* History Toggle Button - Now conditionally rendered */}
       {!isSideHistoryOpen && (
         <button 
-          onClick={() => setIsSideHistoryOpen(true)}
-          className="fixed top-4 left-4 z-50 bg-white/20 backdrop-blur-sm p-2 rounded-full hover:bg-white/30 transition-colors"
-          aria-label="Open history"
+          onClick={() => setIsSideHistoryOpen(!isSideHistoryOpen)}
+          className="fixed top-4 left-4 z-50 bg-white/20 backdrop-blur-sm p-2 rounded-full"
         >
           <Menu className="text-white" />
         </button>
       )}
 
+      {/* Save Button */}
       <div className="floating-save-container absolute right-8 top-8 z-50">
         <button 
           onClick={handleSave} 
@@ -328,11 +499,13 @@ const Page: React.FC = () => {
             transition-all duration-300 ease-in-out
             flex items-center justify-center
             border border-white/10 hover:border-white/30"
-          aria-label="Save search"
         >
           <Save className="text-white/80 hover:text-white w-6 h-6" />
         </button>
       </div>
+
+
+      <div className="background-layer" />
 
       <h1 className="main-heading text-white text-center text-4xl my-8">
         Peekaboo
@@ -348,29 +521,31 @@ const Page: React.FC = () => {
       </div>
 
       <div className="component-toggle-container flex justify-center space-x-2 my-4">
-        {SEARCH_COMPONENTS.map(({ name }) => (
-          <button
-            key={name}
-            onClick={() => toggleComponent(name)}
-            className={`glass-toggle ${activeComponents.includes(name) 
-              ? 'active bg-white/30 text-white' 
-              : 'bg-black/50 text-white/50'} 
-              w-4 h-4 rounded-full transition-all duration-300 ease-in-out hover:scale-105`}
-            aria-label={`Toggle ${name}`}
-          />
-        ))}
-      </div>
+  {SEARCH_COMPONENTS.map(({ name }) => (
+    <button
+      key={name}
+      onClick={() => toggleComponent(name)}
+      className={`glass-toggle ${activeComponents.includes(name) 
+        ? 'active bg-white/30 text-white' 
+        : 'bg-black/50 text-white/50'} 
+        w-4 h-4 rounded-full transition-all duration-300 ease-in-out hover:scale-105`}
+      data-component={name.toLowerCase()}
+      aria-label={`Toggle ${name}`}
+    />
+  ))}
+</div>
 
       {submittedQuery && (
-        <>
-          <div className="query-display text-center my-4">
-            Showing results for: <span className="query-text">{submittedQuery}</span>
-          </div>
-          <ResultsSection 
-            submittedQuery={submittedQuery} 
-            activeComponents={activeComponents} 
-          />
-        </>
+        <div className="query-display text-center my-4">
+          Showing results for: <span className="query-text">{submittedQuery}</span>
+        </div>
+      )}
+
+      {submittedQuery && (
+        <ResultsSection 
+          submittedQuery={submittedQuery} 
+          activeComponents={activeComponents} 
+        />
       )}
     </div>
   );

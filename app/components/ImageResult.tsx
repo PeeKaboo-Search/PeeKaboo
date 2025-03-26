@@ -1,16 +1,22 @@
+"use client";
+
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import "@/app/styles/images.css";
 import { searchImages } from "@/app/api/imageSearchApi";
 
-// Update prop types to match the error messages
-export interface QueryProps {
+interface ImageResult {
+  link: string;
+  title: string;
+}
+
+interface ImageResultProps {
   query: string;
   className?: string;
   heading?: string;
 }
 
-const ImageResult: React.FC<QueryProps> = ({ 
+const ImageResult: React.FC<ImageResultProps> = ({ 
   query, 
   className = "", 
   heading = "Explore Related Images" 
@@ -19,11 +25,6 @@ const ImageResult: React.FC<QueryProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [sliderValue, setSliderValue] = useState<number>(0);
-
-  interface ImageResult {
-    link: string;
-    title: string;
-  }
 
   const sliderRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -67,7 +68,6 @@ const ImageResult: React.FC<QueryProps> = ({
     const sliderWidth = slider.offsetWidth;
     const maxScroll = trackWidth - sliderWidth;
     
-    // Calculate scroll position based on slider percentage
     const scrollAmount = (value / 100) * maxScroll;
     track.style.transform = `translateX(-${scrollAmount}px)`;
   };
