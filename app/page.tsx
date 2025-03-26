@@ -1,15 +1,22 @@
 'use client';
 
-import React, { useState, lazy, Suspense, useEffect } from "react";
+import React, { useState, lazy, Suspense, useEffect, ComponentType } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { SideHistory } from "@/app/components/SideHistory";
 import { Menu, Save } from "lucide-react";
 import "app/styles/page.css";
 
 // Type Definitions
+interface SearchComponentProps {
+  query?: string;
+  keyword?: string;
+}
+
+type SearchComponent = ComponentType<SearchComponentProps>;
+
 interface SearchComponentConfig {
   name: string;
-  component: React.LazyExoticComponent<React.ComponentType<any>>;
+  component: React.LazyExoticComponent<SearchComponent>;
   propType: 'query' | 'keyword';
 }
 
@@ -28,6 +35,48 @@ interface ResultsSectionProps {
 interface User {
   id: string;
   email?: string;
+}
+
+interface WindowInfo {
+  innerWidth: number;
+  innerHeight: number;
+  devicePixelRatio: number;
+  userAgent: string;
+  platform: string;
+}
+
+interface ApplicationState {
+  query: string;
+  activeComponents: string[];
+  timestamp: string;
+  userContext: {
+    id: string;
+    email?: string;
+  } | null;
+  windowInfo: WindowInfo;
+}
+
+interface ImageData {
+  src: string;
+  base64: string | null;
+  width: number;
+  height: number;
+  alt: string;
+}
+
+interface ComponentInfo {
+  type: string;
+  props: Record<string, unknown>;
+  elementId: string;
+  elementClass: string;
+  elementType: string;
+}
+
+interface SnapshotData {
+  applicationState: ApplicationState;
+  componentData: ComponentInfo[];
+  images: ImageData[];
+  stylesheets: string;
 }
 
 const SEARCH_COMPONENTS: SearchComponentConfig[] = [
