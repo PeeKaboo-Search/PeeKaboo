@@ -11,9 +11,9 @@ export interface RedditPost {
 export interface AnalysisResult {
   success: boolean;
   data?: {
-      analysis: string;
-      rawPosts: RedditPost[];
-      timestamp: string;
+    analysis: string;
+    rawPosts: RedditPost[];
+    timestamp: string;
   };
   error?: string;
 }
@@ -34,8 +34,8 @@ export interface AIRequest {
 export interface AIResponseChoice {
   index: number;
   message: {
-      role: string;
-      content: string;
+    role: string;
+    content: string;
   };
   finish_reason: string;
 }
@@ -93,16 +93,16 @@ export interface ChartOptions {
   responsive: boolean;
   maintainAspectRatio: boolean;
   plugins: {
-      title: {
-          display: boolean;
-          text: string;
+    title: {
+      display: boolean;
+      text: string;
+    };
+    legend?: {
+      position: 'top' | 'right' | 'bottom' | 'left';
+      labels?: {
+        fontSize?: number;
       };
-      legend?: {
-          position: 'top' | 'right' | 'bottom' | 'left';
-          labels?: {
-              fontSize?: number;
-          };
-      };
+    };
   };
 }
 
@@ -119,9 +119,9 @@ export interface TrendAnalysisProps extends ComponentProps {}
 // Error Handling Types
 export interface APIErrorResponse {
   error: {
-      message: string;
-      type: string;
-      code: string;
+    message: string;
+    type: string;
+    code: string;
   };
 }
 
@@ -135,7 +135,7 @@ export interface AnalysisState {
 // Search Component Types
 export interface SearchComponentConfig {
   name: string;
-  component: React.LazyExoticComponent<React.ComponentType<any>>;
+  component: React.ComponentType<ComponentProps>;
   propType: 'query' | 'keyword';
 }
 

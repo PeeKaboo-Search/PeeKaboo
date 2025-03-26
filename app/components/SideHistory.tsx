@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createClient } from "@supabase/supabase-js";
-import { X, LogOut, History, RefreshCw } from "lucide-react";
+import { X, LogOut, History, User } from "lucide-react";
 
 // Supabase Configuration
 const supabase = createClient(
@@ -10,10 +10,20 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+// More specific type for user
+interface UserProfile {
+  id: string;
+  email?: string;
+  user_metadata?: {
+    name?: string;
+    avatar_url?: string;
+  };
+}
+
 interface SideHistoryProps {
   isOpen: boolean;
   onClose: () => void;
-  user: any;
+  user: UserProfile;
   onSignOut: () => void;
 }
 
@@ -33,13 +43,8 @@ export const SideHistory: React.FC<SideHistoryProps> = ({
 }) => {
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
 
-  useEffect(() => {
-    if (user && isOpen) {
-      fetchSavedSearches();
-    }
-  }, [user, isOpen]);
-
-  const fetchSavedSearches = async () => {
+  // Use useCallback to memoize the fetch function
+  const fetchSavedSearches = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('search_history')
@@ -52,7 +57,13 @@ export const SideHistory: React.FC<SideHistoryProps> = ({
     } catch (error) {
       console.error('Error fetching saved searches:', error);
     }
-  };
+  }, [user.id]);
+
+  useEffect(() => {
+    if (user && isOpen) {
+      fetchSavedSearches();
+    }
+  }, [user, isOpen, fetchSavedSearches]);
 
   const openSnapshotInNewTab = (url: string) => {
     if (url) {
@@ -146,7 +157,16 @@ export const SideHistory: React.FC<SideHistoryProps> = ({
           onClick={onSignOut}
           className="w-full bg-white/10 text-white p-3 rounded-lg flex items-center justify-center hover:bg-white/20 transition-colors"
         >
-          <LogOut className="mr-2" /> Logout
+          {user.user_metadata?.avatar_url ? (
+            <img 
+              src={user.user_metadata.avatar_url} 
+              alt="User profile" 
+              className="w-8 h-8 rounded-full mr-2 object-cover"
+            />
+          ) : (
+            <User className="w-8 h-8 mr-2" />
+          )}
+          Logout
         </button>
       </div>
     </div>
