@@ -3,18 +3,14 @@ import Image from "next/image";
 import "@/app/styles/images.css";
 import { searchImages } from "@/app/api/imageSearchApi";
 
-interface ImageResult {
-  link: string;
-  title: string;
-}
-
-interface ImageResultProps {
+// Update prop types to match the error messages
+export interface QueryProps {
   query: string;
   className?: string;
   heading?: string;
 }
 
-const ImageResult: React.FC<ImageResultProps> = ({ 
+const ImageResult: React.FC<QueryProps> = ({ 
   query, 
   className = "", 
   heading = "Explore Related Images" 
@@ -23,6 +19,11 @@ const ImageResult: React.FC<ImageResultProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [sliderValue, setSliderValue] = useState<number>(0);
+
+  interface ImageResult {
+    link: string;
+    title: string;
+  }
 
   const sliderRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -42,7 +43,6 @@ const ImageResult: React.FC<ImageResultProps> = ({
           setError("Failed to fetch images");
         }
       } catch (error) {
-        // Fixed: Using the error parameter properly
         console.error("Image search error:", error);
         setError("An error occurred while fetching images");
       } finally {

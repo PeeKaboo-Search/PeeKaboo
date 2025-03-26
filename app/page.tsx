@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useState, lazy, Suspense, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
@@ -28,7 +28,6 @@ interface ResultsSectionProps {
 interface User {
   id: string;
   email?: string;
-  // Add other user properties as needed
 }
 
 // Supabase Configuration
@@ -60,7 +59,7 @@ const SEARCH_COMPONENTS: SearchComponentConfig[] = [
   },
   { 
     name: 'YouTubeVideos', 
-    component: lazy(() => import("app/components/YTvideos").then(module => ({ default: module.default }))),
+    component: lazy(() => import("app/components/YTvideos")),
     propType: 'query' 
   },
   { 
@@ -98,6 +97,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ query, setQuery, handleSearch, 
       <button
         type="submit"
         className="search-button bg-white text-black"
+        disabled={isSearching}
       >
         {isSearching ? "Searching..." : "Search"}
       </button>
@@ -184,35 +184,22 @@ const Page: React.FC = () => {
     try {
       const captureComprehensivePage = async () => {
         return new Promise<string>((resolve, reject) => {
-          // Safe JSON stringify to handle circular references
           const safeStringify = (obj: any) => {
             const cache = new WeakSet();
             return JSON.stringify(obj, (key, value) => {
-              // Handle React-specific circular references
               if (typeof value === 'object' && value !== null) {
-                if (cache.has(value)) {
-                  // Circular reference found, return a placeholder
-                  return '[Circular]';
-                }
+                if (cache.has(value)) return '[Circular]';
                 cache.add(value);
               }
-  
-              // Remove function references and complex objects
               if (typeof value === 'function') return undefined;
-              
-              // Handle specific React and Next.js objects
               if (key === 'Provider' || key === 'context') return undefined;
-              
-              // Stringify simple values
               return value;
             }, 2);
           };
   
-          // Capture images safely
           const captureImagesBase64 = () => {
             return Array.from(document.images).map(img => {
               try {
-                // Use natural dimensions for more accurate capture
                 const canvas = document.createElement('canvas');
                 canvas.width = img.naturalWidth;
                 canvas.height = img.naturalHeight;
@@ -237,7 +224,6 @@ const Page: React.FC = () => {
             });
           };
   
-          // Capture application state safely
           const captureApplicationState = () => {
             return {
               query: submittedQuery || '',
@@ -257,12 +243,10 @@ const Page: React.FC = () => {
             };
           };
   
-          // Capture component data safely
           const captureComponentData = () => {
             const componentData: any[] = [];
   
             const extractComponentInfo = (element: Element) => {
-              // Find React fiber node safely
               const reactKey = Object.keys(element).find(key => 
                 key.startsWith('__react') && 
                 typeof (element as any)[key] === 'object'
@@ -271,58 +255,43 @@ const Page: React.FC = () => {
               if (reactKey) {
                 const fiber = (element as any)[reactKey];
                 
-                // Safely extract props and state
                 const extractSafeProps = (props: any) => {
                   if (!props) return {};
                   const safeProps: any = {};
-                  
                   Object.keys(props).forEach(key => {
-                    // Skip functions, complex objects, and known problematic keys
                     if (typeof props[key] !== 'function' && 
                         key !== 'children' && 
                         key !== 'Provider' && 
                         key !== 'context') {
                       try {
-                        // Attempt to stringify simple values
                         safeProps[key] = JSON.parse(JSON.stringify(props[key]));
                       } catch {
-                        // Fallback to basic type or string representation
                         safeProps[key] = String(props[key]);
                       }
                     }
                   });
-                  
                   return safeProps;
                 };
   
-                // Collect safe component information
-                const componentInfo = {
+                componentData.push({
                   type: fiber.type?.name || fiber.type?.displayName || 'Unknown',
                   props: extractSafeProps(fiber.memoizedProps),
                   elementId: element.id,
                   elementClass: element.className,
                   elementType: element.tagName.toLowerCase()
-                };
-  
-                componentData.push(componentInfo);
+                });
               }
-  
-              // Recursively process child elements
               Array.from(element.children).forEach(extractComponentInfo);
             };
   
-            // Start extraction from body
             extractComponentInfo(document.body);
             return componentData;
           };
   
-          // Capture stylesheets safely
           const captureStylesheets = () => {
             const styleContents: string[] = [];
-            
             Array.from(document.styleSheets).forEach(sheet => {
               try {
-                // Capture CSS rules safely
                 const rules = Array.from(sheet.cssRules)
                   .map(rule => {
                     try {
@@ -334,19 +303,15 @@ const Page: React.FC = () => {
                   .join('\n');
                 styleContents.push(rules);
               } catch {
-                // Fallback for cross-origin stylesheets
                 if (sheet.href) {
                   styleContents.push(`/* External Stylesheet: ${sheet.href} */`);
                 }
               }
             });
-            
             return styleContents.join('\n');
           };
   
-          // Create comprehensive snapshot
           const createComprehensiveSnapshot = () => {
-            // Capture all data safely
             const snapshotData = {
               applicationState: captureApplicationState(),
               componentData: captureComponentData(),
@@ -354,28 +319,24 @@ const Page: React.FC = () => {
               stylesheets: captureStylesheets()
             };
   
-            // Create a script tag with the snapshot data
             const snapshotScript = `
-  <!DOCTYPE html>
-  <html>
-  <head>
-    <meta charset="UTF-8">
-    <title>Peekaboo Comprehensive Snapshot</title>
-    <script id="__PEEKABOO_SNAPSHOT__" type="application/json">
-    ${safeStringify(snapshotData)}
-    </script>
-  </head>
-  <body>
-    <!-- Snapshot preserved from original page -->
-    ${document.documentElement.innerHTML}
-  </body>
-  </html>
-  `;
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Peekaboo Comprehensive Snapshot</title>
+  <script id="__PEEKABOO_SNAPSHOT__" type="application/json">
+  ${safeStringify(snapshotData)}
+  </script>
+</head>
+<body>
+  ${document.documentElement.innerHTML}
+</body>
+</html>`;
   
             return snapshotScript;
           };
   
-          // Generate and resolve snapshot
           try {
             const snapshotHTML = createComprehensiveSnapshot();
             const blob = new Blob([snapshotHTML], { type: 'text/html' });
@@ -389,18 +350,12 @@ const Page: React.FC = () => {
         });
       };
       
-      // Capture the comprehensive page snapshot
       const snapshotData = await captureComprehensivePage();
-      
-      // Generate unique filename
       const fileName = `search_reports/${user.id}/${Date.now()}_comprehensive.html`;
-      
-      // Convert base64 to blob
       const snapshotBlob = typeof snapshotData === 'string' && snapshotData.startsWith('data:')
         ? await (await fetch(snapshotData)).blob()
         : new Blob([snapshotData], { type: 'text/html' });
       
-      // Upload to Supabase storage
       const { error: uploadError } = await supabase.storage
         .from('search_reports')
         .upload(fileName, snapshotBlob, {
@@ -411,12 +366,10 @@ const Page: React.FC = () => {
       
       if (uploadError) throw uploadError;
       
-      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('search_reports')
         .getPublicUrl(fileName);
       
-      // Save search history
       const { error } = await supabase
         .from('search_history')
         .insert({
@@ -440,7 +393,6 @@ const Page: React.FC = () => {
     await supabase.auth.signOut();
   };
 
-  // If no user, show login page
   if (!user) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -457,7 +409,7 @@ const Page: React.FC = () => {
                   }
                 }
               })}
-              className="bg-white text-black px-4 py-2 rounded"
+              className="bg-white text-black px-4 py-2 rounded hover:bg-gray-200 transition-colors"
             >
               Sign in with Google
             </button>
@@ -469,7 +421,6 @@ const Page: React.FC = () => {
 
   return (
     <div className="search-container bg-black min-h-screen text-white relative">
-      {/* Side History Drawer */}
       <SideHistory 
         isOpen={isSideHistoryOpen} 
         onClose={() => setIsSideHistoryOpen(false)}
@@ -477,17 +428,15 @@ const Page: React.FC = () => {
         onSignOut={handleSignOut}
       />
 
-      {/* History Toggle Button - Now conditionally rendered */}
       {!isSideHistoryOpen && (
         <button 
           onClick={() => setIsSideHistoryOpen(!isSideHistoryOpen)}
-          className="fixed top-4 left-4 z-50 bg-white/20 backdrop-blur-sm p-2 rounded-full"
+          className="fixed top-4 left-4 z-50 bg-white/20 backdrop-blur-sm p-2 rounded-full hover:bg-white/30 transition-colors"
         >
           <Menu className="text-white" />
         </button>
       )}
 
-      {/* Save Button */}
       <div className="floating-save-container absolute right-8 top-8 z-50">
         <button 
           onClick={handleSave} 
@@ -503,7 +452,6 @@ const Page: React.FC = () => {
           <Save className="text-white/80 hover:text-white w-6 h-6" />
         </button>
       </div>
-
 
       <div className="background-layer" />
 
@@ -521,19 +469,19 @@ const Page: React.FC = () => {
       </div>
 
       <div className="component-toggle-container flex justify-center space-x-2 my-4">
-  {SEARCH_COMPONENTS.map(({ name }) => (
-    <button
-      key={name}
-      onClick={() => toggleComponent(name)}
-      className={`glass-toggle ${activeComponents.includes(name) 
-        ? 'active bg-white/30 text-white' 
-        : 'bg-black/50 text-white/50'} 
-        w-4 h-4 rounded-full transition-all duration-300 ease-in-out hover:scale-105`}
-      data-component={name.toLowerCase()}
-      aria-label={`Toggle ${name}`}
-    />
-  ))}
-</div>
+        {SEARCH_COMPONENTS.map(({ name }) => (
+          <button
+            key={name}
+            onClick={() => toggleComponent(name)}
+            className={`glass-toggle ${activeComponents.includes(name) 
+              ? 'active bg-white/30 text-white' 
+              : 'bg-black/50 text-white/50'} 
+              w-4 h-4 rounded-full transition-all duration-300 ease-in-out hover:scale-105`}
+            data-component={name.toLowerCase()}
+            aria-label={`Toggle ${name}`}
+          />
+        ))}
+      </div>
 
       {submittedQuery && (
         <div className="query-display text-center my-4">
