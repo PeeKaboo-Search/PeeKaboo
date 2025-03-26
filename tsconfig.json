@@ -22,14 +22,16 @@
     "paths": {
       "@/*": ["./*"]
     },
-    "types": ["estree", "json-schema"]
+    "types": []
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "debug.js"
+    "debug.js",
+    "app/types/index.ts",
+    "html2pdf.d.ts"
   ],
   "exclude": ["node_modules"]
 }
