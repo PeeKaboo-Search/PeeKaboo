@@ -1,113 +1,74 @@
 "use client";
 
-import React, { useState, lazy, Suspense, useEffect, ComponentType, FC } from "react";
-import { createClient } from "@supabase/supabase-js";
+import React, { useState, Suspense, useEffect } from "react";
+import { createClient, User, AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { SideHistory } from "@/app/components/SideHistory";
 import { Menu, Save } from "lucide-react";
 import "app/styles/page.css";
 
-// Import prop types for each component
-import { ImageResultProps } from "@/app/components/ImageResult";
-import { MarketResearchProps } from "@/app/components/GoogleAnalytics";
-import { AppAnalyticsProps } from "@/app/components/PlayStoreAnalytics";
-import { RedditAnalyticsProps } from "@/app/components/RedditAnalytics";
-import { YouTubeVideosProps } from "@/app/components/YTvideos";
-import { QuoraAnalyticsProps } from "@/app/components/QuoraAnalysis";
-import { XAnalyticsProps } from "@/app/components/XAnalytics";
-import { MetaAdAnalysisProps } from "@/app/components/FacebookAdsAnalytics";
-import { MarketingStrategyProps } from "@/app/components/StrategyAnalysis";
+// Import components
+import ImageResult from "@/app/components/ImageResult";
+import GoogleAnalytics from "@/app/components/GoogleAnalytics";
+import PlayStoreAnalytics from "@/app/components/PlayStoreAnalytics";
+import RedditAnalytics from "@/app/components/RedditAnalytics";
+import YouTubeVideos from "@/app/components/YTvideos";
+import QuoraAnalysis from "@/app/components/QuoraAnalysis";
+import XAnalytics from "@/app/components/XAnalytics";
+import FacebookAdsAnalytics from "@/app/components/FacebookAdsAnalytics";
+import StrategyAnalysis from "@/app/components/StrategyAnalysis";
 
-// Unified generic props type
-type SearchComponentProps = 
-  | ImageResultProps 
-  | MarketResearchProps 
-  | AppAnalyticsProps 
-  | RedditAnalyticsProps 
-  | YouTubeVideosProps 
-  | QuoraAnalyticsProps 
-  | XAnalyticsProps 
-  | MetaAdAnalysisProps 
-  | MarketingStrategyProps;
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-// Type Definitions
-interface SearchComponentConfig {
-  name: string;
-  component: React.LazyExoticComponent<React.ComponentType<SearchComponentProps>>;
-  propType: 'query' | 'keyword';
+// Component prop interfaces
+interface QueryProps {
+  query: string;
 }
+
+interface KeywordProps {
+  keyword: string;
+}
+
+type SearchComponentConfig = 
+  | {
+      name: string;
+      component: React.ComponentType<QueryProps>;
+      propType: 'query';
+    }
+  | {
+      name: string;
+      component: React.ComponentType<KeywordProps>;
+      propType: 'keyword';
+    };
+
+const SEARCH_COMPONENTS: SearchComponentConfig[] = [
+  { name: 'ImageResult', component: ImageResult, propType: 'query' },
+  { name: 'GoogleAnalytics', component: GoogleAnalytics, propType: 'query' },
+  { name: 'PlayStoreAnalytics', component: PlayStoreAnalytics, propType: 'query' },
+  { name: 'RedditAnalytics', component: RedditAnalytics, propType: 'query' },
+  { name: 'YouTubeVideos', component: YouTubeVideos, propType: 'query' },
+  { name: 'QuoraAnalysis', component: QuoraAnalysis, propType: 'query' },
+  { name: 'XAnalytics', component: XAnalytics, propType: 'query' },
+  { name: 'FacebookAdsAnalysis', component: FacebookAdsAnalytics, propType: 'keyword' },
+  { name: 'StrategyAnalysis', component: StrategyAnalysis, propType: 'query' },
+];
 
 interface SearchFormProps {
   query: string;
   setQuery: (query: string) => void;
-  handleSearch: (e: React.FormEvent<HTMLFormElement>) => void;
+  handleSearch: (event: React.FormEvent<HTMLFormElement>) => void;
   isSearching: boolean;
 }
 
-interface ResultsSectionProps {
-  submittedQuery: string;
-  activeComponents: string[];
-}
-
-interface User {
-  id: string;
-  email?: string;
-}
-
-// Supabase Configuration
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!, 
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-const SEARCH_COMPONENTS: SearchComponentConfig[] = [
-  { 
-    name: 'ImageResult', 
-    component: lazy(() => import("@/app/components/ImageResult").then(m => ({ default: m.default as React.ComponentType<SearchComponentProps> }))), 
-    propType: 'query' 
-  },
-  { 
-    name: 'GoogleAnalytics', 
-    component: lazy(() => import("@/app/components/GoogleAnalytics").then(m => ({ default: m.default as React.ComponentType<SearchComponentProps> }))), 
-    propType: 'query' 
-  },
-  { 
-    name: 'PlayStoreAnalytics', 
-    component: lazy(() => import("@/app/components/PlayStoreAnalytics").then(m => ({ default: m.default as React.ComponentType<SearchComponentProps> }))), 
-    propType: 'query' 
-  },
-  { 
-    name: 'RedditAnalytics', 
-    component: lazy(() => import("@/app/components/RedditAnalytics").then(m => ({ default: m.default as React.ComponentType<SearchComponentProps> }))), 
-    propType: 'query' 
-  },
-  { 
-    name: 'YouTubeVideos', 
-    component: lazy(() => import("@/app/components/YTvideos").then(m => ({ default: m.default as React.ComponentType<SearchComponentProps> }))), 
-    propType: 'query' 
-  },
-  { 
-    name: 'QuoraAnalysis', 
-    component: lazy(() => import("@/app/components/QuoraAnalysis").then(m => ({ default: m.default as React.ComponentType<SearchComponentProps> }))), 
-    propType: 'query' 
-  },
-  { 
-    name: 'XAnalytics', 
-    component: lazy(() => import("@/app/components/XAnalytics").then(m => ({ default: m.default as React.ComponentType<SearchComponentProps> }))), 
-    propType: 'query' 
-  },
-  { 
-    name: 'FacebookAdsAnalysis', 
-    component: lazy(() => import("@/app/components/FacebookAdsAnalytics").then(m => ({ default: m.default as React.ComponentType<SearchComponentProps> }))), 
-    propType: 'keyword' 
-  },
-  { 
-    name: 'StrategyAnalysis', 
-    component: lazy(() => import("@/app/components/StrategyAnalysis").then(m => ({ default: m.default as React.ComponentType<SearchComponentProps> }))), 
-    propType: 'query' 
-  },
-];
-
-const SearchForm: React.FC<SearchFormProps> = ({ query, setQuery, handleSearch, isSearching }) => (
+const SearchForm: React.FC<SearchFormProps> = ({ 
+  query, 
+  setQuery, 
+  handleSearch, 
+  isSearching 
+}) => (
   <form onSubmit={handleSearch} className="search-form">
     <div className="search-bar-wrapper">
       <input
@@ -120,6 +81,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ query, setQuery, handleSearch, 
       <button
         type="submit"
         className="search-button bg-white text-black"
+        disabled={isSearching}
       >
         {isSearching ? "Searching..." : "Search"}
       </button>
@@ -127,24 +89,41 @@ const SearchForm: React.FC<SearchFormProps> = ({ query, setQuery, handleSearch, 
   </form>
 );
 
-const ResultsSection: React.FC<ResultsSectionProps> = ({ submittedQuery, activeComponents }) => (
+interface ResultsSectionProps {
+  submittedQuery: string;
+  activeComponents: string[];
+}
+
+const ResultsSection: React.FC<ResultsSectionProps> = ({ 
+  submittedQuery, 
+  activeComponents 
+}) => (
   <div className="results-container">
     <Suspense fallback={<div className="results-loader text-white">Loading components...</div>}>
       {SEARCH_COMPONENTS.filter(comp => activeComponents.includes(comp.name)).map((config) => {
-        const Component = config.component;
-        const props = config.propType === 'query' 
-          ? { query: submittedQuery } 
-          : { keyword: submittedQuery };
-
-        return (
-          <div
-            key={config.name}
-            className="result-card bg-black text-white border border-gray-800"
-            data-component={config.name.toLowerCase()}
-          >
-            <Component {...props as SearchComponentProps} />
-          </div>
-        );
+        if (config.propType === 'query') {
+          const Component = config.component;
+          return (
+            <div
+              key={config.name}
+              className="result-card bg-black text-white border border-gray-800"
+              data-component={config.name.toLowerCase()}
+            >
+              <Component query={submittedQuery} />
+            </div>
+          );
+        } else {
+          const Component = config.component;
+          return (
+            <div
+              key={config.name}
+              className="result-card bg-black text-white border border-gray-800"
+              data-component={config.name.toLowerCase()}
+            >
+              <Component keyword={submittedQuery} />
+            </div>
+          );
+        }
       })}
     </Suspense>
   </div>
@@ -166,18 +145,18 @@ const Page: React.FC = () => {
     checkUser();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event: AuthChangeEvent, session: Session | null) => {
         setUser(session?.user ?? null);
       }
     );
 
     return () => {
-      authListener.subscription.unsubscribe();
+      authListener?.subscription?.unsubscribe();
     };
   }, []);
 
-  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     
     const componentsToSearch = activeComponents.length > 0 
       ? activeComponents 
@@ -200,42 +179,32 @@ const Page: React.FC = () => {
     );
   };
 
-  // [Rest of the code remains the same as in the original implementation]
   const handleSave = async () => {
     if (!user) return;
   
     try {
       const captureComprehensivePage = async () => {
         return new Promise<string>((resolve, reject) => {
-          // Safe JSON stringify to handle circular references
           const safeStringify = (obj: unknown) => {
             const cache = new WeakSet();
             return JSON.stringify(obj, (key, value) => {
-              // Handle React-specific circular references
               if (typeof value === 'object' && value !== null) {
                 if (cache.has(value)) {
-                  // Circular reference found, return a placeholder
                   return '[Circular]';
                 }
                 cache.add(value);
               }
   
-              // Remove function references and complex objects
               if (typeof value === 'function') return undefined;
-              
-              // Handle specific React and Next.js objects
               if (key === 'Provider' || key === 'context') return undefined;
               
-              // Stringify simple values
               return value;
             }, 2);
           };
   
-          // Capture images safely
           const captureImagesBase64 = () => {
             return Array.from(document.images).map(img => {
               try {
-                // Use natural dimensions for more accurate capture
                 const canvas = document.createElement('canvas');
                 canvas.width = img.naturalWidth;
                 canvas.height = img.naturalHeight;
@@ -248,7 +217,7 @@ const Page: React.FC = () => {
                   height: img.naturalHeight,
                   alt: img.alt
                 };
-              } catch (e) {
+              } catch {
                 return {
                   src: img.src,
                   base64: null,
@@ -260,7 +229,6 @@ const Page: React.FC = () => {
             });
           };
   
-          // Capture application state safely
           const captureApplicationState = () => {
             return {
               query: submittedQuery || '',
@@ -280,12 +248,10 @@ const Page: React.FC = () => {
             };
           };
   
-          // Capture component data safely
           const captureComponentData = () => {
             const componentData: Record<string, unknown>[] = [];
   
-            const extractComponentInfo = (element: Element) => {
-              // Find React fiber node safely
+            const extractComponentInfo = (element: HTMLElement) => {
               const reactKey = Object.keys(element).find(key => 
                 key.startsWith('__react') && 
                 typeof (element as any)[key] === 'object'
@@ -294,22 +260,18 @@ const Page: React.FC = () => {
               if (reactKey) {
                 const fiber = (element as any)[reactKey];
                 
-                // Safely extract props and state
                 const extractSafeProps = (props: Record<string, unknown>) => {
                   if (!props) return {};
                   const safeProps: Record<string, unknown> = {};
                   
                   Object.keys(props).forEach(key => {
-                    // Skip functions, complex objects, and known problematic keys
                     if (typeof props[key] !== 'function' && 
                         key !== 'children' && 
                         key !== 'Provider' && 
                         key !== 'context') {
                       try {
-                        // Attempt to stringify simple values
                         safeProps[key] = JSON.parse(JSON.stringify(props[key]));
                       } catch {
-                        // Fallback to basic type or string representation
                         safeProps[key] = String(props[key]);
                       }
                     }
@@ -318,10 +280,9 @@ const Page: React.FC = () => {
                   return safeProps;
                 };
   
-                // Collect safe component information
                 const componentInfo = {
-                  type: fiber.type?.name || fiber.type?.displayName || 'Unknown',
-                  props: extractSafeProps(fiber.memoizedProps),
+                  type: fiber?.type?.name || fiber?.type?.displayName || 'Unknown',
+                  props: extractSafeProps(fiber?.memoizedProps || {}),
                   elementId: element.id,
                   elementClass: element.className,
                   elementType: element.tagName.toLowerCase()
@@ -330,23 +291,21 @@ const Page: React.FC = () => {
                 componentData.push(componentInfo);
               }
   
-              // Recursively process child elements
-              Array.from(element.children).forEach(extractComponentInfo);
+              Array.from(element.children).forEach(child => 
+                extractComponentInfo(child as HTMLElement)
+              );
             };
   
-            // Start extraction from body
-            extractComponentInfo(document.body);
+            extractComponentInfo(document.body as HTMLElement);
             return componentData;
           };
   
-          // Capture stylesheets safely
           const captureStylesheets = () => {
             const styleContents: string[] = [];
             
             Array.from(document.styleSheets).forEach(sheet => {
               try {
-                // Capture CSS rules safely
-                const rules = Array.from(sheet.cssRules)
+                const rules = Array.from(sheet.cssRules || [])
                   .map(rule => {
                     try {
                       return rule.cssText;
@@ -357,7 +316,6 @@ const Page: React.FC = () => {
                   .join('\n');
                 styleContents.push(rules);
               } catch {
-                // Fallback for cross-origin stylesheets
                 if (sheet.href) {
                   styleContents.push(`/* External Stylesheet: ${sheet.href} */`);
                 }
@@ -367,9 +325,7 @@ const Page: React.FC = () => {
             return styleContents.join('\n');
           };
   
-          // Create comprehensive snapshot
           const createComprehensiveSnapshot = () => {
-            // Capture all data safely
             const snapshotData = {
               applicationState: captureApplicationState(),
               componentData: captureComponentData(),
@@ -377,7 +333,6 @@ const Page: React.FC = () => {
               stylesheets: captureStylesheets()
             };
   
-            // Create a script tag with the snapshot data
             const snapshotScript = `
   <!DOCTYPE html>
   <html>
@@ -398,7 +353,6 @@ const Page: React.FC = () => {
             return snapshotScript;
           };
   
-          // Generate and resolve snapshot
           try {
             const snapshotHTML = createComprehensiveSnapshot();
             const blob = new Blob([snapshotHTML], { type: 'text/html' });
@@ -412,18 +366,14 @@ const Page: React.FC = () => {
         });
       };
       
-      // Capture the comprehensive page snapshot
       const snapshotData = await captureComprehensivePage();
       
-      // Generate unique filename
       const fileName = `search_reports/${user.id}/${Date.now()}_comprehensive.html`;
       
-      // Convert base64 to blob
       const snapshotBlob = typeof snapshotData === 'string' && snapshotData.startsWith('data:')
         ? await (await fetch(snapshotData)).blob()
         : new Blob([snapshotData], { type: 'text/html' });
       
-      // Upload to Supabase storage
       const { error: uploadError } = await supabase.storage
         .from('search_reports')
         .upload(fileName, snapshotBlob, {
@@ -434,12 +384,10 @@ const Page: React.FC = () => {
       
       if (uploadError) throw uploadError;
       
-      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('search_reports')
         .getPublicUrl(fileName);
       
-      // Save search history
       const { error } = await supabase
         .from('search_history')
         .insert({
@@ -463,7 +411,6 @@ const Page: React.FC = () => {
     await supabase.auth.signOut();
   };
 
-  // If no user, show login page
   if (!user) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -492,7 +439,6 @@ const Page: React.FC = () => {
 
   return (
     <div className="search-container bg-black min-h-screen text-white relative">
-      {/* Side History Drawer */}
       <SideHistory 
         isOpen={isSideHistoryOpen} 
         onClose={() => setIsSideHistoryOpen(false)}
@@ -500,17 +446,16 @@ const Page: React.FC = () => {
         onSignOut={handleSignOut}
       />
 
-      {/* History Toggle Button */}
       {!isSideHistoryOpen && (
         <button 
           onClick={() => setIsSideHistoryOpen(!isSideHistoryOpen)}
           className="fixed top-4 left-4 z-50 bg-white/20 backdrop-blur-sm p-2 rounded-full"
+          aria-label="Open history menu"
         >
           <Menu className="text-white" />
         </button>
       )}
 
-      {/* Save Button */}
       <div className="floating-save-container absolute right-8 top-8 z-50">
         <button 
           onClick={handleSave} 
@@ -522,6 +467,7 @@ const Page: React.FC = () => {
             transition-all duration-300 ease-in-out
             flex items-center justify-center
             border border-white/10 hover:border-white/30"
+          aria-label="Save current search"
         >
           <Save className="text-white/80 hover:text-white w-6 h-6" />
         </button>
