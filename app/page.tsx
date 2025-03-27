@@ -129,6 +129,21 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
   </div>
 );
 
+// Type-safe React internal property access
+interface ReactFiber {
+  memoizedProps?: Record<string, unknown>;
+  type?: {
+    name?: string;
+    displayName?: string;
+  };
+}
+
+interface ReactInternalProps {
+  [key: string]: unknown;
+}
+
+interface ReactElement extends HTMLElement, ReactInternalProps {}
+
 const Page: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [query, setQuery] = useState("");
@@ -194,14 +209,14 @@ const Page: React.FC = () => {
                 }
                 cache.add(value);
               }
-  
+
               if (typeof value === 'function') return undefined;
               if (key === 'Provider' || key === 'context') return undefined;
               
               return value;
             }, 2);
           };
-  
+
           const captureImagesBase64 = () => {
             return Array.from(document.images).map(img => {
               try {
@@ -228,7 +243,7 @@ const Page: React.FC = () => {
               }
             });
           };
-  
+
           const captureApplicationState = () => {
             return {
               query: submittedQuery || '',
@@ -247,59 +262,73 @@ const Page: React.FC = () => {
               }
             };
           };
-  
+
           const captureComponentData = () => {
-            const componentData: Record<string, unknown>[] = [];
-  
-            const extractComponentInfo = (element: HTMLElement) => {
-              const reactKey = Object.keys(element).find(key => 
-                key.startsWith('__react') && 
-                typeof (element as any)[key] === 'object'
+            const componentData: Array<{
+              type: string;
+              props: Record<string, unknown>;
+              elementId: string;
+              elementClass: string;
+              elementType: string;
+            }> = [];
+
+            const extractComponentInfo = (element: ReactElement) => {
+              const reactKeys = Object.keys(element).filter(key => 
+                key.startsWith('__reactFiber$') || key.startsWith('__reactProps$')
               );
-  
-              if (reactKey) {
-                const fiber = (element as any)[reactKey];
+
+              reactKeys.forEach(reactKey => {
+                const fiberOrProps = element[reactKey as keyof ReactElement];
                 
-                const extractSafeProps = (props: Record<string, unknown>) => {
-                  if (!props) return {};
-                  const safeProps: Record<string, unknown> = {};
-                  
-                  Object.keys(props).forEach(key => {
-                    if (typeof props[key] !== 'function' && 
-                        key !== 'children' && 
-                        key !== 'Provider' && 
-                        key !== 'context') {
-                      try {
-                        safeProps[key] = JSON.parse(JSON.stringify(props[key]));
-                      } catch {
-                        safeProps[key] = String(props[key]);
+                if (typeof fiberOrProps === 'object' && fiberOrProps !== null) {
+                  const extractSafeProps = (props: unknown): Record<string, unknown> => {
+                    if (typeof props !== 'object' || props === null) return {};
+                    const safeProps: Record<string, unknown> = {};
+                    
+                    Object.entries(props).forEach(([key, value]) => {
+                      if (typeof value !== 'function' && 
+                          key !== 'children' && 
+                          key !== 'Provider' && 
+                          key !== 'context') {
+                        try {
+                          safeProps[key] = JSON.parse(JSON.stringify(value));
+                        } catch {
+                          safeProps[key] = String(value);
+                        }
                       }
-                    }
-                  });
-                  
-                  return safeProps;
-                };
-  
-                const componentInfo = {
-                  type: fiber?.type?.name || fiber?.type?.displayName || 'Unknown',
-                  props: extractSafeProps(fiber?.memoizedProps || {}),
-                  elementId: element.id,
-                  elementClass: element.className,
-                  elementType: element.tagName.toLowerCase()
-                };
-  
-                componentData.push(componentInfo);
-              }
-  
+                    });
+                    
+                    return safeProps;
+                  };
+
+                  const componentInfo = {
+                    type: reactKey.includes('Fiber') ? 
+                      ((fiberOrProps as ReactFiber)?.type?.name || 
+                       (fiberOrProps as ReactFiber)?.type?.displayName || 
+                       'Unknown') : 'Props',
+                    props: extractSafeProps(
+                      reactKey.includes('Fiber') ? 
+                      (fiberOrProps as ReactFiber)?.memoizedProps : 
+                      fiberOrProps
+                    ),
+                    elementId: element.id,
+                    elementClass: element.className,
+                    elementType: element.tagName.toLowerCase()
+                  };
+
+                  componentData.push(componentInfo);
+                }
+              });
+
               Array.from(element.children).forEach(child => 
-                extractComponentInfo(child as HTMLElement)
+                extractComponentInfo(child as ReactElement)
               );
             };
-  
-            extractComponentInfo(document.body as HTMLElement);
+
+            extractComponentInfo(document.body as ReactElement);
             return componentData;
           };
-  
+
           const captureStylesheets = () => {
             const styleContents: string[] = [];
             
@@ -324,7 +353,7 @@ const Page: React.FC = () => {
             
             return styleContents.join('\n');
           };
-  
+
           const createComprehensiveSnapshot = () => {
             const snapshotData = {
               applicationState: captureApplicationState(),
@@ -332,7 +361,7 @@ const Page: React.FC = () => {
               images: captureImagesBase64(),
               stylesheets: captureStylesheets()
             };
-  
+
             const snapshotScript = `
   <!DOCTYPE html>
   <html>
@@ -352,7 +381,7 @@ const Page: React.FC = () => {
   
             return snapshotScript;
           };
-  
+
           try {
             const snapshotHTML = createComprehensiveSnapshot();
             const blob = new Blob([snapshotHTML], { type: 'text/html' });
