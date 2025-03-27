@@ -17,11 +17,20 @@ import XAnalytics from "@/app/components/XAnalytics";
 import FacebookAdsAnalytics from "@/app/components/FacebookAdsAnalytics";
 import StrategyAnalysis from "@/app/components/StrategyAnalysis";
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Initialize Supabase client with proper site URL for production
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    flowType: 'pkce',
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+  }
+});
 
 // Component prop interfaces
 interface QueryProps {
@@ -128,21 +137,6 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
     </Suspense>
   </div>
 );
-
-// Type-safe React internal property access
-interface ReactFiber {
-  memoizedProps?: Record<string, unknown>;
-  type?: {
-    name?: string;
-    displayName?: string;
-  };
-}
-
-interface ReactInternalProps {
-  [key: string]: unknown;
-}
-
-interface ReactElement extends HTMLElement, ReactInternalProps {}
 
 const Page: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -263,103 +257,10 @@ const Page: React.FC = () => {
             };
           };
 
-          const captureComponentData = () => {
-            const componentData: Array<{
-              type: string;
-              props: Record<string, unknown>;
-              elementId: string;
-              elementClass: string;
-              elementType: string;
-            }> = [];
-
-            const extractComponentInfo = (element: ReactElement) => {
-              const reactKeys = Object.keys(element).filter(key => 
-                key.startsWith('__reactFiber$') || key.startsWith('__reactProps$')
-              );
-
-              reactKeys.forEach(reactKey => {
-                const fiberOrProps = element[reactKey as keyof ReactElement];
-                
-                if (typeof fiberOrProps === 'object' && fiberOrProps !== null) {
-                  const extractSafeProps = (props: unknown): Record<string, unknown> => {
-                    if (typeof props !== 'object' || props === null) return {};
-                    const safeProps: Record<string, unknown> = {};
-                    
-                    Object.entries(props).forEach(([key, value]) => {
-                      if (typeof value !== 'function' && 
-                          key !== 'children' && 
-                          key !== 'Provider' && 
-                          key !== 'context') {
-                        try {
-                          safeProps[key] = JSON.parse(JSON.stringify(value));
-                        } catch {
-                          safeProps[key] = String(value);
-                        }
-                      }
-                    });
-                    
-                    return safeProps;
-                  };
-
-                  const componentInfo = {
-                    type: reactKey.includes('Fiber') ? 
-                      ((fiberOrProps as ReactFiber)?.type?.name || 
-                       (fiberOrProps as ReactFiber)?.type?.displayName || 
-                       'Unknown') : 'Props',
-                    props: extractSafeProps(
-                      reactKey.includes('Fiber') ? 
-                      (fiberOrProps as ReactFiber)?.memoizedProps : 
-                      fiberOrProps
-                    ),
-                    elementId: element.id,
-                    elementClass: element.className,
-                    elementType: element.tagName.toLowerCase()
-                  };
-
-                  componentData.push(componentInfo);
-                }
-              });
-
-              Array.from(element.children).forEach(child => 
-                extractComponentInfo(child as ReactElement)
-              );
-            };
-
-            extractComponentInfo(document.body as ReactElement);
-            return componentData;
-          };
-
-          const captureStylesheets = () => {
-            const styleContents: string[] = [];
-            
-            Array.from(document.styleSheets).forEach(sheet => {
-              try {
-                const rules = Array.from(sheet.cssRules || [])
-                  .map(rule => {
-                    try {
-                      return rule.cssText;
-                    } catch {
-                      return '/* Unable to capture rule */';
-                    }
-                  })
-                  .join('\n');
-                styleContents.push(rules);
-              } catch {
-                if (sheet.href) {
-                  styleContents.push(`/* External Stylesheet: ${sheet.href} */`);
-                }
-              }
-            });
-            
-            return styleContents.join('\n');
-          };
-
           const createComprehensiveSnapshot = () => {
             const snapshotData = {
               applicationState: captureApplicationState(),
-              componentData: captureComponentData(),
               images: captureImagesBase64(),
-              stylesheets: captureStylesheets()
             };
 
             const snapshotScript = `
@@ -436,6 +337,19 @@ const Page: React.FC = () => {
     }
   };
 
+  const handleSignIn = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${siteUrl}/auth/callback`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent'
+        }
+      }
+    });
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
   };
@@ -447,16 +361,8 @@ const Page: React.FC = () => {
           <h1 className="text-3xl mb-6 text-center">Peekaboo</h1>
           <div className="flex justify-center">
             <button 
-              onClick={() => supabase.auth.signInWithOAuth({ 
-                provider: 'google',
-                options: {
-                  queryParams: {
-                    access_type: 'offline',
-                    prompt: 'consent'
-                  }
-                }
-              })}
-              className="bg-white text-black px-4 py-2 rounded"
+              onClick={handleSignIn}
+              className="bg-white text-black px-4 py-2 rounded hover:bg-gray-200 transition-colors"
             >
               Sign in with Google
             </button>
