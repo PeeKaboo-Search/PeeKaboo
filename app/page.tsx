@@ -1,15 +1,38 @@
 "use client";
 
-import React, { useState, lazy, Suspense, useEffect } from "react";
+import React, { useState, lazy, Suspense, useEffect, ComponentType, FC } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { SideHistory } from "@/app/components/SideHistory";
-import { Menu, X, Save, LogOut } from "lucide-react";
+import { Menu, Save } from "lucide-react";
 import "app/styles/page.css";
+
+// Import prop types for each component
+import { ImageResultProps } from "@/app/components/ImageResult";
+import { MarketResearchProps } from "@/app/components/GoogleAnalytics";
+import { AppAnalyticsProps } from "@/app/components/PlayStoreAnalytics";
+import { RedditAnalyticsProps } from "@/app/components/RedditAnalytics";
+import { YouTubeVideosProps } from "@/app/components/YTvideos";
+import { QuoraAnalyticsProps } from "@/app/components/QuoraAnalysis";
+import { XAnalyticsProps } from "@/app/components/XAnalytics";
+import { MetaAdAnalysisProps } from "@/app/components/FacebookAdsAnalytics";
+import { MarketingStrategyProps } from "@/app/components/StrategyAnalysis";
+
+// Unified generic props type
+type SearchComponentProps = 
+  | ImageResultProps 
+  | MarketResearchProps 
+  | AppAnalyticsProps 
+  | RedditAnalyticsProps 
+  | YouTubeVideosProps 
+  | QuoraAnalyticsProps 
+  | XAnalyticsProps 
+  | MetaAdAnalysisProps 
+  | MarketingStrategyProps;
 
 // Type Definitions
 interface SearchComponentConfig {
   name: string;
-  component: React.LazyExoticComponent<React.ComponentType<any>>;
+  component: React.LazyExoticComponent<React.ComponentType<SearchComponentProps>>;
   propType: 'query' | 'keyword';
 }
 
@@ -28,7 +51,6 @@ interface ResultsSectionProps {
 interface User {
   id: string;
   email?: string;
-  // Add other user properties as needed
 }
 
 // Supabase Configuration
@@ -40,47 +62,47 @@ const supabase = createClient(
 const SEARCH_COMPONENTS: SearchComponentConfig[] = [
   { 
     name: 'ImageResult', 
-    component: lazy(() => import("app/components/ImageResult")), 
+    component: lazy(() => import("@/app/components/ImageResult").then(m => ({ default: m.default as React.ComponentType<SearchComponentProps> }))), 
     propType: 'query' 
   },
   { 
     name: 'GoogleAnalytics', 
-    component: lazy(() => import("app/components/GoogleAnalytics")), 
+    component: lazy(() => import("@/app/components/GoogleAnalytics").then(m => ({ default: m.default as React.ComponentType<SearchComponentProps> }))), 
     propType: 'query' 
   },
   { 
     name: 'PlayStoreAnalytics', 
-    component: lazy(() => import("app/components/PlayStoreAnalytics")), 
+    component: lazy(() => import("@/app/components/PlayStoreAnalytics").then(m => ({ default: m.default as React.ComponentType<SearchComponentProps> }))), 
     propType: 'query' 
   },
   { 
     name: 'RedditAnalytics', 
-    component: lazy(() => import("app/components/RedditAnalytics")), 
+    component: lazy(() => import("@/app/components/RedditAnalytics").then(m => ({ default: m.default as React.ComponentType<SearchComponentProps> }))), 
     propType: 'query' 
   },
   { 
     name: 'YouTubeVideos', 
-    component: lazy(() => import("app/components/YTvideos").then(module => ({ default: module.default }))),
+    component: lazy(() => import("@/app/components/YTvideos").then(m => ({ default: m.default as React.ComponentType<SearchComponentProps> }))), 
     propType: 'query' 
   },
   { 
     name: 'QuoraAnalysis', 
-    component: lazy(() => import("app/components/QuoraAnalysis")), 
+    component: lazy(() => import("@/app/components/QuoraAnalysis").then(m => ({ default: m.default as React.ComponentType<SearchComponentProps> }))), 
     propType: 'query' 
   },
   { 
     name: 'XAnalytics', 
-    component: lazy(() => import("app/components/XAnalytics")), 
+    component: lazy(() => import("@/app/components/XAnalytics").then(m => ({ default: m.default as React.ComponentType<SearchComponentProps> }))), 
     propType: 'query' 
   },
   { 
     name: 'FacebookAdsAnalysis', 
-    component: lazy(() => import("app/components/FacebookAdsAnalytics")), 
+    component: lazy(() => import("@/app/components/FacebookAdsAnalytics").then(m => ({ default: m.default as React.ComponentType<SearchComponentProps> }))), 
     propType: 'keyword' 
   },
   { 
     name: 'StrategyAnalysis', 
-    component: lazy(() => import("app/components/StrategyAnalysis")), 
+    component: lazy(() => import("@/app/components/StrategyAnalysis").then(m => ({ default: m.default as React.ComponentType<SearchComponentProps> }))), 
     propType: 'query' 
   },
 ];
@@ -120,7 +142,7 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({ submittedQuery, activeC
             className="result-card bg-black text-white border border-gray-800"
             data-component={config.name.toLowerCase()}
           >
-            <Component {...props} />
+            <Component {...props as SearchComponentProps} />
           </div>
         );
       })}
@@ -178,6 +200,7 @@ const Page: React.FC = () => {
     );
   };
 
+  // [Rest of the code remains the same as in the original implementation]
   const handleSave = async () => {
     if (!user) return;
   
@@ -185,7 +208,7 @@ const Page: React.FC = () => {
       const captureComprehensivePage = async () => {
         return new Promise<string>((resolve, reject) => {
           // Safe JSON stringify to handle circular references
-          const safeStringify = (obj: any) => {
+          const safeStringify = (obj: unknown) => {
             const cache = new WeakSet();
             return JSON.stringify(obj, (key, value) => {
               // Handle React-specific circular references
@@ -259,7 +282,7 @@ const Page: React.FC = () => {
   
           // Capture component data safely
           const captureComponentData = () => {
-            const componentData: any[] = [];
+            const componentData: Record<string, unknown>[] = [];
   
             const extractComponentInfo = (element: Element) => {
               // Find React fiber node safely
@@ -272,9 +295,9 @@ const Page: React.FC = () => {
                 const fiber = (element as any)[reactKey];
                 
                 // Safely extract props and state
-                const extractSafeProps = (props: any) => {
+                const extractSafeProps = (props: Record<string, unknown>) => {
                   if (!props) return {};
-                  const safeProps: any = {};
+                  const safeProps: Record<string, unknown> = {};
                   
                   Object.keys(props).forEach(key => {
                     // Skip functions, complex objects, and known problematic keys
@@ -477,7 +500,7 @@ const Page: React.FC = () => {
         onSignOut={handleSignOut}
       />
 
-      {/* History Toggle Button - Now conditionally rendered */}
+      {/* History Toggle Button */}
       {!isSideHistoryOpen && (
         <button 
           onClick={() => setIsSideHistoryOpen(!isSideHistoryOpen)}
@@ -504,7 +527,6 @@ const Page: React.FC = () => {
         </button>
       </div>
 
-
       <div className="background-layer" />
 
       <h1 className="main-heading text-white text-center text-4xl my-8">
@@ -521,19 +543,19 @@ const Page: React.FC = () => {
       </div>
 
       <div className="component-toggle-container flex justify-center space-x-2 my-4">
-  {SEARCH_COMPONENTS.map(({ name }) => (
-    <button
-      key={name}
-      onClick={() => toggleComponent(name)}
-      className={`glass-toggle ${activeComponents.includes(name) 
-        ? 'active bg-white/30 text-white' 
-        : 'bg-black/50 text-white/50'} 
-        w-4 h-4 rounded-full transition-all duration-300 ease-in-out hover:scale-105`}
-      data-component={name.toLowerCase()}
-      aria-label={`Toggle ${name}`}
-    />
-  ))}
-</div>
+        {SEARCH_COMPONENTS.map(({ name }) => (
+          <button
+            key={name}
+            onClick={() => toggleComponent(name)}
+            className={`glass-toggle ${activeComponents.includes(name) 
+              ? 'active bg-white/30 text-white' 
+              : 'bg-black/50 text-white/50'} 
+              w-4 h-4 rounded-full transition-all duration-300 ease-in-out hover:scale-105`}
+            data-component={name.toLowerCase()}
+            aria-label={`Toggle ${name}`}
+          />
+        ))}
+      </div>
 
       {submittedQuery && (
         <div className="query-display text-center my-4">
