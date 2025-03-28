@@ -67,7 +67,7 @@ interface Trigger {
   relevance: number;
 }
 
-// This type is now used to define the expected structure of the research data
+// ResearchData is now used in the type assertion
 interface ResearchData {
   executiveSummary: string;
   topTriggers?: Trigger[];
@@ -250,6 +250,9 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
     fetchData();
   }, [query, research, hasSearched]);
 
+  // Adding an explicit type assertion for the analysis
+  const analysisData = analysis as ResearchData;
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -266,7 +269,7 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
     );
   }
 
-  if (!analysis) {
+  if (!analysisData) {
     return (
       <div className="text-center p-4">
         No analysis data available
@@ -286,14 +289,14 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
           <h2 className="text-2xl font-bold mb-4">Market Overview</h2>
           <div 
             className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg prose prose-invert max-w-none"
-            dangerouslySetInnerHTML={{ __html: analysis.executiveSummary }} 
+            dangerouslySetInnerHTML={{ __html: analysisData.executiveSummary }} 
           />
         </section>
 
         <ResearchSection
           icon={<KeyRound className="w-6 h-6" />}
           title="Top Product Triggers"
-          items={validateArray(analysis.topTriggers)}
+          items={validateArray(analysisData.topTriggers)}
           renderItem={(trigger, index) => (
             <TriggerCard key={index} trigger={trigger as Trigger} />
           )}
@@ -303,7 +306,7 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
         <ResearchSection
           icon={<TrendingUp className="w-6 h-6" />}
           title="Current Trends"
-          items={validateArray(analysis.trends)}
+          items={validateArray(analysisData.trends)}
           renderItem={(trend, index) => (
             <TrendCard key={index} trend={trend as Trend} />
           )}
@@ -313,7 +316,7 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
         <ResearchSection
           icon={<Eye className="w-6 h-6" />}
           title="Consumer Insights"
-          items={validateArray(analysis.consumerInsights)}
+          items={validateArray(analysisData.consumerInsights)}
           renderItem={(insight, index) => (
             <InsightCard key={index} insight={insight as Insight} />
           )}
@@ -323,7 +326,7 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
         <ResearchSection
           icon={<Lightbulb className="w-6 h-6" />}
           title="Industry Insights"
-          items={validateArray(analysis.industryInsights)}
+          items={validateArray(analysisData.industryInsights)}
           renderItem={(insight, index) => (
             <InsightCard key={index} insight={insight as Insight} />
           )}
@@ -333,7 +336,7 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
         <ResearchSection
           icon={<Calendar className="w-6 h-6" />}
           title="Seasonal & Emerging Topics"
-          items={validateArray(analysis.seasonalTopics)}
+          items={validateArray(analysisData.seasonalTopics)}
           renderItem={(topic, index) => (
             <SeasonalCard key={index} topic={topic as SeasonalTopic} />
           )}
