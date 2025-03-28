@@ -4,7 +4,7 @@ import React, { useEffect, useState, memo } from "react";
 import { 
   TrendingUp, Calendar,
   Lightbulb, Eye, 
-  KeyRound // For product triggers
+  KeyRound, Search
 } from "lucide-react";
 import { Progress } from "@/app/components/ui/progress";
 import { useMarketResearch } from "@/app/api/googleAnalyticsApi";
@@ -24,15 +24,15 @@ interface CardProps {
   timing?: string;
 }
 
-interface SectionProps<T> {
+interface SectionProps {
   icon: React.ReactNode;
   title: string;
-  items: T[];
-  renderItem: (item: T, index: number) => React.ReactNode;
+  items: any[];
+  renderItem: (item: any, index: number) => React.ReactNode;
   emptyMessage: string;
+  className?: string;
 }
 
-// Define interfaces for each data type
 interface Trend {
   title: string;
   description: string;
@@ -60,7 +60,6 @@ interface SeasonalTopic {
   timing: string;
 }
 
-// Updated Trigger interface to match the new product-focused structure
 interface Trigger {
   productFeature: string;
   userNeed: string;
@@ -68,21 +67,19 @@ interface Trigger {
   relevance: number;
 }
 
-// Removed unused MarketOverviewData interface
-
 // Helper functions
-const validateArray = <T,>(data: T[] | undefined | null): T[] => {
+const validateArray = (data: any[] | undefined | null): any[] => {
   return Array.isArray(data) ? data : [];
 };
 
 // Base card component
 const ResearchCard = memo(({ title, description, items, score, scoreLabel, timing }: CardProps) => (
-  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg">
+  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full flex flex-col">
     <div className="flex justify-between items-center mb-4">
       <h3 className="text-xl font-semibold">{title}</h3>
       {timing && <span className="text-sm opacity-70">{timing}</span>}
     </div>
-    <div className="space-y-4">
+    <div className="space-y-4 flex-grow">
       <p dangerouslySetInnerHTML={{ __html: description }} />
       {items && items.length > 0 && (
         <ul className="space-y-2 mt-4">
@@ -104,6 +101,29 @@ const ResearchCard = memo(({ title, description, items, score, scoreLabel, timin
 ));
 
 ResearchCard.displayName = 'ResearchCard';
+
+// Google Source Card component
+const GoogleSourceCard = memo(({ result }: { result: { title: string; snippet: string; link: string } }) => (
+  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full flex flex-col transition-transform hover:scale-[1.02]">
+    <h3 className="text-xl font-semibold mb-2 line-clamp-2">{result.title}</h3>
+    <p className="text-sm mb-4 flex-grow line-clamp-3">{result.snippet}</p>
+    <a 
+      href={result.link} 
+      target="_blank" 
+      rel="noopener noreferrer"
+      className="text-blue-400 hover:text-blue-300 text-sm mt-auto flex items-center gap-1"
+    >
+      <span>Visit Source</span>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+        <polyline points="15 3 21 3 21 9"></polyline>
+        <line x1="10" y1="14" x2="21" y2="3"></line>
+      </svg>
+    </a>
+  </div>
+));
+
+GoogleSourceCard.displayName = 'GoogleSourceCard';
 
 // Specialized card components
 const TrendCard = memo(({ trend }: { trend: Trend }) => (
@@ -153,7 +173,6 @@ const SeasonalCard = memo(({ topic }: { topic: SeasonalTopic }) => (
 
 SeasonalCard.displayName = 'SeasonalCard';
 
-// Updated Trigger Card component for product triggers
 const TriggerCard = memo(({ trigger }: { trigger: Trigger }) => (
   <ResearchCard
     title={trigger.productFeature}
@@ -168,15 +187,16 @@ const TriggerCard = memo(({ trigger }: { trigger: Trigger }) => (
 
 TriggerCard.displayName = 'TriggerCard';
 
-// Generic section component
-const ResearchSection = <T,>({
+// Generic section component with updated type definition
+const ResearchSection: React.FC<SectionProps> = ({
   icon,
   title,
   items,
   renderItem,
-  emptyMessage
-}: SectionProps<T>) => (
-  <section className="mt-8">
+  emptyMessage,
+  className = ""
+}) => (
+  <section className={`mt-8 ${className}`}>
     <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
       {icon}
       {title}
@@ -185,7 +205,7 @@ const ResearchSection = <T,>({
       {items.length > 0 ? (
         items.map((item, index) => renderItem(item, index))
       ) : (
-        <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6">
+        <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 col-span-full">
           <p>{emptyMessage}</p>
         </div>
       )}
@@ -193,9 +213,15 @@ const ResearchSection = <T,>({
   </section>
 );
 
-// Main component
 const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
-  const { researchData, research, isLoading, error } = useMarketResearch();
+  const { 
+    googleResults, 
+    analysis, 
+    isLoading, 
+    error, 
+    isSuccess, 
+    research 
+  } = useMarketResearch();
   const [hasSearched, setHasSearched] = useState(false);
 
   useEffect(() => {
@@ -216,15 +242,15 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
     );
   }
 
-  if (error || !researchData?.success) {
+  if (error || !isSuccess) {
     return (
       <div className="text-center text-red-500 p-4">
-        {error || researchData?.error || "Failed to fetch research data"}
+        {error || "Failed to fetch research data"}
       </div>
     );
   }
 
-  if (!researchData?.data?.analysis) {
+  if (!analysis) {
     return (
       <div className="text-center p-4">
         No analysis data available
@@ -232,25 +258,25 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
     );
   }
 
-  const { analysis } = researchData.data;
-
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <header className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Product Research Analysis</h1>
-        <p className="text-lg opacity-70">Product Research for: {query}</p>
+        <p className="text-lg opacity-70">Research for: <span className="font-medium text-white">{query}</span></p>
       </header>
 
-      <div className="space-y-8">
+      <div className="space-y-12">
         <section>
           <h2 className="text-2xl font-bold mb-4">Market Overview</h2>
-          <div className="mb-6" dangerouslySetInnerHTML={{ __html: analysis.executiveSummary }} />
+          <div 
+            className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg prose prose-invert max-w-none"
+            dangerouslySetInnerHTML={{ __html: analysis.executiveSummary }} 
+          />
         </section>
 
-        {/* Top Triggers Section - Updated for product triggers */}
         <ResearchSection
           icon={<KeyRound className="w-6 h-6" />}
-          title="Top 10 Product Triggers"
+          title="Top Product Triggers"
           items={validateArray(analysis.topTriggers)}
           renderItem={(trigger, index) => (
             <TriggerCard key={index} trigger={trigger} />
@@ -298,6 +324,21 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
           emptyMessage="No seasonal topics available"
         />
       </div>
+
+      {/* Google Sources Section moved to the bottom, outside of the previous div */}
+      {googleResults && googleResults.length > 0 && (
+        <div className="mt-12 pt-12 border-t border-white/20">
+          <ResearchSection
+            icon={<Search className="w-6 h-6" />}
+            title="Research Sources"
+            items={googleResults}
+            renderItem={(result, index) => (
+              <GoogleSourceCard key={`source-${index}`} result={result} />
+            )}
+            emptyMessage="No sources available"
+          />
+        </div>
+      )}
     </div>
   );
 };
