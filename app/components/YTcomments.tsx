@@ -7,7 +7,6 @@ import {
   MessageSquare, 
   Loader2, 
   BarChart2,
-  X,
   TrendingUp,
   Target,
   Lightbulb,
@@ -24,25 +23,14 @@ import {
 } from '@/app/api/youtubeAnalytics';
 import { Button } from '@/app/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
-  DialogDescription,
-  DialogPortal
-} from "@/app/components/ui/dialog"; 
 import { Skeleton } from "@/app/components/ui/skeleton";
 import { Badge } from "@/app/components/ui/badge";
 
-// Error state interface
 interface ErrorState {
   message: string;
   code: string;
 }
 
-// Card props interface
 interface AnalysisCardProps {
   title: string;
   description: string;
@@ -95,70 +83,95 @@ interface CommentAnalysisProps {
   videoTitle: string;
 }
 
-// Helper functions
 const validateArray = <T,>(data: T[] | undefined | null): T[] => {
   return Array.isArray(data) ? data : [];
 };
 
-// Get sentiment color based on sentiment value
 const getSentimentColor = (sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed') => {
   switch (sentiment) {
-    case 'positive':
-      return 'text-green-500';
-    case 'negative':
-      return 'text-red-500';
-    case 'mixed':
-      return 'text-amber-500';
-    default:
-      return 'text-gray-400';
+    case 'positive': return '#22c55e';
+    case 'negative': return '#ef4444';
+    case 'mixed': return '#f59e0b';
+    default: return '#94a3b8';
   }
 };
 
-// Analysis card components
-const AnalysisCard = memo(({ title, description, items, score, scoreLabel, sentiment }: AnalysisCardProps) => (
-  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full flex flex-col">
-    <div className="flex justify-between items-center mb-4">
-      <h3 className="text-xl font-semibold">{title}</h3>
-      {sentiment && (
-        <Badge 
-          className={`${getSentimentColor(sentiment)} bg-opacity-20`}
-        >
-          {sentiment}
-        </Badge>
-      )}
-    </div>
-    <div className="space-y-4 flex-grow">
-      <p dangerouslySetInnerHTML={{ __html: description }} />
-      {items && items.length > 0 && (
-        <ul className="space-y-2 mt-4">
-          {items.map((item, idx) => (
-            <li key={idx} className="text-sm" dangerouslySetInnerHTML={{ __html: item }} />
-          ))}
-        </ul>
-      )}
-    </div>
-    {score !== undefined && (
-      <div className="mt-4 space-y-2">
-        <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
-          <div 
-            className={`h-full transition-all ${
-              score > 75 ? "bg-green-500" : 
-              score > 50 ? "bg-amber-500" : 
-              score > 25 ? "bg-orange-500" : "bg-red-500"
-            }`}
-            style={{ width: `${score}%` }}
-          />
-        </div>
-        <span className="text-sm">
-          {scoreLabel}: {score}%
-        </span>
+const AnalysisCard = memo(({ title, description, items, score, scoreLabel, sentiment }: AnalysisCardProps) => {
+  const sentimentColor = getSentimentColor(sentiment);
+  
+  return (
+    <div style={{
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      backdropFilter: 'blur(20px)',
+      borderRadius: '0.5rem',
+      padding: '1.5rem',
+      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%'
+    }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '1rem'
+      }}>
+        <h3 style={{
+          fontSize: '1.25rem',
+          fontWeight: 600
+        }}>{title}</h3>
+        {sentiment && (
+          <Badge style={{
+            padding: '0.25rem 0.5rem',
+            borderRadius: '0.375rem',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            color: sentimentColor
+          }}>
+            {sentiment}
+          </Badge>
+        )}
       </div>
-    )}
-  </div>
-));
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.5rem',
+        flexGrow: 1
+      }}>
+        <p dangerouslySetInnerHTML={{ __html: description }} />
+        {items?.map((item, idx) => (
+          <p key={idx} style={{ fontSize: '0.875rem' }} dangerouslySetInnerHTML={{ __html: item }} />
+        ))}
+      </div>
+      {score !== undefined && (
+        <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{
+            position: 'relative',
+            height: '0.125rem',
+            width: '100%',
+            overflow: 'hidden',
+            borderRadius: '0.5rem',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)'
+          }}>
+            <div style={{
+              height: '100%',
+              transition: 'width 0.3s ease',
+              width: `${score}%`,
+              backgroundColor: 
+                score > 75 ? '#22c55e' :
+                score > 50 ? '#f59e0b' :
+                score > 25 ? '#f97316' : '#ef4444'
+            }} />
+          </div>
+          <span style={{ fontSize: '0.875rem' }}>
+            {scoreLabel}: {score}%
+          </span>
+        </div>
+      )}
+    </div>
+  );
+});
 AnalysisCard.displayName = 'AnalysisCard';
 
-// Specialized card components
 const PainPointCard = memo(({ point }: { point: PainPoint }) => (
   <AnalysisCard
     title={point.title}
@@ -200,32 +213,62 @@ const TriggerCard = memo(({ trigger }: { trigger: EmotionalTrigger }) => (
 ));
 TriggerCard.displayName = 'TriggerCard';
 
-// Comment item component
 const CommentItemComponent = memo(({ comment }: { comment: CommentItemType }) => (
-  <div className="p-4 border rounded-lg transition-all hover:bg-white/5">
-    <div className="flex items-start gap-3">
+  <div style={{
+    padding: '1rem',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: '0.5rem',
+    transition: 'background-color 0.2s'
+  }}>
+    <div style={{
+      display: 'flex',
+      alignItems: 'flex-start',
+      gap: '0.75rem'
+    }}>
       {comment.snippet.topLevelComment.snippet.authorProfileImageUrl && (
-        <div className="relative w-10 h-10 overflow-hidden rounded-full flex-shrink-0">
+        <div style={{
+          position: 'relative',
+          width: '2.5rem',
+          height: '2.5rem',
+          overflow: 'hidden',
+          borderRadius: '50%',
+          flexShrink: 0
+        }}>
           <Image
             src={comment.snippet.topLevelComment.snippet.authorProfileImageUrl}
             alt={comment.snippet.topLevelComment.snippet.authorDisplayName}
             fill
             sizes="40px"
-            className="object-cover"
+            style={{ objectFit: 'cover' }}
           />
         </div>
       )}
-      <div className="flex-1">
-        <p className="font-medium">{comment.snippet.topLevelComment.snippet.authorDisplayName}</p>
-        <p className="mt-1 text-sm whitespace-pre-line">{comment.snippet.topLevelComment.snippet.textDisplay}</p>
-        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <ThumbsUp className="h-3 w-3" />
+      <div style={{ flex: 1 }}>
+        <p style={{ fontWeight: 500 }}>
+          {comment.snippet.topLevelComment.snippet.authorDisplayName}
+        </p>
+        <p style={{ 
+          marginTop: '0.25rem',
+          fontSize: '0.875rem',
+          whiteSpace: 'pre-line'
+        }}>
+          {comment.snippet.topLevelComment.snippet.textDisplay}
+        </p>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          marginTop: '0.5rem',
+          fontSize: '0.875rem',
+          color: 'rgba(255, 255, 255, 0.6)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <ThumbsUp size={14} />
             <span>{comment.snippet.topLevelComment.snippet.likeCount}</span>
           </div>
           {comment.snippet.totalReplyCount > 0 && (
-            <div className="flex items-center gap-1">
-              <MessageSquare className="h-3 w-3" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              <MessageSquare size={14} />
               <span>{comment.snippet.totalReplyCount} replies</span>
             </div>
           )}
@@ -241,16 +284,13 @@ const CommentAnalysis: React.FC<CommentAnalysisProps> = ({ videoId, videoTitle }
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentAnalysis, setCommentAnalysis] = useState<CommentAnalysisType | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [showAnalysis, setShowAnalysis] = useState(false);
   const [activeTab, setActiveTab] = useState("pain-points");
   const [error, setError] = useState<ErrorState | null>(null);
 
-  // Handle comment analysis
   const handleAnalyzeComments = async () => {
     if (!videoId) return;
     
     setIsAnalyzing(true);
-    setShowAnalysis(true);
     
     try {
       const analysis = await analyzeVideoComments(videoId, videoTitle);
@@ -266,7 +306,6 @@ const CommentAnalysis: React.FC<CommentAnalysisProps> = ({ videoId, videoTitle }
     }
   };
 
-  // Fetch comments when videoId changes
   useEffect(() => {
     const fetchComments = async () => {
       if (!videoId) return;
@@ -291,31 +330,31 @@ const CommentAnalysis: React.FC<CommentAnalysisProps> = ({ videoId, videoTitle }
     fetchComments();
   }, [videoId]);
 
-  // Reset analysis state when dialog is closed
-  const handleDialogChange = (open: boolean) => {
-    setShowAnalysis(open);
-    if (!open) {
-      setActiveTab("pain-points");
-    }
-  };
-
   return (
-    <div className="mt-8">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-semibold">Comments</h3>
+    <div style={{ marginTop: '2rem' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: '1rem'
+      }}>
+        <h3 style={{
+          fontSize: '1.25rem',
+          fontWeight: 600
+        }}>Comments</h3>
         <Button
           onClick={handleAnalyzeComments}
           disabled={isAnalyzing || !comments || comments.items.length === 0}
-          className="flex items-center gap-2"
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
         >
           {isAnalyzing ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 style={{ animation: 'spin 1s linear infinite' }} size={16} />
               Analyzing...
             </>
           ) : (
             <>
-              <BarChart2 className="h-4 w-4" />
+              <BarChart2 size={16} />
               Analyze Comments
             </>
           )}
@@ -323,186 +362,282 @@ const CommentAnalysis: React.FC<CommentAnalysisProps> = ({ videoId, videoTitle }
       </div>
       
       {commentsLoading ? (
-        <div className="mt-4 space-y-4">
+        <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="border border-white/10 rounded-lg p-4 animate-pulse">
-              <div className="flex items-start gap-3">
-                <Skeleton className="h-10 w-10 rounded-full" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-full" />
-                  <Skeleton className="h-3 w-3/4" />
+            <div key={i} style={{
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '0.5rem',
+              padding: '1rem',
+              animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                <div style={{
+                  width: '2.5rem',
+                  height: '2.5rem',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                }} />
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{
+                    width: '8rem',
+                    height: '1rem',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '0.25rem'
+                  }} />
+                  <div style={{
+                    width: '100%',
+                    height: '0.75rem',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '0.25rem'
+                  }} />
+                  <div style={{
+                    width: '75%',
+                    height: '0.75rem',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '0.25rem'
+                  }} />
                 </div>
               </div>
             </div>
           ))}
         </div>
       ) : !comments ? (
-        <p className="text-muted-foreground">Error loading comments. Please try again.</p>
+        <p style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+          Error loading comments. Please try again.
+        </p>
       ) : comments.items.length === 0 ? (
-        <div className="p-8 text-center border border-dashed rounded-lg">
-          <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p className="text-muted-foreground">No comments found for this video.</p>
+        <div style={{
+          padding: '2rem',
+          textAlign: 'center',
+          border: '1px dashed rgba(255, 255, 255, 0.2)',
+          borderRadius: '0.5rem'
+        }}>
+          <MessageSquare size={32} style={{ margin: '0 auto 0.5rem', opacity: 0.5 }} />
+          <p style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+            No comments found for this video.
+          </p>
         </div>
       ) : (
-        <div className="space-y-4 max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem',
+          maxHeight: '24rem',
+          overflowY: 'auto',
+          paddingRight: '0.5rem'
+        }}>
           {comments.items.slice(0, 10).map((comment) => (
             <CommentItemComponent key={comment.id} comment={comment} />
           ))}
           {comments.items.length > 10 && (
-            <p className="text-center text-sm text-muted-foreground pt-2">
+            <p style={{
+              textAlign: 'center',
+              fontSize: '0.875rem',
+              color: 'rgba(255, 255, 255, 0.6)',
+              paddingTop: '0.5rem'
+            }}>
               Showing 10 of {comments.items.length} comments
             </p>
           )}
         </div>
       )}
 
-      {/* Comment Analysis Dashboard Dialog */}
-      <Dialog open={showAnalysis} onOpenChange={handleDialogChange}>
-
-  <DialogPortal>
-
-    <div className="DialogOverlay">
-
-      <DialogContent className="DialogContent">
-
-        <DialogHeader>
-
-          <DialogTitle className="text-2xl font-bold">Comment Analysis Dashboard</DialogTitle>
-
-          <DialogDescription>
-
+      {commentAnalysis && (
+        <div style={{ marginTop: '2rem' }}>
+          <h2 style={{
+            fontSize: '1.5rem',
+            fontWeight: 700,
+            marginBottom: '1rem'
+          }}>
+            Comment Analysis Dashboard
+          </h2>
+          <p style={{ color: 'rgba(255, 255, 255, 0.6)', marginBottom: '1.5rem' }}>
             {videoTitle}
+          </p>
 
-          </DialogDescription>
+          {commentAnalysis.success && commentAnalysis.data ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+              <section>
+                <h3 style={{
+                  fontSize: '1.5rem',
+                  fontWeight: 700,
+                  marginBottom: '1rem'
+                }}>Overview</h3>
+                <div style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  backdropFilter: 'blur(20px)',
+                  borderRadius: '0.5rem',
+                  padding: '1.5rem'
+                }}>
+                  <p style={{ fontSize: '1.125rem', whiteSpace: 'pre-line' }}>
+                    {commentAnalysis.data.analysis.overview}
+                  </p>
+                </div>
+              </section>
 
-          <DialogClose className="DialogClose">
-
-            <X className="h-4 w-4" />
-
-          </DialogClose>
-
-        </DialogHeader>
-
-        <div className="overflow-y-auto pr-1 max-h-[calc(90vh-120px)] scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
-
-        {commentAnalysis?.success && commentAnalysis.data ? (
-              <div className="space-y-8">
-                {/* Overview Section */}
-                <section>
-                  <h2 className="text-2xl font-bold mb-4">Overview</h2>
-                  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6">
-                    <p className="text-lg whitespace-pre-line">{commentAnalysis.data.analysis.overview}</p>
+              <Tabs value={activeTab} onValueChange={setActiveTab} style={{ width: '100%' }}>
+                <TabsList style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '0.5rem',
+                  marginBottom: '2rem'
+                }}>
+                  <TabsTrigger value="pain-points" style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.75rem 1rem',
+                    borderRadius: '0.375rem',
+                    transition: 'background-color 0.2s'
+                  }}>
+                    <TrendingUp size={16} />
+                    Pain Points
+                  </TabsTrigger>
+                  <TabsTrigger value="user-experiences" style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.75rem 1rem',
+                    borderRadius: '0.375rem',
+                    transition: 'background-color 0.2s'
+                  }}>
+                    <Users size={16} />
+                    User Experiences
+                  </TabsTrigger>
+                  <TabsTrigger value="emotional-triggers" style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.75rem 1rem',
+                    borderRadius: '0.375rem',
+                    transition: 'background-color 0.2s'
+                  }}>
+                    <Lightbulb size={16} />
+                    Emotional Triggers
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="pain-points">
+                  <div style={{
+                    display: 'grid',
+                    gap: '1.5rem',
+                    gridTemplateColumns: 'repeat(1, 1fr)'
+                  }}>
+                    {validateArray(commentAnalysis.data.analysis.painPoints).map((point, index) => (
+                      <PainPointCard key={index} point={point} />
+                    ))}
+                    {validateArray(commentAnalysis.data.analysis.painPoints).length === 0 && (
+                      <div style={{
+                        gridColumn: '1 / -1',
+                        textAlign: 'center',
+                        padding: '2rem'
+                      }}>
+                        <p style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                          No pain points identified.
+                        </p>
+                      </div>
+                    )}
                   </div>
-                </section>
-
-                {/* Tabs for different analysis sections */}
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="grid grid-cols-3 mb-8">
-                    <TabsTrigger value="pain-points" className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" />
-                      Pain Points
-                    </TabsTrigger>
-                    <TabsTrigger value="user-experiences" className="flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      User Experiences
-                    </TabsTrigger>
-                    <TabsTrigger value="emotional-triggers" className="flex items-center gap-2">
-                      <Lightbulb className="h-4 w-4" />
-                      Emotional Triggers
-                    </TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="pain-points">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {validateArray(commentAnalysis.data.analysis.painPoints).map((point, index) => (
-                        <PainPointCard key={index} point={point} />
-                      ))}
-                      {validateArray(commentAnalysis.data.analysis.painPoints).length === 0 && (
-                        <div className="col-span-full text-center py-8">
-                          <p className="text-muted-foreground">No pain points identified.</p>
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="user-experiences">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {validateArray(commentAnalysis.data.analysis.userExperiences).map((exp, index) => (
-                        <ExperienceCard key={index} exp={exp} />
-                      ))}
-                      {validateArray(commentAnalysis.data.analysis.userExperiences).length === 0 && (
-                        <div className="col-span-full text-center py-8">
-                          <p className="text-muted-foreground">No user experiences identified.</p>
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="emotional-triggers">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {validateArray(commentAnalysis.data.analysis.emotionalTriggers).map((triggerData, index) => {
-                        const enhancedTrigger: EmotionalTrigger = {
-                          trigger: triggerData.trigger,
-                          context: triggerData.context,
-                          responsePattern: triggerData.responsePattern,
-                          intensity: triggerData.intensity,
-                          dominantEmotion: 'dominantEmotion' in triggerData ? 
-                            triggerData.dominantEmotion as string : 
-                            "Unknown"
-                        };
-                        return <TriggerCard key={index} trigger={enhancedTrigger} />;
-                      })}
-                      {validateArray(commentAnalysis.data.analysis.emotionalTriggers).length === 0 && (
-                        <div className="col-span-full text-center py-8">
-                          <p className="text-muted-foreground">No emotional triggers identified.</p>
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                </Tabs>
-
-                {/* Market Implications Section */}
-                <section>
-                  <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
-                    <Target className="w-6 h-6" />
-                    Market Implications
-                  </h2>
-                  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6">
-                    <div className="prose max-w-none">
-                      <p className="whitespace-pre-line">{commentAnalysis.data.analysis.marketImplications}</p>
-                    </div>
+                </TabsContent>
+                
+                <TabsContent value="user-experiences">
+                  <div style={{
+                    display: 'grid',
+                    gap: '1.5rem',
+                    gridTemplateColumns: 'repeat(1, 1fr)'
+                  }}>
+                    {validateArray(commentAnalysis.data.analysis.userExperiences).map((exp, index) => (
+                      <ExperienceCard key={index} exp={exp} />
+                    ))}
+                    {validateArray(commentAnalysis.data.analysis.userExperiences).length === 0 && (
+                      <div style={{
+                        gridColumn: '1 / -1',
+                        textAlign: 'center',
+                        padding: '2rem'
+                      }}>
+                        <p style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                          No user experiences identified.
+                        </p>
+                      </div>
+                    )}
                   </div>
-                </section>
-              </div>
-            ) : (
-              <div className="py-16 text-center">
-                {isAnalyzing ? (
-                  <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="h-10 w-10 animate-spin" />
-                    <p className="text-lg">Analyzing comments...</p>
-                    <p className="text-sm text-muted-foreground">This may take a moment for videos with many comments</p>
+                </TabsContent>
+                
+                <TabsContent value="emotional-triggers">
+                  <div style={{
+                    display: 'grid',
+                    gap: '1.5rem',
+                    gridTemplateColumns: 'repeat(1, 1fr)'
+                  }}>
+                    {validateArray(commentAnalysis.data.analysis.emotionalTriggers).map((triggerData, index) => {
+                      const enhancedTrigger: EmotionalTrigger = {
+                        trigger: triggerData.trigger,
+                        context: triggerData.context,
+                        responsePattern: triggerData.responsePattern,
+                        intensity: triggerData.intensity,
+                        dominantEmotion: 'dominantEmotion' in triggerData ? 
+                          triggerData.dominantEmotion as string : 
+                          "Unknown"
+                      };
+                      return <TriggerCard key={index} trigger={enhancedTrigger} />;
+                    })}
+                    {validateArray(commentAnalysis.data.analysis.emotionalTriggers).length === 0 && (
+                      <div style={{
+                        gridColumn: '1 / -1',
+                        textAlign: 'center',
+                        padding: '2rem'
+                      }}>
+                        <p style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                          No emotional triggers identified.
+                        </p>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-4">
-                    <AlertTriangle className="h-12 w-12 text-amber-500" />
-                    <p className="text-lg">
-                      {commentAnalysis?.error || error?.message || "Failed to generate analysis. Please try again."}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
+                </TabsContent>
+              </Tabs>
 
+              <section>
+                <h3 style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '1.5rem',
+                  fontWeight: 700,
+                  marginBottom: '1rem'
+                }}>
+                  <Target size={20} />
+                  Market Implications
+                </h3>
+                <div style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  backdropFilter: 'blur(20px)',
+                  borderRadius: '0.5rem',
+                  padding: '1.5rem'
+                }}>
+                  <p style={{ whiteSpace: 'pre-line' }}>
+                    {commentAnalysis.data.analysis.marketImplications}
+                  </p>
+                </div>
+              </section>
+            </div>
+          ) : (
+            <div style={{ 
+              padding: '2rem',
+              textAlign: 'center',
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '0.5rem'
+            }}>
+              <AlertTriangle size={48} style={{ 
+                color: '#f59e0b',
+                margin: '0 auto 1rem'
+              }} />
+              <p style={{ fontSize: '1.125rem' }}>
+                {commentAnalysis.error || error?.message || "Failed to generate analysis."}
+              </p>
+            </div>
+          )}
         </div>
-
-      </DialogContent>
-
-    </div>
-
-  </DialogPortal>
-
-</Dialog>
+      )}
     </div>
   );
 };

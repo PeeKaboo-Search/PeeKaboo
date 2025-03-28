@@ -15,10 +15,6 @@ import {
   VideoStatistics
 } from '@/app/types/youtube';
 import { searchYouTubeVideos } from '@/app/api/youtubeAnalytics';
-import { Card, CardContent } from '@/app/components/ui/card';
-import { Button } from '@/app/components/ui/button';
-import { Skeleton } from "@/app/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/app/components/ui/tooltip";
 import "@/app/styles/YouTubeAnalytics.css";
 import CommentAnalysis from './YTcomments';
 
@@ -62,70 +58,45 @@ const VideoCard = memo(({
   isSelected: boolean,
   onClick: () => void
 }) => (
-  <Card
-    className={`youtube-video-card flex-shrink-0 w-72 cursor-pointer snap-start transition-all hover:shadow-lg
-      ${isSelected ? 'ring-2 ring-primary shadow-md' : ''}`}
+  <div
+    className={`youtube-video-card ${isSelected ? 'selected' : ''}`}
     onClick={onClick}
   >
-    <CardContent className="p-0">
-      <div className="relative w-full h-40">
-        <Image
-          src={video.snippet.thumbnails.medium.url}
-          alt={video.snippet.title}
-          fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="object-cover rounded-t-lg"
-        />
-      </div>
-      <div className="p-4">
-        <h3 className="font-semibold line-clamp-2">{video.snippet.title}</h3>
-        <p className="text-sm text-muted-foreground mt-1">{video.snippet.channelTitle}</p>
-        <div className="flex gap-4 mt-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <div className="flex items-center gap-1">
-                  <Eye className="h-4 w-4" />
-                  <span className="text-sm">{formatNumber(statistics.viewCount || '0')}</span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Views: {parseInt(statistics.viewCount).toLocaleString()}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <div className="flex items-center gap-1">
-                  <ThumbsUp className="h-4 w-4" />
-                  <span className="text-sm">{formatNumber(statistics.likeCount || '0')}</span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Likes: {parseInt(statistics.likeCount || '0').toLocaleString()}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <div className="flex items-center gap-1">
-                  <MessageSquare className="h-4 w-4" />
-                  <span className="text-sm">{formatNumber(statistics.commentCount || '0')}</span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Comments: {parseInt(statistics.commentCount || '0').toLocaleString()}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+    <div className="youtube-video-card-thumbnail">
+      <Image
+        src={video.snippet.thumbnails.medium.url}
+        alt={video.snippet.title}
+        fill
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+      />
+    </div>
+    <div className="youtube-video-card-content">
+      <h3 className="youtube-video-card-title">{video.snippet.title}</h3>
+      <p className="youtube-video-card-channel">{video.snippet.channelTitle}</p>
+      <div className="youtube-video-card-stats">
+        <div className="youtube-video-card-stat">
+          <Eye className="youtube-video-card-stat-icon" />
+          <span className="youtube-video-card-stat-value">
+            {formatNumber(statistics.viewCount || '0')}
+          </span>
+        </div>
+        
+        <div className="youtube-video-card-stat">
+          <ThumbsUp className="youtube-video-card-stat-icon" />
+          <span className="youtube-video-card-stat-value">
+            {formatNumber(statistics.likeCount || '0')}
+          </span>
+        </div>
+        
+        <div className="youtube-video-card-stat">
+          <MessageSquare className="youtube-video-card-stat-icon" />
+          <span className="youtube-video-card-stat-value">
+            {formatNumber(statistics.commentCount || '0')}
+          </span>
         </div>
       </div>
-    </CardContent>
-  </Card>
+    </div>
+  </div>
 ));
 VideoCard.displayName = 'VideoCard';
 
@@ -248,22 +219,22 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
   // Render loading state
   if (loading && !videos.length) {
     return (
-      <div className="youtube-videos-container space-y-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold">YouTube Videos</h2>
-          <p className="text-sm text-muted-foreground">Searching for &quot;{query}&quot;...</p>
+      <div className="youtube-videos-container">
+        <div className="youtube-videos-container-header">
+          <h2 className="youtube-videos-container-header-title">YouTube Videos</h2>
+          <p className="youtube-videos-container-header-search">Searching for "{query}"...</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="youtube-loading-grid">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="bg-white/5 rounded-lg overflow-hidden">
-              <Skeleton className="w-full h-40" />
-              <div className="p-4 space-y-2">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-1/2" />
-                <div className="flex gap-4 mt-4">
-                  <Skeleton className="h-3 w-16" />
-                  <Skeleton className="h-3 w-16" />
-                  <Skeleton className="h-3 w-16" />
+            <div key={i} className="youtube-loading-item">
+              <div className="youtube-loading-thumbnail"></div>
+              <div className="youtube-loading-text">
+                <div className="youtube-loading-line" style={{width: '75%'}}></div>
+                <div className="youtube-loading-line" style={{width: '50%'}}></div>
+                <div className="youtube-videos-stat">
+                  <div className="youtube-loading-line" style={{width: '33%'}}></div>
+                  <div className="youtube-loading-line" style={{width: '33%'}}></div>
+                  <div className="youtube-loading-line" style={{width: '33%'}}></div>
                 </div>
               </div>
             </div>
@@ -274,49 +245,47 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
   }
 
   return (
-    <div className="youtube-videos-container space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">YouTube Videos</h2>
-        <div className="flex items-center"> 
-           <p className="text-sm text-muted-foreground">Searching for &quot;{query}&quot;...</p>
+    <div className="youtube-videos-container">
+      <div className="youtube-videos-container-header">
+        <h2 className="youtube-videos-container-header-title">YouTube Videos</h2>
+        <div className="youtube-videos-load-more-container"> 
+          <p className="youtube-videos-container-header-search">Searching for "{query}"...</p>
       
           {nextPageToken && !loadingMore && (
-            <Button
-              variant="outline"
-              size="sm"
+            <button
               onClick={loadMoreVideos}
               disabled={loading || loadingMore}
-              className="flex items-center gap-1"
+              className="youtube-videos-load-more"
             >
-              Load More <ChevronRight className="h-4 w-4" />
-            </Button>
+              Load More <ChevronRight />
+            </button>
           )}
           {loadingMore && (
-            <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm">Loading more...</span>
+            <div className="youtube-videos-loading">
+              <Loader2 style={{animation: 'spin 1s linear infinite'}} />
+              <span>Loading more...</span>
             </div>
           )}
         </div>
       </div>
 
       {error && (
-        <div className="p-4 bg-red-500/10 text-red-400 rounded-lg flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4" />
+        <div className="youtube-videos-error">
+          <AlertTriangle />
           <p>{error.message}</p>
         </div>
       )}
 
       {/* Video carousel */}
       <div 
-        className="youtube-videos-slider relative overflow-x-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
+        className="youtube-videos-slider"
         ref={videosSliderRef}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
         onMouseMove={handleMouseMove}
       >
-        <div className="flex gap-4 py-4 px-2">
+        <div className="youtube-videos-slider-inner">
           {videos.map((video) => (
             <VideoCard
               key={`youtube-video-${video.id.videoId}`}
