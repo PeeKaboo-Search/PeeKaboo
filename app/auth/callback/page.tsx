@@ -43,7 +43,7 @@ const Page: React.FC = () => {
         }
 
         // Attempt manual sign-in to complete OAuth flow
-        const { data, error } = await supabase.auth.signInWithOAuth({
+        const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
             redirectTo: process.env.NEXT_PUBLIC_SITE_URL
