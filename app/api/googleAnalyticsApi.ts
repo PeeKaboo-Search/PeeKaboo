@@ -240,7 +240,7 @@ export class MarketResearchService {
     searchUrl.searchParams.append('key', CONFIG.API_KEYS.GOOGLE || '');
     searchUrl.searchParams.append('cx', CONFIG.API_KEYS.SEARCH_ENGINE_ID || '');
     searchUrl.searchParams.append('q', `${query} product features benefits user needs`);
-    searchUrl.searchParams.append('num', '10');
+    searchUrl.searchParams.append('num', '1');
 
     const response = await this.fetchWithTimeout(searchUrl.toString(), { method: 'GET' });
 

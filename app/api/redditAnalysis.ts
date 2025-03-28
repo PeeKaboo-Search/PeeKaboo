@@ -161,22 +161,41 @@ export const fetchMarketingInsights = async (
 
     const authData = await authResponse.json() as RedditAuthResponse;
     const accessToken = authData.access_token;
-
-    // Focus on most relevant subreddits and get only 5 posts
-    const subreddits = [
-      'technology', 'products', 'business', 'marketing',
-      'startups', 'entrepreneurship', 'productmanagement'
-    ];
     
     const results: RedditResult[] = [];
     let totalPosts = 0;
 
-    // Keep searching until we have 5 relevant posts
-    for (const subreddit of subreddits) {
+    // Search across Reddit
+    const searchResponse = await fetch(
+      `https://oauth.reddit.com/search?q=${encodeURIComponent(query)}&limit=9&sort=relevance`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'User-Agent': 'MarketingInsights/3.0',
+        },
+      }
+    );
+
+    if (!searchResponse.ok) {
+      throw new Error(`Reddit Search error: ${searchResponse.status}`);
+    }
+
+    const searchData = await searchResponse.json() as RedditSearchResponse;
+    
+    // Filter posts with actual content
+    const relevantPosts = searchData.data.children
+      .filter((post: RedditPost) => 
+        post.data.selftext && 
+        post.data.selftext.length > 50 &&
+        post.data.num_comments > 0
+      );
+    
+    for (const post of relevantPosts) {
       if (totalPosts >= 5) break;
       
-      const searchResponse = await fetch(
-        `https://oauth.reddit.com/r/${subreddit}/search?q=${encodeURIComponent(query)}&limit=5&sort=relevance`,
+      // Get comments for this post
+      const commentsResponse = await fetch(
+        `https://oauth.reddit.com${post.data.permalink}?limit=10&depth=1`,
         {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -184,67 +203,40 @@ export const fetchMarketingInsights = async (
           },
         }
       );
-
-      if (!searchResponse.ok) continue;
-
-      const searchData = await searchResponse.json() as RedditSearchResponse;
       
-      // Filter posts with actual content
-      const relevantPosts = searchData.data.children
-        .filter((post: RedditPost) => 
-          post.data.selftext && 
-          post.data.selftext.length > 50 &&
-          post.data.num_comments > 0
-        );
+      if (!commentsResponse.ok) continue;
       
-      for (const post of relevantPosts) {
-        if (totalPosts >= 5) break;
-        
-        // Get comments for this post
-        const commentsResponse = await fetch(
-          `https://oauth.reddit.com${post.data.permalink}?limit=10&depth=1`,
-          {
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'User-Agent': 'MarketingInsights/3.0',
-            },
-          }
-        );
-        
-        if (!commentsResponse.ok) continue;
-        
-        const commentsData = await commentsResponse.json() as RedditCommentsResponse;
-        
-        // Extract top 5 comments (if available)
-        const topComments = commentsData[1]?.data?.children
-          .filter((comment: RedditComment) => 
-            comment.kind === 't1' && 
-            comment.data?.body && 
-            !comment.data.stickied
-          )
-          .sort((a: RedditComment, b: RedditComment) => b.data.score - a.data.score)
-          .slice(0, 5)
-          .map((comment: RedditComment) => ({
-            body: comment.data.body,
-            score: comment.data.score,
-            author: comment.data.author
-          })) || [];
-        
-        results.push({
-          title: post.data.title,
-          subreddit: post.data.subreddit,
-          snippet: post.data.selftext.slice(0, 300) + (post.data.selftext.length > 300 ? "..." : ""),
-          link: post.data.permalink ? `https://reddit.com${post.data.permalink}` : post.data.url,
-          engagement_metrics: {
-            upvote_ratio: post.data.upvote_ratio,
-            comment_count: post.data.num_comments,
-            awards: post.data.total_awards_received || 0
-          },
-          top_comments: topComments
-        });
-        
-        totalPosts++;
-      }
+      const commentsData = await commentsResponse.json() as RedditCommentsResponse;
+      
+      // Extract top 5 comments (if available)
+      const topComments = commentsData[1]?.data?.children
+        .filter((comment: RedditComment) => 
+          comment.kind === 't1' && 
+          comment.data?.body && 
+          !comment.data.stickied
+        )
+        .sort((a: RedditComment, b: RedditComment) => b.data.score - a.data.score)
+        .slice(0, 5)
+        .map((comment: RedditComment) => ({
+          body: comment.data.body,
+          score: comment.data.score,
+          author: comment.data.author
+        })) || [];
+      
+      results.push({
+        title: post.data.title,
+        subreddit: post.data.subreddit,
+        snippet: post.data.selftext.slice(0, 300) + (post.data.selftext.length > 300 ? "..." : ""),
+        link: post.data.permalink ? `https://reddit.com${post.data.permalink}` : post.data.url,
+        engagement_metrics: {
+          upvote_ratio: post.data.upvote_ratio,
+          comment_count: post.data.num_comments,
+          awards: post.data.total_awards_received || 0
+        },
+        top_comments: topComments
+      });
+      
+      totalPosts++;
     }
 
     if (results.length === 0) {
