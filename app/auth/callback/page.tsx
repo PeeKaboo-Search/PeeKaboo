@@ -20,7 +20,12 @@ const Page: React.FC = () => {
 
     const handleAuth = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession();
+        const { data, error: sessionError } = await supabase.auth.getSession();
+        
+        // Explicitly reference sessionError to avoid ESLint warning
+        if (sessionError) {
+          console.warn('Session error:', sessionError);
+        }
         
         if (data.session) {
           setStatus("Authentication successful!");
@@ -32,14 +37,17 @@ const Page: React.FC = () => {
         
         if (authError) {
           setStatus("Authentication failed. Redirecting...");
+          console.warn('Authentication error:', authError);
           setTimeout(() => router.push('/'), 2000);
           return;
         }
 
         setStatus("Finalizing authentication...");
         setTimeout(() => router.push('/'), 1500);
-      } catch (err) {
+      } catch (error) {
+        // Handle any unexpected errors
         setStatus("An unexpected error occurred.");
+        console.error('Unexpected authentication error:', error);
         setTimeout(() => router.push('/'), 2000);
       }
     };
