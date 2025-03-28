@@ -67,7 +67,8 @@ interface Trigger {
   relevance: number;
 }
 
-interface AnalysisData {
+// This type is now used to define the expected structure of the research data
+interface ResearchData {
   executiveSummary: string;
   topTriggers?: Trigger[];
   trends?: Trend[];
@@ -86,8 +87,6 @@ interface GoogleResult {
 const validateArray = <T,>(data: T[] | undefined | null): T[] => {
   return Array.isArray(data) ? data : [];
 };
-
-// Rest of the code remains the same, with minor type adjustments
 
 // Base card component
 const ResearchCard = memo(({ title, description, items, score, scoreLabel, timing }: CardProps) => (
