@@ -2,11 +2,10 @@
 
 import React, { useState, Suspense, useEffect } from "react";
 import { createClient, User, AuthChangeEvent, Session } from "@supabase/supabase-js";
-import { SideHistory } from "@/app/components/SideHistory";
 import { Menu, Save } from "lucide-react";
-import "app/styles/page.css";
 
 // Import components
+import { SideHistory } from "@/app/components/SideHistory";
 import ImageResult from "@/app/components/ImageResult";
 import GoogleAnalytics from "@/app/components/GoogleAnalytics";
 import PlayStoreAnalytics from "@/app/components/PlayStoreAnalytics";
@@ -17,12 +16,35 @@ import XAnalytics from "@/app/components/XAnalytics";
 import FacebookAdsAnalytics from "@/app/components/FacebookAdsAnalytics";
 import StrategyAnalysis from "@/app/components/StrategyAnalysis";
 
-// Initialize Supabase client with proper site URL for production
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+// Styles
+import "app/styles/page.css";
 
-const supabase = createClient(supabaseUrl, supabaseKey, {
+// Environment Configuration
+const {
+  NEXT_PUBLIC_SUPABASE_URL: supabaseUrl,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: supabaseKey,
+  NEXT_PUBLIC_SITE_URL: siteUrl = "http://localhost:3000"
+} = process.env;
+
+// Type Definitions
+type PropType = 'query' | 'keyword';
+
+interface SearchComponentConfig {
+  name: string;
+  component: React.ComponentType<QueryProps | KeywordProps>;
+  propType: PropType;
+}
+
+interface QueryProps {
+  query: string;
+}
+
+interface KeywordProps {
+  keyword: string;
+}
+
+// Supabase Client Configuration
+const supabase = createClient(supabaseUrl!, supabaseKey!, {
   auth: {
     flowType: 'pkce',
     autoRefreshToken: true,
@@ -32,27 +54,7 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   }
 });
 
-// Component prop interfaces
-interface QueryProps {
-  query: string;
-}
-
-interface KeywordProps {
-  keyword: string;
-}
-
-type SearchComponentConfig = 
-  | {
-      name: string;
-      component: React.ComponentType<QueryProps>;
-      propType: 'query';
-    }
-  | {
-      name: string;
-      component: React.ComponentType<KeywordProps>;
-      propType: 'keyword';
-    };
-
+// Constant Component Configurations
 const SEARCH_COMPONENTS: SearchComponentConfig[] = [
   { name: 'ImageResult', component: ImageResult, propType: 'query' },
   { name: 'GoogleAnalytics', component: GoogleAnalytics, propType: 'query' },
@@ -65,13 +67,47 @@ const SEARCH_COMPONENTS: SearchComponentConfig[] = [
   { name: 'StrategyAnalysis', component: StrategyAnalysis, propType: 'query' },
 ];
 
-interface SearchFormProps {
-  query: string;
-  setQuery: (query: string) => void;
-  handleSearch: (event: React.FormEvent<HTMLFormElement>) => void;
-  isSearching: boolean;
-}
+// Utility Functions
+const safeStringify = (obj: unknown): string => {
+  const cache = new WeakSet();
+  return JSON.stringify(obj, (key, value) => {
+    if (typeof value === 'object' && value !== null) {
+      if (cache.has(value)) return '[Circular]';
+      cache.add(value);
+    }
+    if (typeof value === 'function') return undefined;
+    if (['Provider', 'context'].includes(key)) return undefined;
+    return value;
+  }, 2);
+};
 
+const captureImagesBase64 = () => 
+  Array.from(document.images).map(img => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0);
+      return {
+        src: img.src,
+        base64: canvas.toDataURL('image/png'),
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+        alt: img.alt
+      };
+    } catch {
+      return {
+        src: img.src,
+        base64: null,
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+        alt: img.alt
+      };
+    }
+  });
+
+// Component Definitions
 const SearchForm: React.FC<SearchFormProps> = ({ 
   query, 
   setQuery, 
@@ -98,42 +134,26 @@ const SearchForm: React.FC<SearchFormProps> = ({
   </form>
 );
 
-interface ResultsSectionProps {
-  submittedQuery: string;
-  activeComponents: string[];
-}
-
 const ResultsSection: React.FC<ResultsSectionProps> = ({ 
   submittedQuery, 
   activeComponents 
 }) => (
   <div className="results-container">
     <Suspense fallback={<div className="results-loader text-white">Loading components...</div>}>
-      {SEARCH_COMPONENTS.filter(comp => activeComponents.includes(comp.name)).map((config) => {
-        if (config.propType === 'query') {
-          const Component = config.component;
-          return (
-            <div
-              key={config.name}
-              className="result-card bg-black text-white border border-gray-800"
-              data-component={config.name.toLowerCase()}
-            >
-              <Component query={submittedQuery} />
-            </div>
-          );
-        } else {
-          const Component = config.component;
-          return (
-            <div
-              key={config.name}
-              className="result-card bg-black text-white border border-gray-800"
-              data-component={config.name.toLowerCase()}
-            >
-              <Component keyword={submittedQuery} />
-            </div>
-          );
-        }
-      })}
+      {SEARCH_COMPONENTS
+        .filter(comp => activeComponents.includes(comp.name))
+        .map((config) => (
+          <div
+            key={config.name}
+            className="result-card bg-black text-white border border-gray-800"
+            data-component={config.name.toLowerCase()}
+          >
+            {config.propType === 'query' 
+              ? React.createElement(config.component as React.ComponentType<QueryProps>, { query: submittedQuery })
+              : React.createElement(config.component as React.ComponentType<KeywordProps>, { keyword: submittedQuery })
+            }
+          </div>
+        ))}
     </Suspense>
   </div>
 );
@@ -164,6 +184,7 @@ const Page: React.FC = () => {
     };
   }, []);
 
+  // Search and Component Management Methods
   const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     
@@ -175,9 +196,7 @@ const Page: React.FC = () => {
     setActiveComponents(componentsToSearch);
     setIsSearching(true);
 
-    setTimeout(() => {
-      setIsSearching(false);
-    }, 1500);
+    setTimeout(() => setIsSearching(false), 1500);
   };
 
   const toggleComponent = (componentName: string) => {
@@ -188,121 +207,76 @@ const Page: React.FC = () => {
     );
   };
 
+  // Authentication Methods
+  const handleSignIn = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${siteUrl}/auth/callback`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent'
+        }
+      }
+    });
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
+
+  // Save Functionality
   const handleSave = async () => {
     if (!user) return;
   
     try {
-      const captureComprehensivePage = async () => {
-        return new Promise<string>((resolve, reject) => {
-          const safeStringify = (obj: unknown) => {
-            const cache = new WeakSet();
-            return JSON.stringify(obj, (key, value) => {
-              if (typeof value === 'object' && value !== null) {
-                if (cache.has(value)) {
-                  return '[Circular]';
-                }
-                cache.add(value);
-              }
+      const captureApplicationState = () => ({
+        query: submittedQuery || '',
+        activeComponents: activeComponents || [],
+        timestamp: new Date().toISOString(),
+        userContext: user ? {
+          id: user.id,
+          email: user.email
+        } : null,
+        windowInfo: {
+          innerWidth: window.innerWidth,
+          innerHeight: window.innerHeight,
+          devicePixelRatio: window.devicePixelRatio,
+          userAgent: navigator.userAgent,
+          platform: navigator.platform
+        }
+      });
 
-              if (typeof value === 'function') return undefined;
-              if (key === 'Provider' || key === 'context') return undefined;
-              
-              return value;
-            }, 2);
-          };
+      const createComprehensiveSnapshot = () => {
+        const snapshotData = {
+          applicationState: captureApplicationState(),
+          images: captureImagesBase64(),
+        };
 
-          const captureImagesBase64 = () => {
-            return Array.from(document.images).map(img => {
-              try {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.naturalWidth;
-                canvas.height = img.naturalHeight;
-                const ctx = canvas.getContext('2d');
-                ctx?.drawImage(img, 0, 0);
-                return {
-                  src: img.src,
-                  base64: canvas.toDataURL('image/png'),
-                  width: img.naturalWidth,
-                  height: img.naturalHeight,
-                  alt: img.alt
-                };
-              } catch {
-                return {
-                  src: img.src,
-                  base64: null,
-                  width: img.naturalWidth,
-                  height: img.naturalHeight,
-                  alt: img.alt
-                };
-              }
-            });
-          };
-
-          const captureApplicationState = () => {
-            return {
-              query: submittedQuery || '',
-              activeComponents: activeComponents || [],
-              timestamp: new Date().toISOString(),
-              userContext: user ? {
-                id: user.id,
-                email: user.email
-              } : null,
-              windowInfo: {
-                innerWidth: window.innerWidth,
-                innerHeight: window.innerHeight,
-                devicePixelRatio: window.devicePixelRatio,
-                userAgent: navigator.userAgent,
-                platform: navigator.platform
-              }
-            };
-          };
-
-          const createComprehensiveSnapshot = () => {
-            const snapshotData = {
-              applicationState: captureApplicationState(),
-              images: captureImagesBase64(),
-            };
-
-            const snapshotScript = `
-  <!DOCTYPE html>
-  <html>
-  <head>
-    <meta charset="UTF-8">
-    <title>Peekaboo Comprehensive Snapshot</title>
-    <script id="__PEEKABOO_SNAPSHOT__" type="application/json">
-    ${safeStringify(snapshotData)}
-    </script>
-  </head>
-  <body>
-    <!-- Snapshot preserved from original page -->
-    ${document.documentElement.innerHTML}
-  </body>
-  </html>
-  `;
+        const snapshotScript = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Peekaboo Comprehensive Snapshot</title>
+  <script id="__PEEKABOO_SNAPSHOT__" type="application/json">
+  ${safeStringify(snapshotData)}
+  </script>
+</head>
+<body>
+  <!-- Snapshot preserved from original page -->
+  ${document.documentElement.innerHTML}
+</body>
+</html>
+`;
   
-            return snapshotScript;
-          };
-
-          try {
-            const snapshotHTML = createComprehensiveSnapshot();
-            const blob = new Blob([snapshotHTML], { type: 'text/html' });
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          } catch (error) {
-            reject(error);
-          }
-        });
+        return snapshotScript;
       };
       
-      const snapshotData = await captureComprehensivePage();
-      
+      const snapshotData = createComprehensiveSnapshot();
       const fileName = `search_reports/${user.id}/${Date.now()}_comprehensive.html`;
       
-      const snapshotBlob = typeof snapshotData === 'string' && snapshotData.startsWith('data:')
-        ? await (await fetch(snapshotData)).blob()
-        : new Blob([snapshotData], { type: 'text/html' });
+      const snapshotBlob = new Blob([snapshotData], { type: 'text/html' });
       
       const { error: uploadError } = await supabase.storage
         .from('search_reports')
@@ -337,23 +311,7 @@ const Page: React.FC = () => {
     }
   };
 
-  const handleSignIn = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${siteUrl}/auth/callback`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent'
-        }
-      }
-    });
-  };
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-  };
-
+  // Render Logic
   if (!user) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
