@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 
 const Page: React.FC = () => {
-  const [status, setStatus] = useState("Authenticating...");
+  const [status, setStatus] = useState("Authenticating");
   const router = useRouter();
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,43 +15,49 @@ const Page: React.FC = () => {
   useEffect(() => {
     const handleAuth = async () => {
       try {
-        const { data, error: sessionError } = await supabase.auth.getSession();
+        // First, check for existing session
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
+        if (sessionData.session) {
+          setStatus("Welcome");
+          setTimeout(() => router.push('/'), 1500);
+          return;
+        }
+
+        // If no session, try to get the current user
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        
+        if (userData.user) {
+          setStatus("Welcome");
+          setTimeout(() => router.push('/'), 1500);
+          return;
+        }
+
+        // If both session and user checks fail, log detailed error
         if (sessionError) {
-          console.error('Session error:', sessionError);
-          setStatus("Authentication failed");
-          setTimeout(() => router.push('/'), 2000);
-          return;
+          console.error('Session Error:', sessionError);
         }
         
-        if (data.session) {
-          setStatus("Authentication successful");
-          setTimeout(() => router.push('/'), 1500);
-          return;
+        if (userError) {
+          console.error('User Error:', userError);
         }
 
-        // Attempt to complete the OAuth flow
-        const { data: authData, error: authError } = await supabase.auth.getUser();
-        
-        if (authError) {
-          console.error('Authentication error:', authError);
-          setStatus("Authentication failed");
+        // Attempt manual sign-in to complete OAuth flow
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: process.env.NEXT_PUBLIC_SITE_URL
+          }
+        });
+
+        if (error) {
+          console.error('OAuth Error:', error);
+          setStatus("Authentication Failed");
           setTimeout(() => router.push('/'), 2000);
-          return;
         }
-
-        if (authData.user) {
-          setStatus("Authentication successful");
-          setTimeout(() => router.push('/'), 1500);
-          return;
-        }
-
-        // If no session or user found
-        setStatus("Unable to authenticate");
-        setTimeout(() => router.push('/'), 2000);
       } catch (error) {
-        console.error('Unexpected authentication error:', error);
-        setStatus("An unexpected error occurred");
+        console.error('Unexpected Authentication Error:', error);
+        setStatus("Authentication Failed");
         setTimeout(() => router.push('/'), 2000);
       }
     };
@@ -73,33 +79,61 @@ const Page: React.FC = () => {
           justify-content: center;
           align-items: center;
           z-index: 9999;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
         }
         .auth-card {
-          background: rgba(20,20,20,0.8);
-          border-radius: 8px;
-          padding: 2rem;
           text-align: center;
           color: white;
-          font-size: 1.2rem;
         }
-        .spinner {
-          border: 4px solid rgba(255,255,255,0.2);
-          border-top: 4px solid white;
+        .status {
+          font-size: 1.2rem;
+          margin-bottom: 20px;
+        }
+        .apple-spinner {
+          width: 50px;
+          height: 50px;
+          border: 3px solid rgba(255,255,255,0.3);
           border-radius: 50%;
-          width: 40px;
-          height: 40px;
-          animation: spin 1s linear infinite;
-          margin: 20px auto;
+          border-top-color: white;
+          animation: spin 1s ease-in-out infinite;
+          margin: 0 auto;
         }
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
+        .dot-animation {
+          display: inline-block;
+          overflow: hidden;
+          vertical-align: bottom;
+        }
+        .dot-animation span {
+          display: inline-block;
+          animation: dots 1.4s infinite both;
+        }
+        .dot-animation span:nth-child(2) {
+          animation-delay: 0.2s;
+        }
+        .dot-animation span:nth-child(3) {
+          animation-delay: 0.4s;
+        }
+        @keyframes dots {
+          0%, 20% { opacity: 0; transform: translateY(0); }
+          50% { opacity: 1; transform: translateY(-5px); }
+          80%, 100% { opacity: 0; transform: translateY(0); }
+        }
       `}</style>
       <div className="auth-container">
-        <div className="auth-card">
-          <div>{status}</div>
-          <div className="spinner"></div>
+        <div>
+          <div className="status">
+            {status}
+            <span className="dot-animation">
+              <span>.</span>
+              <span>.</span>
+              <span>.</span>
+            </span>
+          </div>
+          <div className="apple-spinner"></div>
         </div>
       </div>
     </>
