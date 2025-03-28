@@ -27,8 +27,8 @@ interface CardProps {
 interface SectionProps {
   icon: React.ReactNode;
   title: string;
-  items: any[];
-  renderItem: (item: any, index: number) => React.ReactNode;
+  items: unknown[];
+  renderItem: (item: unknown, index: number) => React.ReactNode;
   emptyMessage: string;
   className?: string;
 }
@@ -67,10 +67,27 @@ interface Trigger {
   relevance: number;
 }
 
+interface AnalysisData {
+  executiveSummary: string;
+  topTriggers?: Trigger[];
+  trends?: Trend[];
+  consumerInsights?: Insight[];
+  industryInsights?: Insight[];
+  seasonalTopics?: SeasonalTopic[];
+}
+
+interface GoogleResult {
+  title: string;
+  snippet: string;
+  link: string;
+}
+
 // Helper functions
-const validateArray = (data: any[] | undefined | null): any[] => {
+const validateArray = <T,>(data: T[] | undefined | null): T[] => {
   return Array.isArray(data) ? data : [];
 };
+
+// Rest of the code remains the same, with minor type adjustments
 
 // Base card component
 const ResearchCard = memo(({ title, description, items, score, scoreLabel, timing }: CardProps) => (
@@ -103,7 +120,7 @@ const ResearchCard = memo(({ title, description, items, score, scoreLabel, timin
 ResearchCard.displayName = 'ResearchCard';
 
 // Google Source Card component
-const GoogleSourceCard = memo(({ result }: { result: { title: string; snippet: string; link: string } }) => (
+const GoogleSourceCard = memo(({ result }: { result: GoogleResult }) => (
   <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full flex flex-col transition-transform hover:scale-[1.02]">
     <h3 className="text-xl font-semibold mb-2 line-clamp-2">{result.title}</h3>
     <p className="text-sm mb-4 flex-grow line-clamp-3">{result.snippet}</p>
@@ -133,8 +150,8 @@ const TrendCard = memo(({ trend }: { trend: Trend }) => (
     items={[
       `<strong>Audience:</strong> ${trend.audience.join(", ")}`,
       `<strong>Platforms:</strong> ${trend.platforms.join(", ")}`,
-      ...trend.contentIdeas.map((idea: string) => `<strong>Content Idea:</strong> ${idea}`),
-      ...trend.bestPractices.map((practice: string) => `<strong>Best Practice:</strong> ${practice}`)
+      ...trend.contentIdeas.map((idea) => `<strong>Content Idea:</strong> ${idea}`),
+      ...trend.bestPractices.map((practice) => `<strong>Best Practice:</strong> ${practice}`)
     ]}
     score={trend.impact}
     scoreLabel="Impact Score"
@@ -148,9 +165,9 @@ const InsightCard = memo(({ insight }: { insight: Insight }) => (
     title={insight.title}
     description={insight.keyFindings.join("<br/>")}
     items={[
-      ...insight.implications.map((imp: string) => `<strong>Implication:</strong> ${imp}`),
-      ...insight.opportunities.map((opp: string) => `<strong>Opportunity:</strong> ${opp}`),
-      ...insight.recommendations.map((rec: string) => `<strong>Recommendation:</strong> ${rec}`)
+      ...insight.implications.map((imp) => `<strong>Implication:</strong> ${imp}`),
+      ...insight.opportunities.map((opp) => `<strong>Opportunity:</strong> ${opp}`),
+      ...insight.recommendations.map((rec) => `<strong>Recommendation:</strong> ${rec}`)
     ]}
   />
 ));
@@ -162,8 +179,8 @@ const SeasonalCard = memo(({ topic }: { topic: SeasonalTopic }) => (
     title={topic.topic}
     description={topic.description}
     items={[
-      ...topic.marketingAngles.map((angle: string) => `<strong>Marketing Angle:</strong> ${angle}`),
-      ...topic.contentSuggestions.map((sugg: string) => `<strong>Content Suggestion:</strong> ${sugg}`)
+      ...topic.marketingAngles.map((angle) => `<strong>Marketing Angle:</strong> ${angle}`),
+      ...topic.contentSuggestions.map((sugg) => `<strong>Content Suggestion:</strong> ${sugg}`)
     ]}
     score={topic.relevance}
     scoreLabel="Relevance Score"
@@ -178,7 +195,7 @@ const TriggerCard = memo(({ trigger }: { trigger: Trigger }) => (
     title={trigger.productFeature}
     description={`<strong>User Need:</strong> ${trigger.userNeed}`}
     items={[
-      ...trigger.recommendedProductContent.map((content: string) => `<strong>Product Content:</strong> ${content}`)
+      ...trigger.recommendedProductContent.map((content) => `<strong>Product Content:</strong> ${content}`)
     ]}
     score={trigger.relevance}
     scoreLabel="Relevance Score"
@@ -279,7 +296,7 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
           title="Top Product Triggers"
           items={validateArray(analysis.topTriggers)}
           renderItem={(trigger, index) => (
-            <TriggerCard key={index} trigger={trigger} />
+            <TriggerCard key={index} trigger={trigger as Trigger} />
           )}
           emptyMessage="No product triggers available"
         />
@@ -289,7 +306,7 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
           title="Current Trends"
           items={validateArray(analysis.trends)}
           renderItem={(trend, index) => (
-            <TrendCard key={index} trend={trend} />
+            <TrendCard key={index} trend={trend as Trend} />
           )}
           emptyMessage="No trends available"
         />
@@ -299,7 +316,7 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
           title="Consumer Insights"
           items={validateArray(analysis.consumerInsights)}
           renderItem={(insight, index) => (
-            <InsightCard key={index} insight={insight} />
+            <InsightCard key={index} insight={insight as Insight} />
           )}
           emptyMessage="No consumer insights available"
         />
@@ -309,7 +326,7 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
           title="Industry Insights"
           items={validateArray(analysis.industryInsights)}
           renderItem={(insight, index) => (
-            <InsightCard key={index} insight={insight} />
+            <InsightCard key={index} insight={insight as Insight} />
           )}
           emptyMessage="No industry insights available"
         />
@@ -319,13 +336,12 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
           title="Seasonal & Emerging Topics"
           items={validateArray(analysis.seasonalTopics)}
           renderItem={(topic, index) => (
-            <SeasonalCard key={index} topic={topic} />
+            <SeasonalCard key={index} topic={topic as SeasonalTopic} />
           )}
           emptyMessage="No seasonal topics available"
         />
       </div>
 
-      {/* Google Sources Section moved to the bottom, outside of the previous div */}
       {googleResults && googleResults.length > 0 && (
         <div className="mt-12 pt-12 border-t border-white/20">
           <ResearchSection
@@ -333,7 +349,7 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
             title="Research Sources"
             items={googleResults}
             renderItem={(result, index) => (
-              <GoogleSourceCard key={`source-${index}`} result={result} />
+              <GoogleSourceCard key={`source-${index}`} result={result as GoogleResult} />
             )}
             emptyMessage="No sources available"
           />
