@@ -17,6 +17,8 @@ const nextConfig = {
         'images.unsplash.com', // Unsplash
         'images.pexels.com', // Pexels
         'images.pixabay.com', // Pixabay
+        'store-apps.p.rapidapi.com',
+        'play-lh.googleusercontent.com',
   
         // Cloud Storage
         'storage.googleapis.com', // Google Cloud

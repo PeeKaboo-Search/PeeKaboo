@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import "@/app/styles/images.css";
@@ -42,7 +44,6 @@ const ImageResult: React.FC<ImageResultProps> = ({
           setError("Failed to fetch images");
         }
       } catch (error) {
-        // Fixed: Using the error parameter properly
         console.error("Image search error:", error);
         setError("An error occurred while fetching images");
       } finally {
@@ -67,7 +68,6 @@ const ImageResult: React.FC<ImageResultProps> = ({
     const sliderWidth = slider.offsetWidth;
     const maxScroll = trackWidth - sliderWidth;
     
-    // Calculate scroll position based on slider percentage
     const scrollAmount = (value / 100) * maxScroll;
     track.style.transform = `translateX(-${scrollAmount}px)`;
   };

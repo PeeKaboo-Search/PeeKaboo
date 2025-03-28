@@ -1,149 +1,152 @@
-// Reddit Post interface
+// Reddit Related Types
 export interface RedditPost {
-    title: string;
-    subreddit: string;
-    upvotes: number;
-    comments: number;
-    body: string;
+  title: string;
+  subreddit: string;
+  upvotes: number;
+  comments: number;
+  body: string;
 }
 
-// Analysis Result interface
+// Analysis Result Interfaces
 export interface AnalysisResult {
-    success: boolean;
-    data?: {
-        analysis: string;
-        rawPosts: RedditPost[];
-        timestamp: string;
-    };
-    error?: string;
+  success: boolean;
+  data?: {
+    analysis: string;
+    rawPosts: RedditPost[];
+    timestamp: string;
+  };
+  error?: string;
 }
 
-// Groq API interfaces
-export interface GroqMessage {
-    role: 'system' | 'user' | 'assistant';
+// AI API Interfaces
+export interface AIMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+export interface AIRequest {
+  model: string;
+  messages: AIMessage[];
+  temperature: number;
+  max_tokens: number;
+}
+
+export interface AIResponseChoice {
+  index: number;
+  message: {
+    role: string;
     content: string;
+  };
+  finish_reason: string;
 }
 
-export interface GroqRequest {
-    model: string;
-    messages: GroqMessage[];
-    temperature: number;
-    max_tokens: number;
+export interface AIResponse {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  choices: AIResponseChoice[];
 }
 
-export interface GroqChoice {
-    message: {
-        content: string;
-        role: string;
+// Dataset and Visualization Types
+export interface ChartDataset {
+  label: string;
+  data: number[];
+}
+
+export interface HistoricTrendDataset extends ChartDataset {
+  borderColor?: string;
+  tension?: number;
+}
+
+export interface BaseChartData {
+  title: string;
+  labels: string[];
+}
+
+export interface HistoricTrendData extends BaseChartData {
+  datasets: HistoricTrendDataset[];
+}
+
+export interface DistributionData extends BaseChartData {
+  data: number[];
+}
+
+// Comprehensive Market Analysis Structure
+export interface MarketAnalysisData {
+  historicTrend: HistoricTrendData;
+  marketShare: DistributionData;
+  sentiment: DistributionData;
+  regional: DistributionData;
+  demographics: DistributionData;
+  priceDistribution: DistributionData;
+}
+
+// Styling and Configuration Types
+export interface ChartColors {
+  line: string;
+  pie: string[];
+  bar: string;
+}
+
+export interface ChartOptions {
+  responsive: boolean;
+  maintainAspectRatio: boolean;
+  plugins: {
+    title: {
+      display: boolean;
+      text: string;
     };
-    finish_reason: string;
-    index: number;
-}
-
-export interface GroqResponse {
-    id: string;
-    object: string;
-    created: number;
-    model: string;
-    choices: GroqChoice[];
-}
-
-// API Response Types
-export interface GroqResponse {
-    id: string;
-    object: string;
-    created: number;
-    model: string;
-    choices: {
-      index: number;
-      message: {
-        role: string;
-        content: string;
-      };
-      finish_reason: string;
-    }[];
-  }
-  
-  // Dataset Types
-  export interface ChartDataset {
-    label: string;
-    data: number[];
-  }
-  
-  export interface HistoricTrendDataset extends ChartDataset {
-    borderColor?: string;
-    tension?: number;
-  }
-  
-  // Chart Data Structure Types
-  export interface BaseChartData {
-    title: string;
-    labels: string[];
-  }
-  
-  export interface HistoricTrendData extends BaseChartData {
-    datasets: HistoricTrendDataset[];
-  }
-  
-  export interface DistributionData extends BaseChartData {
-    data: number[];
-  }
-  
-  // Complete Market Analysis Data Structure
-  export interface MarketAnalysisData {
-    historicTrend: HistoricTrendData;
-    marketShare: DistributionData;
-    sentiment: DistributionData;
-    regional: DistributionData;
-    demographics: DistributionData;
-    priceDistribution: DistributionData;
-  }
-  
-  // Chart Configuration Types
-  export interface ChartColors {
-    line: string;
-    pie: string[];
-    bar: string;
-  }
-  
-  // Component Props Types
-  export interface TrendAnalysisProps {
-    query: string;
-    className?: string;
-    onDataLoaded?: (data: MarketAnalysisData) => void;
-    onError?: (error: Error) => void;
-  }
-  
-  // Chart Options Types
-  export interface ChartOptions {
-    responsive: boolean;
-    maintainAspectRatio: boolean;
-    plugins: {
-      title: {
-        display: boolean;
-        text: string;
-      };
-      legend?: {
-        position: 'top' | 'right' | 'bottom' | 'left';
-        labels?: {
-          fontSize?: number;
-        };
+    legend?: {
+      position: 'top' | 'right' | 'bottom' | 'left';
+      labels?: {
+        fontSize?: number;
       };
     };
-  }
-  
-  // API Error Types
-  export interface APIErrorResponse {
-    error: {
-      message: string;
-      type: string;
-      code: string;
-    };
-  }
-  
-  // State Types
-  export interface AnalysisState {
-    loading: boolean;
-    error: string | null;
-    data: MarketAnalysisData | null;
-  }
+  };
+}
+
+// Component and Prop Types
+export type ComponentProps = {
+  query: string;
+  className?: string;
+  onDataLoaded?: (data: MarketAnalysisData) => void;
+  onError?: (error: Error) => void;
+};
+
+export type TrendAnalysisProps = ComponentProps;
+
+// Error Handling Types
+export interface APIErrorResponse {
+  error: {
+    message: string;
+    type: string;
+    code: string;
+  };
+}
+
+// State Management Types
+export interface AnalysisState {
+  loading: boolean;
+  error: string | null;
+  data: MarketAnalysisData | null;
+}
+
+// Search Component Types
+export interface SearchComponentConfig {
+  name: string;
+  component: React.ComponentType<ComponentProps>;
+  propType: 'query' | 'keyword';
+}
+
+export interface SearchFormProps {
+  query: string;
+  setQuery: (query: string) => void;
+  handleSearch: (e: React.FormEvent<HTMLFormElement>) => void;
+  isSearching: boolean;
+}
+
+export interface ResultsSectionProps {
+  submittedQuery: string;
+  activeComponents: string[];
+}
