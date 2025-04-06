@@ -33,7 +33,12 @@ const CardSkeleton = () => (
   </div>
 );
 
-const SkeletonSection = ({ title, count = 3 }) => (
+interface SkeletonSectionProps {
+  title: string;
+  count?: number;
+}
+
+const SkeletonSection = ({ title, count = 3 }: SkeletonSectionProps) => (
   <section className="mt-8">
     <div className="flex items-center gap-2 h-8 bg-white/20 rounded w-48 mb-4"></div>
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -45,7 +50,7 @@ const SkeletonSection = ({ title, count = 3 }) => (
 );
 
 // Base card component
-const AnalysisCard = memo(({ title, description, items, score, scoreLabel, timing, icon }: {
+interface AnalysisCardProps {
   title: string;
   description: string | React.ReactNode;
   items?: string[];
@@ -53,8 +58,10 @@ const AnalysisCard = memo(({ title, description, items, score, scoreLabel, timin
   scoreLabel?: string;
   timing?: string;
   icon?: React.ReactNode;
-}) => (
-  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg">
+}
+
+const AnalysisCard = memo(({ title, description, items, score, scoreLabel, timing, icon }: AnalysisCardProps) => (
+  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full">
     <div className="flex justify-between items-center mb-4">
       <h3 className="text-xl font-semibold flex items-center gap-2">
         {icon}
@@ -89,15 +96,19 @@ const AnalysisCard = memo(({ title, description, items, score, scoreLabel, timin
 
 AnalysisCard.displayName = 'AnalysisCard';
 
-// Overview & Sentiment Analysis Card
-const OverviewCard = memo(({ overview, sentiment }: { 
+interface SentimentData {
+  score: number;
+  label: 'positive' | 'negative' | 'neutral';
+  confidence: number;
+}
+
+interface OverviewCardProps {
   overview: string;
-  sentiment: { 
-    score: number; 
-    label: 'positive' | 'negative' | 'neutral'; 
-    confidence: number;
-  } 
-}) => {
+  sentiment: SentimentData;
+}
+
+// Overview & Sentiment Analysis Card
+const OverviewCard = memo(({ overview, sentiment }: OverviewCardProps) => {
   // Determine color based on sentiment
   const getSentimentColor = () => {
     if (sentiment.label === 'positive') return 'text-green-400';
@@ -144,16 +155,20 @@ const OverviewCard = memo(({ overview, sentiment }: {
 
 OverviewCard.displayName = 'OverviewCard';
 
+interface TriggerData {
+  name: string;
+  description: string;
+  impact_score: number;
+  frequency: number;
+  examples: string[];
+}
+
+interface TriggerCardProps {
+  trigger: TriggerData;
+}
+
 // Trigger Card
-const TriggerCard = memo(({ trigger }: { 
-  trigger: {
-    name: string;
-    description: string;
-    impact_score: number;
-    frequency: number;
-    examples: string[];
-  }
-}) => (
+const TriggerCard = memo(({ trigger }: TriggerCardProps) => (
   <AnalysisCard
     icon={<AlertTriangle className="w-4 h-4" />}
     title={trigger.name}
@@ -170,16 +185,20 @@ const TriggerCard = memo(({ trigger }: {
 
 TriggerCard.displayName = 'TriggerCard';
 
+interface TrendData {
+  name: string;
+  description: string;
+  popularity_score: number;
+  growth_rate: number;
+  examples: string[];
+}
+
+interface TrendCardProps {
+  trend: TrendData;
+}
+
 // Current Trend Card
-const TrendCard = memo(({ trend }: { 
-  trend: {
-    name: string;
-    description: string;
-    popularity_score: number;
-    growth_rate: number;
-    examples: string[];
-  }
-}) => (
+const TrendCard = memo(({ trend }: TrendCardProps) => (
   <AnalysisCard
     icon={<TrendingUp className="w-4 h-4" />}
     title={trend.name}
@@ -196,16 +215,20 @@ const TrendCard = memo(({ trend }: {
 
 TrendCard.displayName = 'TrendCard';
 
+interface UpcomingTrendData {
+  name: string;
+  description: string;
+  prediction_confidence: number;
+  potential_impact: number;
+  early_indicators: string[];
+}
+
+interface UpcomingTrendCardProps {
+  trend: UpcomingTrendData;
+}
+
 // Upcoming Trend Card
-const UpcomingTrendCard = memo(({ trend }: { 
-  trend: {
-    name: string;
-    description: string;
-    prediction_confidence: number;
-    potential_impact: number;
-    early_indicators: string[];
-  }
-}) => (
+const UpcomingTrendCard = memo(({ trend }: UpcomingTrendCardProps) => (
   <AnalysisCard
     icon={<Lightbulb className="w-4 h-4" />}
     title={trend.name}
@@ -223,16 +246,21 @@ const UpcomingTrendCard = memo(({ trend }: {
 
 UpcomingTrendCard.displayName = 'UpcomingTrendCard';
 
+interface TweetData {
+  content: string;
+  engagement: number;
+  created_at: string;
+  author: string;
+  hashtags: string[];
+  media_url?: string;
+}
+
+interface TweetCardProps {
+  tweet: TweetData;
+}
+
 // Tweet Card
-const TweetCard = memo(({ tweet }: { 
-  tweet: {
-    content: string;
-    engagement: number;
-    created_at: string;
-    author: string;
-    hashtags: string[];
-  }
-}) => {
+const TweetCard = memo(({ tweet }: TweetCardProps) => {
   const date = new Date(tweet.created_at);
   const formattedDate = date.toLocaleDateString('en-US', {
     month: 'short', 
@@ -240,12 +268,22 @@ const TweetCard = memo(({ tweet }: {
     year: 'numeric'
   });
 
+  // Check for t.co links in content that might be images
+  const hasImageLink = tweet.content.includes('t.co/') || tweet.media_url;
+  const imageUrl = tweet.media_url || (hasImageLink ? '/api/placeholder/300/200' : undefined);
+
   return (
-    <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg">
+    <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full">
       <div className="flex items-center gap-2 mb-3">
         <span className="font-medium">@{tweet.author}</span>
       </div>
       <div className="text-lg mb-3">{tweet.content}</div>
+      
+      {imageUrl && (
+        <div className="mb-3">
+          <img src={imageUrl} alt="Tweet media" className="rounded-lg w-full h-auto max-h-40 object-cover" />
+        </div>
+      )}
       
       {tweet.hashtags.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3">
@@ -267,15 +305,19 @@ const TweetCard = memo(({ tweet }: {
 
 TweetCard.displayName = 'TweetCard';
 
+interface HashtagData {
+  tag: string;
+  count: number;
+  relevance: number;
+}
+
+interface HashtagCardProps {
+  hashtags: HashtagData[];
+}
+
 // Hashtag Card
-const HashtagCard = memo(({ hashtags }: { 
-  hashtags: {
-    tag: string;
-    count: number;
-    relevance: number;
-  }[] 
-}) => (
-  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg">
+const HashtagCard = memo(({ hashtags }: HashtagCardProps) => (
+  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full">
     <h3 className="text-xl font-semibold flex items-center gap-2 mb-4">
       <Target className="w-5 h-5" />
       Top Hashtags
@@ -298,17 +340,13 @@ const HashtagCard = memo(({ hashtags }: {
 
 HashtagCard.displayName = 'HashtagCard';
 
+interface DataSummaryCardProps {
+  tweets: TweetData[];
+}
+
 // Data Summary Card
-const DataSummaryCard = memo(({ tweets }: { 
-  tweets: {
-    content: string;
-    engagement: number;
-    created_at: string;
-    author: string;
-    hashtags: string[];
-  }[]
-}) => (
-  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg">
+const DataSummaryCard = memo(({ tweets }: DataSummaryCardProps) => (
+  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full">
     <h3 className="text-xl font-semibold mb-4">Data Summary</h3>
     <ul className="space-y-2">
       <li className="flex justify-between">
@@ -345,14 +383,18 @@ const DataSummaryCard = memo(({ tweets }: {
 
 DataSummaryCard.displayName = 'DataSummaryCard';
 
+interface InsightsData {
+  comparisons: string[];
+  actionableInsights: string[];
+  demographicPatterns: string[];
+}
+
+interface InsightsCardProps {
+  insights: InsightsData;
+}
+
 // Insights Card
-const InsightsCard = memo(({ insights }: {
-  insights: {
-    comparisons: string[];
-    actionableInsights: string[];
-    demographicPatterns: string[];
-  }
-}) => (
+const InsightsCard = memo(({ insights }: InsightsCardProps) => (
   <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg col-span-1 md:col-span-3">
     <h3 className="text-xl font-semibold mb-4">Trend Insights</h3>
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -386,17 +428,19 @@ const InsightsCard = memo(({ insights }: {
 
 InsightsCard.displayName = 'InsightsCard';
 
-// Main Twitter Analysis Dashboard Component
-const TwitterAnalysisDashboard = memo(({ 
-  query,
-  options
-}: { 
+interface TwitterAnalysisDashboardProps {
   query: string;
   options?: {
     industry?: string;
     timeframe?: string;
   };
-}) => {
+}
+
+// Main Twitter Analysis Dashboard Component
+const TwitterAnalysisDashboard = memo(({ 
+  query,
+  options
+}: TwitterAnalysisDashboardProps) => {
   const { data, isLoading, error, analyze } = useTwitterAnalysis();
   const [hasSearched, setHasSearched] = useState(false);
 
@@ -426,13 +470,13 @@ const TwitterAnalysisDashboard = memo(({
         </section>
 
         {/* Triggers Skeleton */}
-        <SkeletonSection />
+        <SkeletonSection title="Key Engagement Triggers" />
 
         {/* Current Trends Skeleton */}
-        <SkeletonSection />
+        <SkeletonSection title="Current Trends" />
 
         {/* Upcoming Trends Skeleton */}
-        <SkeletonSection />
+        <SkeletonSection title="Upcoming Trends" />
 
         {/* Hashtags & Data Summary Skeleton */}
         <section className="mt-8">
@@ -444,7 +488,7 @@ const TwitterAnalysisDashboard = memo(({
         </section>
 
         {/* Top Tweets Skeleton */}
-        <SkeletonSection />
+        <SkeletonSection title="Top Tweets" />
       </div>
     </div>
   );
