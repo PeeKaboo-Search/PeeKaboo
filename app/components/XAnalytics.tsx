@@ -4,9 +4,10 @@ import React, { useEffect, useState, memo } from "react";
 import { 
   BarChart, MessageCircle, 
   Lightbulb, TrendingUp, 
-  Calendar, Target,
+  Target,
   AlertTriangle
 } from "lucide-react";
+import Image from "next/image";
 import { Progress } from "@/app/components/ui/progress";
 import { useTwitterAnalysis } from "@/app/api/xAnalytics";
 
@@ -34,11 +35,10 @@ const CardSkeleton = () => (
 );
 
 interface SkeletonSectionProps {
-  title: string;
   count?: number;
 }
 
-const SkeletonSection = ({ title, count = 3 }: SkeletonSectionProps) => (
+const SkeletonSection = ({ count = 3 }: SkeletonSectionProps) => (
   <section className="mt-8">
     <div className="flex items-center gap-2 h-8 bg-white/20 rounded w-48 mb-4"></div>
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -280,8 +280,14 @@ const TweetCard = memo(({ tweet }: TweetCardProps) => {
       <div className="text-lg mb-3">{tweet.content}</div>
       
       {imageUrl && (
-        <div className="mb-3">
-          <img src={imageUrl} alt="Tweet media" className="rounded-lg w-full h-auto max-h-40 object-cover" />
+        <div className="mb-3 relative h-40">
+          <Image 
+            src={imageUrl} 
+            alt="Tweet media" 
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="rounded-lg object-cover"
+          />
         </div>
       )}
       
@@ -470,13 +476,13 @@ const TwitterAnalysisDashboard = memo(({
         </section>
 
         {/* Triggers Skeleton */}
-        <SkeletonSection title="Key Engagement Triggers" />
+        <SkeletonSection count={3} />
 
         {/* Current Trends Skeleton */}
-        <SkeletonSection title="Current Trends" />
+        <SkeletonSection count={3} />
 
         {/* Upcoming Trends Skeleton */}
-        <SkeletonSection title="Upcoming Trends" />
+        <SkeletonSection count={3} />
 
         {/* Hashtags & Data Summary Skeleton */}
         <section className="mt-8">
@@ -488,7 +494,7 @@ const TwitterAnalysisDashboard = memo(({
         </section>
 
         {/* Top Tweets Skeleton */}
-        <SkeletonSection title="Top Tweets" />
+        <SkeletonSection count={3} />
       </div>
     </div>
   );
@@ -506,7 +512,7 @@ const TwitterAnalysisDashboard = memo(({
     );
   }
 
-  const { analysis, tweets, timestamp } = data;
+  const { analysis, tweets } = data;
   const topTweets = tweets.slice(0, 3); // Get top 3 tweets by engagement
 
   return (
