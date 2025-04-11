@@ -9,7 +9,7 @@ import "app/styles/page.css";
 // Import components
 import ImageResult from "@/app/components/ImageResult";
 import GoogleAnalytics from "@/app/components/GoogleAnalytics";
-import PlayStoreAnalytics from "@/app/components/PlayStoreAnalytics";
+import PlayStoreAnalytics from "@/app/components/PlayStoreSelector";
 import RedditAnalytics from "@/app/components/RedditAnalytics";
 import YouTubeVideos from "@/app/components/YTvideos";
 import QuoraAnalysis from "@/app/components/QuoraAnalysis";

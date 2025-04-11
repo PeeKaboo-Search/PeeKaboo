@@ -79,6 +79,7 @@ export interface ReviewAnalysis {
           topic: string;
           sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
           intensity: number;
+          examples: string[];
         }>;
       };
       painPoints: Array<{
@@ -88,19 +89,43 @@ export interface ReviewAnalysis {
         impact: number;
         sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
         possibleSolutions: string[];
+        reviewExamples: string[];
       }>;
       userExperiences: Array<{
         scenario: string;
         sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
         impact: string;
         frequencyPattern: string;
+        userQuotes: string[];
       }>;
+      featureRequests: Array<{
+        feature: string;
+        description: string;
+        demand: number;
+        businessValue: number;
+        implementationComplexity: 'low' | 'medium' | 'high';
+      }>;
+      competitiveAnalysis: {
+        comparisonMentions: Array<{
+          competitor: string;
+          sentiment: 'positive' | 'negative' | 'neutral';
+          context: string;
+        }>;
+        advantageGaps: string[];
+      };
+      versionTrends: {
+        improvementAreas: string[];
+        regressedFeatures: string[];
+      };
       marketImplications: string;
+      actionableRecommendations: string[];
     };
     sources: Array<{
       id: string;
       content: string;
       sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
+      version: string;
+      rating: number;
     }>;
   };
 }
@@ -265,19 +290,38 @@ export const getAppReviews = async (
 export const analyzeAppReviews = async (
   appId: string, 
   appName: string,
-  numberOfReviews: number = 10
+  numberOfReviews: number = 50
 ): Promise<ReviewAnalysis> => {
   try {
-    const reviews = await getAppReviews(appId, numberOfReviews);
+    // Get a mix of reviews for better analysis - most relevant plus newest plus some negative reviews
+    const mostRelevantReviews = await getAppReviews(appId, Math.floor(numberOfReviews * 0.4), 'MOST_RELEVANT');
+    const newestReviews = await getAppReviews(appId, Math.floor(numberOfReviews * 0.3), 'NEWEST');
     
-    if (reviews.length === 0) {
+    // Get some negative reviews specifically (ratings 1-3)
+    const negativeReviews1 = await getAppReviews(appId, Math.floor(numberOfReviews * 0.1), 'MOST_RELEVANT', '1');
+    const negativeReviews2 = await getAppReviews(appId, Math.floor(numberOfReviews * 0.1), 'MOST_RELEVANT', '2');
+    const negativeReviews3 = await getAppReviews(appId, Math.floor(numberOfReviews * 0.1), 'MOST_RELEVANT', '3');
+    
+    // Combine and deduplicate reviews
+    const allReviews = [...mostRelevantReviews, ...newestReviews, ...negativeReviews1, ...negativeReviews2, ...negativeReviews3];
+    const uniqueReviews = Array.from(new Map(allReviews.map(review => [review.review_id, review])).values());
+    
+    if (uniqueReviews.length === 0) {
       return {
         success: false,
         error: 'No reviews available for analysis'
       };
     }
     
-    const reviewsForAnalysis: ReviewForAnalysis[] = reviews.map(review => ({
+    // Get app details for additional context
+    let appDetails: App | null = null;
+    try {
+      appDetails = await getAppDetails(appId);
+    } catch (error) {
+      console.warn('Could not fetch app details:', error);
+    }
+    
+    const reviewsForAnalysis: ReviewForAnalysis[] = uniqueReviews.map(review => ({
       id: review.review_id,
       rating: review.review_rating,
       text: review.review_text,
@@ -293,73 +337,137 @@ export const analyzeAppReviews = async (
       'Content-Type': 'application/json'
     };
     
+    const systemPrompt = `You are an expert product analyst specializing in mobile app reviews. 
+Your task is to provide deep, actionable insights from user reviews that can guide product decisions.
+
+Guidelines:
+1. Analyze reviews for patterns, themes, and sentiment trends
+2. Prioritize issues by frequency and impact on user experience
+3. Identify specific feature requests and improvement opportunities
+4. Extract user quotes that exemplify key points
+5. Note version-specific issues or improvements
+6. Identify competitive advantages or disadvantages mentioned
+7. Provide actionable recommendations based on the data
+
+Be precise and data-driven in your analysis. Respond only with JSON in the exact format requested.`;
+
+    const userPrompt = `Analyze these ${reviewsForAnalysis.length} reviews for the app "${appName}" (ID: ${appId}).
+${appDetails ? `
+App Category: ${appDetails.app_category}
+Downloads: ${appDetails.num_downloads}
+Current Version: ${appDetails.current_version || 'Unknown'}
+Release Date: ${appDetails.app_first_released_at_datetime_utc}
+Last Updated: ${appDetails.app_updated_at_datetime_utc}
+` : ''}
+
+I need comprehensive insights that can directly inform product decisions. Focus on:
+- Clear patterns in user feedback (positive and negative)
+- Specific pain points with concrete examples
+- Feature requests with assessment of potential business value
+- Version-specific issues or improvements
+- Competitive mentions and comparative feedback
+- Precise, actionable recommendations
+
+Analyze version trends if version information is available in reviews.
+
+Format your response exactly according to this JSON schema:
+{
+  "appId": "string",
+  "appName": "string",
+  "analysis": {
+    "overview": "string - A concise executive summary of the key insights",
+    "sentimentAnalysis": {
+      "overall": "positive|negative|neutral|mixed",
+      "score": "number - normalized sentiment score from -1 to 1",
+      "distribution": {
+        "positive": "number - percentage of positive reviews",
+        "neutral": "number - percentage of neutral reviews",
+        "negative": "number - percentage of negative reviews"
+      },
+      "trends": [
+        {
+          "topic": "string - specific aspect or feature mentioned",
+          "sentiment": "positive|negative|neutral|mixed",
+          "intensity": "number from 0-10 indicating strength of sentiment",
+          "examples": ["string - direct user quotes illustrating this trend"]
+        }
+      ]
+    },
+    "painPoints": [
+      {
+        "title": "string - concise name of the issue",
+        "description": "string - detailed explanation of the problem",
+        "frequency": "number from 0-10 indicating how often this appears",
+        "impact": "number from 0-10 indicating severity for users",
+        "sentiment": "positive|negative|neutral|mixed",
+        "possibleSolutions": ["string - concrete actionable solutions"],
+        "reviewExamples": ["string - direct quotes from reviews mentioning this issue"]
+      }
+    ],
+    "userExperiences": [
+      {
+        "scenario": "string - specific use case or user journey described",
+        "sentiment": "positive|negative|neutral|mixed",
+        "impact": "string - how this affects the overall user experience",
+        "frequencyPattern": "string - when/how often this occurs",
+        "userQuotes": ["string - direct quotes describing this experience"]
+      }
+    ],
+    "featureRequests": [
+      {
+        "feature": "string - name of requested feature",
+        "description": "string - detailed explanation of what users want",
+        "demand": "number from 0-10 indicating frequency of requests",
+        "businessValue": "number from 0-10 indicating potential value",
+        "implementationComplexity": "low|medium|high"
+      }
+    ],
+    "competitiveAnalysis": {
+      "comparisonMentions": [
+        {
+          "competitor": "string - name of competing app mentioned",
+          "sentiment": "positive|negative|neutral",
+          "context": "string - context of the comparison"
+        }
+      ],
+      "advantageGaps": ["string - areas where competitors are mentioned as better"]
+    },
+    "versionTrends": {
+      "improvementAreas": ["string - features that have improved over versions"],
+      "regressedFeatures": ["string - features that have gotten worse"]
+    },
+    "marketImplications": "string - broader market context and opportunity",
+    "actionableRecommendations": ["string - specific, prioritized action items"]
+  },
+  "sources": [
+    {
+      "id": "string - review ID",
+      "content": "string - review text",
+      "sentiment": "positive|negative|neutral|mixed",
+      "version": "string - app version",
+      "rating": "number - star rating"
+    }
+  ]
+}
+
+Here are the reviews to analyze: ${JSON.stringify(reviewsForAnalysis)}`;
+    
     const groqResponse = await fetch(groqUrl, {
       method: 'POST',
       headers: groqHeaders,
       body: JSON.stringify({
-        model: "deepseek-r1-distill-qwen-32b",
+        model: "deepseek-r1-distill-qwen-32b", // Using the specified model
         messages: [
           {
             role: "system",
-            content: `You are an expert app review analyst. You will analyze app reviews to provide insights about user sentiment, pain points, and product opportunities. Reply with JSON only.`
+            content: systemPrompt
           },
           {
             role: "user",
-            content: `Analyze these reviews for the app "${appName}" (ID: ${appId}). Extract key insights, sentiment, and pain points. Format your analysis exactly according to this JSON schema:
-            {
-              "appId": "string",
-              "appName": "string",
-              "analysis": {
-                "overview": "string",
-                "sentimentAnalysis": {
-                  "overall": "positive|negative|neutral|mixed",
-                  "score": number,
-                  "distribution": {
-                    "positive": number,
-                    "neutral": number,
-                    "negative": number
-                  },
-                  "trends": [
-                    {
-                      "topic": "string",
-                      "sentiment": "positive|negative|neutral|mixed",
-                      "intensity": number
-                    }
-                  ]
-                },
-                "painPoints": [
-                  {
-                    "title": "string",
-                    "description": "string",
-                    "frequency": number,
-                    "impact": number,
-                    "sentiment": "positive|negative|neutral|mixed",
-                    "possibleSolutions": ["string"]
-                  }
-                ],
-                "userExperiences": [
-                  {
-                    "scenario": "string",
-                    "sentiment": "positive|negative|neutral|mixed",
-                    "impact": "string",
-                    "frequencyPattern": "string"
-                  }
-                ],
-                "marketImplications": "string"
-              },
-              "sources": [
-                {
-                  "id": "string",
-                  "content": "string",
-                  "sentiment": "positive|negative|neutral|mixed"
-                }
-              ]
-            }
-            
-            Reviews: ${JSON.stringify(reviewsForAnalysis)}`
+            content: userPrompt
           }
         ],
-        temperature: 0.7,
+        temperature: 0.3, // Lower temperature for more consistent analysis
         max_tokens: 4500,
         response_format: { type: 'json_object' },
       })
