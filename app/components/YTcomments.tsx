@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, memo } from 'react';
+import React, { useEffect, useState, memo, useRef } from 'react';
 import Image from 'next/image';
 import { 
   ThumbsUp, 
@@ -36,13 +36,11 @@ import {
 import { Skeleton } from "@/app/components/ui/skeleton";
 import { Badge } from "@/app/components/ui/badge";
 
-// Error state interface
 interface ErrorState {
   message: string;
   code: string;
 }
 
-// Card props interface
 interface AnalysisCardProps {
   title: string;
   description: string;
@@ -95,34 +93,25 @@ interface CommentAnalysisProps {
   videoTitle: string;
 }
 
-// Helper functions
 const validateArray = <T,>(data: T[] | undefined | null): T[] => {
   return Array.isArray(data) ? data : [];
 };
 
-// Get sentiment color based on sentiment value
 const getSentimentColor = (sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed') => {
   switch (sentiment) {
-    case 'positive':
-      return 'text-green-500';
-    case 'negative':
-      return 'text-red-500';
-    case 'mixed':
-      return 'text-amber-500';
-    default:
-      return 'text-gray-400';
+    case 'positive': return 'text-green-500';
+    case 'negative': return 'text-red-500';
+    case 'mixed': return 'text-amber-500';
+    default: return 'text-gray-400';
   }
 };
 
-// Analysis card components
 const AnalysisCard = memo(({ title, description, items, score, scoreLabel, sentiment }: AnalysisCardProps) => (
   <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full flex flex-col">
     <div className="flex justify-between items-center mb-4">
       <h3 className="text-xl font-semibold">{title}</h3>
       {sentiment && (
-        <Badge 
-          className={`${getSentimentColor(sentiment)} bg-opacity-20`}
-        >
+        <Badge className={`${getSentimentColor(sentiment)} bg-opacity-20`}>
           {sentiment}
         </Badge>
       )}
@@ -158,7 +147,6 @@ const AnalysisCard = memo(({ title, description, items, score, scoreLabel, senti
 ));
 AnalysisCard.displayName = 'AnalysisCard';
 
-// Specialized card components
 const PainPointCard = memo(({ point }: { point: PainPoint }) => (
   <AnalysisCard
     title={point.title}
@@ -200,7 +188,6 @@ const TriggerCard = memo(({ trigger }: { trigger: EmotionalTrigger }) => (
 ));
 TriggerCard.displayName = 'TriggerCard';
 
-// Comment item component
 const CommentItemComponent = memo(({ comment }: { comment: CommentItemType }) => (
   <div className="p-4 border rounded-lg transition-all hover:bg-white/5">
     <div className="flex items-start gap-3">
@@ -244,8 +231,8 @@ const CommentAnalysis: React.FC<CommentAnalysisProps> = ({ videoId, videoTitle }
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [activeTab, setActiveTab] = useState("pain-points");
   const [error, setError] = useState<ErrorState | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  // Handle comment analysis
   const handleAnalyzeComments = async () => {
     if (!videoId) return;
     
@@ -266,7 +253,6 @@ const CommentAnalysis: React.FC<CommentAnalysisProps> = ({ videoId, videoTitle }
     }
   };
 
-  // Fetch comments when videoId changes
   useEffect(() => {
     const fetchComments = async () => {
       if (!videoId) return;
@@ -291,7 +277,6 @@ const CommentAnalysis: React.FC<CommentAnalysisProps> = ({ videoId, videoTitle }
     fetchComments();
   }, [videoId]);
 
-  // Reset analysis state when dialog is closed
   const handleDialogChange = (open: boolean) => {
     setShowAnalysis(open);
     if (!open) {
@@ -357,152 +342,138 @@ const CommentAnalysis: React.FC<CommentAnalysisProps> = ({ videoId, videoTitle }
         </div>
       )}
 
-      {/* Comment Analysis Dashboard Dialog */}
       <Dialog open={showAnalysis} onOpenChange={handleDialogChange}>
-
-  <DialogPortal>
-
-    <div className="DialogOverlay">
-
-      <DialogContent className="DialogContent">
-
-        <DialogHeader>
-
-          <DialogTitle className="text-2xl font-bold">Comment Analysis Dashboard</DialogTitle>
-
-          <DialogDescription>
-
-            {videoTitle}
-
-          </DialogDescription>
-
-          <DialogClose className="DialogClose">
-
-            <X className="h-4 w-4" />
-
-          </DialogClose>
-
-        </DialogHeader>
-
-        <div className="overflow-y-auto pr-1 max-h-[calc(90vh-120px)] scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
-
-        {commentAnalysis?.success && commentAnalysis.data ? (
-              <div className="space-y-8">
-                {/* Overview Section */}
-                <section>
-                  <h2 className="text-2xl font-bold mb-4">Overview</h2>
-                  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6">
-                    <p className="text-lg whitespace-pre-line">{commentAnalysis.data.analysis.overview}</p>
+        <DialogPortal>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center pointer-events-none">
+            <DialogContent 
+              ref={dialogRef}
+              className="bg-black/90 border border-white/20 rounded-xl w-11/12 max-w-5xl max-h-[90vh] shadow-xl flex flex-col pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <DialogHeader className="border-b border-white/10 p-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <DialogTitle className="text-2xl font-bold">Comment Analysis Dashboard</DialogTitle>
+                    <DialogDescription className="text-white/70 mt-1">
+                      {videoTitle}
+                    </DialogDescription>
                   </div>
-                </section>
+                  <DialogClose className="rounded-full p-2 hover:bg-white/10 transition-colors">
+                    <X className="h-5 w-5" />
+                  </DialogClose>
+                </div>
+              </DialogHeader>
 
-                {/* Tabs for different analysis sections */}
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="grid grid-cols-3 mb-8">
-                    <TabsTrigger value="pain-points" className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" />
-                      Pain Points
-                    </TabsTrigger>
-                    <TabsTrigger value="user-experiences" className="flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      User Experiences
-                    </TabsTrigger>
-                    <TabsTrigger value="emotional-triggers" className="flex items-center gap-2">
-                      <Lightbulb className="h-4 w-4" />
-                      Emotional Triggers
-                    </TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="pain-points">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {validateArray(commentAnalysis.data.analysis.painPoints).map((point, index) => (
-                        <PainPointCard key={index} point={point} />
-                      ))}
-                      {validateArray(commentAnalysis.data.analysis.painPoints).length === 0 && (
-                        <div className="col-span-full text-center py-8">
-                          <p className="text-muted-foreground">No pain points identified.</p>
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="user-experiences">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {validateArray(commentAnalysis.data.analysis.userExperiences).map((exp, index) => (
-                        <ExperienceCard key={index} exp={exp} />
-                      ))}
-                      {validateArray(commentAnalysis.data.analysis.userExperiences).length === 0 && (
-                        <div className="col-span-full text-center py-8">
-                          <p className="text-muted-foreground">No user experiences identified.</p>
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="emotional-triggers">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {validateArray(commentAnalysis.data.analysis.emotionalTriggers).map((triggerData, index) => {
-                        const enhancedTrigger: EmotionalTrigger = {
-                          trigger: triggerData.trigger,
-                          context: triggerData.context,
-                          responsePattern: triggerData.responsePattern,
-                          intensity: triggerData.intensity,
-                          dominantEmotion: 'dominantEmotion' in triggerData ? 
-                            triggerData.dominantEmotion as string : 
-                            "Unknown"
-                        };
-                        return <TriggerCard key={index} trigger={enhancedTrigger} />;
-                      })}
-                      {validateArray(commentAnalysis.data.analysis.emotionalTriggers).length === 0 && (
-                        <div className="col-span-full text-center py-8">
-                          <p className="text-muted-foreground">No emotional triggers identified.</p>
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                </Tabs>
+              <div className="p-6 overflow-y-auto flex-grow scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+                {commentAnalysis?.success && commentAnalysis.data ? (
+                  <div className="space-y-8">
+                    <section>
+                      <h2 className="text-2xl font-bold mb-4">Overview</h2>
+                      <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6">
+                        <p className="text-lg whitespace-pre-line">{commentAnalysis.data.analysis.overview}</p>
+                      </div>
+                    </section>
 
-                {/* Market Implications Section */}
-                <section>
-                  <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
-                    <Target className="w-6 h-6" />
-                    Market Implications
-                  </h2>
-                  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6">
-                    <div className="prose max-w-none">
-                      <p className="whitespace-pre-line">{commentAnalysis.data.analysis.marketImplications}</p>
-                    </div>
-                  </div>
-                </section>
-              </div>
-            ) : (
-              <div className="py-16 text-center">
-                {isAnalyzing ? (
-                  <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="h-10 w-10 animate-spin" />
-                    <p className="text-lg">Analyzing comments...</p>
-                    <p className="text-sm text-muted-foreground">This may take a moment for videos with many comments</p>
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                      <TabsList className="grid grid-cols-3 mb-8">
+                        <TabsTrigger value="pain-points" className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4" />
+                          Pain Points
+                        </TabsTrigger>
+                        <TabsTrigger value="user-experiences" className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          User Experiences
+                        </TabsTrigger>
+                        <TabsTrigger value="emotional-triggers" className="flex items-center gap-2">
+                          <Lightbulb className="h-4 w-4" />
+                          Emotional Triggers
+                        </TabsTrigger>
+                      </TabsList>
+                      
+                      <TabsContent value="pain-points">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {validateArray(commentAnalysis.data.analysis.painPoints).map((point, index) => (
+                            <PainPointCard key={index} point={point} />
+                          ))}
+                          {validateArray(commentAnalysis.data.analysis.painPoints).length === 0 && (
+                            <div className="col-span-full text-center py-8">
+                              <p className="text-muted-foreground">No pain points identified.</p>
+                            </div>
+                          )}
+                        </div>
+                      </TabsContent>
+                      
+                      <TabsContent value="user-experiences">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {validateArray(commentAnalysis.data.analysis.userExperiences).map((exp, index) => (
+                            <ExperienceCard key={index} exp={exp} />
+                          ))}
+                          {validateArray(commentAnalysis.data.analysis.userExperiences).length === 0 && (
+                            <div className="col-span-full text-center py-8">
+                              <p className="text-muted-foreground">No user experiences identified.</p>
+                            </div>
+                          )}
+                        </div>
+                      </TabsContent>
+                      
+                      <TabsContent value="emotional-triggers">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {validateArray(commentAnalysis.data.analysis.emotionalTriggers).map((triggerData, index) => {
+                            const enhancedTrigger: EmotionalTrigger = {
+                              trigger: triggerData.trigger,
+                              context: triggerData.context,
+                              responsePattern: triggerData.responsePattern,
+                              intensity: triggerData.intensity,
+                              dominantEmotion: 'dominantEmotion' in triggerData ? 
+                                triggerData.dominantEmotion as string : 
+                                "Unknown"
+                            };
+                            return <TriggerCard key={index} trigger={enhancedTrigger} />;
+                          })}
+                          {validateArray(commentAnalysis.data.analysis.emotionalTriggers).length === 0 && (
+                            <div className="col-span-full text-center py-8">
+                              <p className="text-muted-foreground">No emotional triggers identified.</p>
+                            </div>
+                          )}
+                        </div>
+                      </TabsContent>
+                    </Tabs>
+
+                    <section>
+                      <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
+                        <Target className="w-6 h-6" />
+                        Market Implications
+                      </h2>
+                      <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6">
+                        <div className="prose max-w-none">
+                          <p className="whitespace-pre-line">{commentAnalysis.data.analysis.marketImplications}</p>
+                        </div>
+                      </div>
+                    </section>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center gap-4">
-                    <AlertTriangle className="h-12 w-12 text-amber-500" />
-                    <p className="text-lg">
-                      {commentAnalysis?.error || error?.message || "Failed to generate analysis. Please try again."}
-                    </p>
+                  <div className="py-16 text-center">
+                    {isAnalyzing ? (
+                      <div className="flex flex-col items-center gap-4">
+                        <Loader2 className="h-10 w-10 animate-spin" />
+                        <p className="text-lg">Analyzing comments...</p>
+                        <p className="text-sm text-muted-foreground">This may take a moment for videos with many comments</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-4">
+                        <AlertTriangle className="h-12 w-12 text-amber-500" />
+                        <p className="text-lg">
+                          {commentAnalysis?.error || error?.message || "Failed to generate analysis. Please try again."}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-
-        </div>
-
-      </DialogContent>
-
-    </div>
-
-  </DialogPortal>
-
-</Dialog>
+            </DialogContent>
+          </div>
+        </DialogPortal>
+      </Dialog>
     </div>
   );
 };

@@ -1,22 +1,23 @@
 "use client";
 
 import React, { useState, useEffect, memo } from 'react';
-import Image from 'next/image'; // Import Next.js Image component
+import Image from 'next/image';
 import { MetaAdAnalysisService } from '@/app/api/facebookAnalytics';
 import { 
   MessageSquare, Eye, Target, 
-  Users, Award, ArrowRight, Sparkles 
+  Users, Award, ArrowRight, Sparkles,
+  ImageIcon, ChevronLeft, ChevronRight 
 } from 'lucide-react';
 import { Progress } from "@/app/components/ui/progress"; 
 
-// Types
+// Updated Types to support multiple images
 interface MetaAdContent {
   adId: string;
   pageId: string;
   pageName: string;
   content: string;
   title?: string;
-  imageUrl?: string;
+  images: string[]; // Changed from imageUrl to images array
   linkUrl?: string;
   active: boolean;
   creationTime?: string;
@@ -75,6 +76,83 @@ interface MetaAdAnalysisProps {
   limit?: number;
   className?: string;
 }
+
+// Image Carousel Component
+const ImageCarousel = memo(({ 
+  images,
+  adTitle,
+  pageName 
+}: { 
+  images: string[];
+  adTitle?: string;
+  pageName: string;
+}) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  
+  if (!images || images.length === 0) {
+    return (
+      <div className="relative w-full h-64 bg-gray-800 flex items-center justify-center rounded-md">
+        <ImageIcon className="w-12 h-12 opacity-40" />
+      </div>
+    );
+  }
+
+  const nextImage = () => {
+    setCurrentIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const prevImage = () => {
+    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  return (
+    <div className="relative w-full h-64 rounded-md overflow-hidden group">
+      <Image 
+        src={images[currentIndex]} 
+        alt={adTitle || `Ad from ${pageName}`} 
+        fill
+        style={{ objectFit: 'cover' }}
+        className="rounded-md"
+      />
+      
+      {images.length > 1 && (
+        <>
+          <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
+            {images.map((_, idx) => (
+              <button 
+                key={idx} 
+                className={`w-2 h-2 rounded-full ${idx === currentIndex ? 'bg-white' : 'bg-white/50'}`}
+                onClick={() => setCurrentIndex(idx)}
+                aria-label={`Go to image ${idx + 1}`}
+              />
+            ))}
+          </div>
+          
+          <button
+            onClick={prevImage}
+            className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/60 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+            aria-label="Previous image"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          
+          <button
+            onClick={nextImage}
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/60 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+            aria-label="Next image"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
+        </>
+      )}
+      
+      <div className="absolute top-2 right-2 bg-black/60 px-2 py-1 rounded text-xs">
+        {currentIndex + 1}/{images.length}
+      </div>
+    </div>
+  );
+});
+ImageCarousel.displayName = 'ImageCarousel';
 
 // Helper Components
 const AnalysisCard = memo(({ 
@@ -355,17 +433,17 @@ const MetaAdAnalysisDashboard: React.FC<MetaAdAnalysisProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {data.sources.map((ad, index) => (
               <div key={`ad-${index}`} className="bg-white/10 backdrop-blur-lg rounded-lg p-6">
-                {ad.imageUrl && (
-                  <div className="mb-4 relative w-full h-64">
-                    <Image 
-                      src={ad.imageUrl} 
-                      alt={`Ad from ${ad.pageName}`} 
-                      fill
-                      style={{ objectFit: 'cover' }}
-                      className="rounded-md"
+                {/* Image carousel for multiple images */}
+                {ad.images && ad.images.length > 0 && (
+                  <div className="mb-4">
+                    <ImageCarousel 
+                      images={ad.images} 
+                      adTitle={ad.title} 
+                      pageName={ad.pageName} 
                     />
                   </div>
                 )}
+                
                 {ad.title && (
                   <h4 className="font-medium mb-2">{ad.title}</h4>
                 )}

@@ -9,6 +9,7 @@ interface MetaAdItem {
       title?: string;
       link_url?: string;
       video_preview_image_url?: string;
+      image_url?: string; // Added image_url field
     }>;
     body?: {
       markup?: {
@@ -18,6 +19,7 @@ interface MetaAdItem {
     title?: string;
     link_description?: string;
     creation_time?: number;
+    images?: Array<string>; // Added images field
   };
   isActive: boolean;
   startDate?: number;
@@ -52,7 +54,7 @@ interface MetaAdContent {
   pageName: string;
   content: string;
   title?: string;
-  imageUrl?: string;
+  images: string[]; // Changed to array of image URLs
   linkUrl?: string;
   active: boolean;
   creationTime?: string;
@@ -165,7 +167,6 @@ export class MetaAdAnalysisService {
         try {
           parsedAnalysis = JSON.parse(analysis) as AnalysisData;
         } catch {
-          // Removed the unused variable completely
           return { 
             success: false, 
             error: 'Failed to parse analysis result', 
@@ -373,14 +374,33 @@ export class MetaAdAnalysisService {
         creationTime = new Date(ad.snapshot.creation_time * 1000).toISOString();
       }
       
-      // Find first available image URL
-      let imageUrl: string | undefined;
+      // Extract all image URLs from the ad
+      const images: string[] = [];
+      
+      // Check for direct images in snapshot
+      if (ad.snapshot?.images && Array.isArray(ad.snapshot.images)) {
+        images.push(...ad.snapshot.images);
+      }
+      
+      // Extract image URLs from cards
       if (ad.snapshot?.cards && Array.isArray(ad.snapshot.cards)) {
         for (const card of ad.snapshot.cards) {
           if (card.video_preview_image_url) {
-            imageUrl = card.video_preview_image_url;
-            break;
+            images.push(card.video_preview_image_url);
           }
+          if (card.image_url) {
+            images.push(card.image_url);
+          }
+        }
+      }
+      
+      // Extract additional image URLs from HTML content if present
+      if (ad.snapshot?.body?.markup?.__html) {
+        const htmlContent = ad.snapshot.body.markup.__html;
+        const imgRegex = /<img[^>]+src="([^">]+)"/g;
+        let match;
+        while ((match = imgRegex.exec(htmlContent)) !== null) {
+          if (match[1]) images.push(match[1]);
         }
       }
       
@@ -401,7 +421,7 @@ export class MetaAdAnalysisService {
         pageName: ad.pageName,
         content: this.sanitizeText(content),
         title: ad.snapshot?.title,
-        imageUrl,
+        images: [...new Set(images)], // Remove duplicate images
         linkUrl,
         active: ad.isActive,
         creationTime
@@ -419,7 +439,13 @@ export class MetaAdAnalysisService {
     
     // Limit content length to keep within API limits
     const combinedContent = adContent
-      .map(ad => `AD #${ad.adId} from ${ad.pageName}: "${ad.content}"`)
+      .map(ad => {
+        const imageUrls = ad.images.length > 0 ? 
+          `\nImage URLs: ${ad.images.join(', ')}` : 
+          '\nNo images';
+        
+        return `AD #${ad.adId} from ${ad.pageName}: "${ad.content}"${imageUrls}`;
+      })
       .join('\n\n')
       .slice(0, 8000); // Ensure we don't exceed token limits
     
@@ -472,7 +498,7 @@ export class MetaAdAnalysisService {
   "recommendedCounterStrategies": "Strategic insights for countering these competitor approaches"
 }
 
-Ensure the analysis is data-driven, uses professional marketing terminology, and provides actionable intelligence for developing competitive ad strategies. Do not repeat the same point across different sections - each insight should be unique and specific.
+Ensure the analysis is data-driven, uses professional marketing terminology, and provides actionable intelligence for developing competitive ad strategies. Include analysis of the visual elements based on the image URLs provided. Do not repeat the same point across different sections - each insight should be unique and specific.
 
 IMPORTANT: Return VALID JSON only with no additional text before or after the JSON object.`
     };
@@ -513,7 +539,6 @@ IMPORTANT: Return VALID JSON only with no additional text before or after the JS
           const errorData = await response.json();
           errorMessage += ` - ${JSON.stringify(errorData)}`;
         } catch {
-          // Removed the unused variable completely
           // Unable to parse error JSON
         }
         throw new Error(errorMessage);
