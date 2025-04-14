@@ -79,6 +79,7 @@ interface RedditPostData {
   upvote_ratio: number;
   num_comments: number;
   total_awards_received: number;
+  created_utc: number;
 }
 
 interface RedditPost {
@@ -89,6 +90,7 @@ interface RedditPost {
 interface RedditSearchResponse {
   data: {
     children: RedditPost[];
+    after: string | null;
   };
 }
 
@@ -133,8 +135,15 @@ interface GroqResponse {
   }[];
 }
 
+// Search params interface
+interface SearchParams {
+  relevance?: 'relevance' | 'hot' | 'new' | 'top' | 'comments';
+  timeframe?: 'all' | 'year' | 'month' | 'week' | 'day' | 'hour';
+}
+
 export const fetchMarketingInsights = async (
-  query: string
+  query: string,
+  searchParams: SearchParams = { relevance: 'relevance', timeframe: 'all' }
 ): Promise<{ results: RedditResult[]; insights: MarketingInsight } | null> => {
   try {
     const redditClientId = process.env.NEXT_PUBLIC_REDDIT_CLIENT_ID;
@@ -163,18 +172,25 @@ export const fetchMarketingInsights = async (
     const accessToken = authData.access_token;
     
     const results: RedditResult[] = [];
-    let totalPosts = 0;
-
-    // Search across Reddit
-    const searchResponse = await fetch(
-      `https://oauth.reddit.com/search?q=${encodeURIComponent(query)}&limit=9&sort=relevance`,
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'User-Agent': 'MarketingInsights/3.0',
-        },
-      }
-    );
+    
+    // Set sort and time parameters based on input
+    const sort = searchParams.relevance || 'relevance';
+    const time = searchParams.timeframe || 'all';
+    
+    // Search across Reddit with sort and time parameters
+    let searchUrl = `https://oauth.reddit.com/search?q=${encodeURIComponent(query)}&limit=25&sort=${sort}`;
+    
+    // Only add t parameter when sort type requires it (top, controversial)
+    if (['top', 'controversial'].includes(sort)) {
+      searchUrl += `&t=${time}`;
+    }
+    
+    const searchResponse = await fetch(searchUrl, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'User-Agent': 'MarketingInsights/3.0',
+      },
+    });
 
     if (!searchResponse.ok) {
       throw new Error(`Reddit Search error: ${searchResponse.status}`);
@@ -190,9 +206,8 @@ export const fetchMarketingInsights = async (
         post.data.num_comments > 0
       );
     
-    for (const post of relevantPosts) {
-      if (totalPosts >= 5) break;
-      
+    // Process up to 5 posts
+    for (const post of relevantPosts.slice(0, 5)) {
       // Get comments for this post
       const commentsResponse = await fetch(
         `https://oauth.reddit.com${post.data.permalink}?limit=10&depth=1`,
@@ -235,8 +250,6 @@ export const fetchMarketingInsights = async (
         },
         top_comments: topComments
       });
-      
-      totalPosts++;
     }
 
     if (results.length === 0) {
