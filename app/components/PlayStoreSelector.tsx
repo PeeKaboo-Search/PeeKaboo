@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState, useRef, memo } from 'react';
 import Image from 'next/image';
-import { 
-  Star, 
+import {
   ChevronRight,
   AlertTriangle,
   ArrowRight

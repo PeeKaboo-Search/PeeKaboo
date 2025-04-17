@@ -197,8 +197,8 @@ const FeatureRequestCard = memo(({
 
 FeatureRequestCard.displayName = 'FeatureRequestCard';
 
-// Define array type for the hasItems function
-interface ArrayLike<T> {
+// Define array type for the hasItems function - Fixed the unused generic type error
+interface ArrayLike {
   length: number;
 }
 
@@ -249,8 +249,8 @@ const AppAnalysis: React.FC<AppAnalysisProps> = ({ appId, appName, onBackToSelec
   };
 
   // Helper function to safely check array length with optional chaining
-  // Fixed the any[] type with a generic type
-  const hasItems = <T,>(arr?: ArrayLike<T> | null): boolean => {
+  // Fixed the type error by removing the unused generic type parameter
+  const hasItems = (arr?: ArrayLike | null): boolean => {
     return Boolean(arr && arr.length > 0);
   };
 
