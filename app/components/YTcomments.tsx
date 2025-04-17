@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, memo, useRef } from 'react';
+import React, { useEffect, useState, memo } from 'react';
 import Image from 'next/image';
 import { 
   ThumbsUp, 

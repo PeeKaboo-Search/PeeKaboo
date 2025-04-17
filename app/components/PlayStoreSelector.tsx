@@ -4,7 +4,6 @@ import React, { useEffect, useState, useRef, memo } from 'react';
 import Image from 'next/image';
 import { 
   Star, 
-  Loader2, 
   ChevronRight,
   AlertTriangle,
   ArrowRight
@@ -26,30 +25,6 @@ interface ErrorState {
 interface AppSelectionProps {
   query: string;
 }
-
-// Format rating to display stars
-const RatingStars = ({ rating }: { rating: number }) => {
-  const fullStars = Math.floor(rating);
-  const hasHalfStar = rating % 1 >= 0.5;
-  
-  return (
-    <div className="flex items-center">
-      {[...Array(5)].map((_, i) => (
-        <Star
-          key={i}
-          className={`h-4 w-4 ${
-            i < fullStars 
-              ? 'text-yellow-400 fill-yellow-400' 
-              : i === fullStars && hasHalfStar
-                ? 'text-yellow-400 fill-yellow-400 opacity-50'
-                : 'text-gray-300'
-          }`}
-        />
-      ))}
-      <span className="ml-1 text-sm font-medium">{rating.toFixed(1)}</span>
-    </div>
-  );
-};
 
 // AppCard component with larger icons
 const AppCard = memo(({ 

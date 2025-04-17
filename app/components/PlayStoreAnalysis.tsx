@@ -197,6 +197,11 @@ const FeatureRequestCard = memo(({
 
 FeatureRequestCard.displayName = 'FeatureRequestCard';
 
+// Define array type for the hasItems function
+interface ArrayLike<T> {
+  length: number;
+}
+
 const AppAnalysis: React.FC<AppAnalysisProps> = ({ appId, appName, onBackToSelection }) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [analysis, setAnalysis] = useState<ReviewAnalysis | null>(null);
@@ -244,8 +249,9 @@ const AppAnalysis: React.FC<AppAnalysisProps> = ({ appId, appName, onBackToSelec
   };
 
   // Helper function to safely check array length with optional chaining
-  const hasItems = (arr?: any[]): boolean => {
-    return Array.isArray(arr) && arr.length > 0;
+  // Fixed the any[] type with a generic type
+  const hasItems = <T,>(arr?: ArrayLike<T> | null): boolean => {
+    return Boolean(arr && arr.length > 0);
   };
 
   return (
@@ -433,7 +439,7 @@ const AppAnalysis: React.FC<AppAnalysisProps> = ({ appId, appName, onBackToSelec
                             <p className="text-xs font-medium mb-1">User Quotes:</p>
                             <div className="max-h-28 overflow-y-auto">
                               {experience.userQuotes?.map((quote, i) => (
-                                <p key={i} className="text-xs italic text-muted-foreground mb-1">"{quote}"</p>
+                                <p key={i} className="text-xs italic text-muted-foreground mb-1">&ldquo;{quote}&rdquo;</p>
                               ))}
                             </div>
                           </div>
