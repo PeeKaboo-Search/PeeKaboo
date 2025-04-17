@@ -252,7 +252,7 @@ Ensure the analysis is data-driven, uses professional marketing terminology, and
     };
 
     const payload = {
-      model: 'deepseek-r1-distill-qwen-32b',
+      model: 'llama3-70b-8192',      
       messages: [
         analysisPrompt,
         {

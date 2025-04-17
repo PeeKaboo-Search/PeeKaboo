@@ -504,7 +504,7 @@ IMPORTANT: Return VALID JSON only with no additional text before or after the JS
     };
 
     const payload = {
-      model: 'deepseek-r1-distill-qwen-32b',
+      model: 'llama3-70b-8192',      
       messages: [
         analysisPrompt,
         {

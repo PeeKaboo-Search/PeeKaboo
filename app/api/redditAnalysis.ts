@@ -330,7 +330,7 @@ export const fetchMarketingInsights = async (
         "Authorization": `Bearer ${groqApiKey}`,
       },
       body: JSON.stringify({
-        model: "deepseek-r1-distill-qwen-32b",
+        model: "llama3-70b-8192",
         messages: [
           { role: "system", content: context },
           { role: "user", content: JSON.stringify(groqInputData) },

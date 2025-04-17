@@ -294,7 +294,7 @@ export class MarketingStrategyService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'deepseek-r1-distill-qwen-32b',
+          model: 'llama3-70b-8192',          
           messages: [
             { role: 'system', content: MARKETING_STRATEGY_PROMPT },
             { 

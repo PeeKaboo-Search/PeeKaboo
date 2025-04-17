@@ -456,7 +456,7 @@ Here are the reviews to analyze: ${JSON.stringify(reviewsForAnalysis)}`;
       method: 'POST',
       headers: groqHeaders,
       body: JSON.stringify({
-        model: "deepseek-r1-distill-qwen-32b", // Using the specified model
+        model: "llama3-70b-8192", 
         messages: [
           {
             role: "system",
