@@ -31,6 +31,8 @@ interface SectionProps {
   renderItem: (item: unknown, index: number) => React.ReactNode;
   emptyMessage: string;
   className?: string;
+  isLoading?: boolean;
+  skeletonCount?: number;
 }
 
 interface Trend {
@@ -67,7 +69,6 @@ interface Trigger {
   relevance: number;
 }
 
-// ResearchData is now used in the type assertion
 interface ResearchData {
   executiveSummary: string;
   topTriggers?: Trigger[];
@@ -87,6 +88,43 @@ interface GoogleResult {
 const validateArray = <T,>(data: T[] | undefined | null): T[] => {
   return Array.isArray(data) ? data : [];
 };
+
+// Skeleton components
+const SkeletonCard = () => (
+  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full flex flex-col animate-pulse">
+    <div className="flex justify-between items-center mb-4">
+      <div className="h-6 bg-white/20 rounded w-3/4"></div>
+      <div className="h-4 bg-white/20 rounded w-1/5"></div>
+    </div>
+    <div className="space-y-4 flex-grow">
+      <div className="h-4 bg-white/20 rounded w-full"></div>
+      <div className="h-4 bg-white/20 rounded w-5/6"></div>
+      <div className="h-4 bg-white/20 rounded w-4/6"></div>
+      <div className="mt-6 space-y-3">
+        <div className="h-3 bg-white/20 rounded w-full"></div>
+        <div className="h-3 bg-white/20 rounded w-full"></div>
+        <div className="h-3 bg-white/20 rounded w-5/6"></div>
+      </div>
+    </div>
+    <div className="mt-4 space-y-2">
+      <div className="h-2 bg-white/20 rounded w-full"></div>
+      <div className="h-3 bg-white/20 rounded w-1/4"></div>
+    </div>
+  </div>
+);
+
+const SkeletonTextBlock = () => (
+  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg animate-pulse">
+    <div className="space-y-3">
+      <div className="h-4 bg-white/20 rounded w-3/4"></div>
+      <div className="h-4 bg-white/20 rounded w-5/6"></div>
+      <div className="h-4 bg-white/20 rounded w-full"></div>
+      <div className="h-4 bg-white/20 rounded w-4/5"></div>
+      <div className="h-4 bg-white/20 rounded w-5/6"></div>
+      <div className="h-4 bg-white/20 rounded w-3/4"></div>
+    </div>
+  </div>
+);
 
 // Base card component
 const ResearchCard = memo(({ title, description, items, score, scoreLabel, timing }: CardProps) => (
@@ -203,14 +241,16 @@ const TriggerCard = memo(({ trigger }: { trigger: Trigger }) => (
 
 TriggerCard.displayName = 'TriggerCard';
 
-// Generic section component with updated type definition
+// Generic section component with updated type definition and skeleton loading
 const ResearchSection: React.FC<SectionProps> = ({
   icon,
   title,
   items,
   renderItem,
   emptyMessage,
-  className = ""
+  className = "",
+  isLoading = false,
+  skeletonCount = 3
 }) => (
   <section className={`mt-8 ${className}`}>
     <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
@@ -218,7 +258,11 @@ const ResearchSection: React.FC<SectionProps> = ({
       {title}
     </h2>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {items.length > 0 ? (
+      {isLoading ? (
+        Array.from({ length: skeletonCount }).map((_, index) => (
+          <SkeletonCard key={`skeleton-${index}`} />
+        ))
+      ) : items.length > 0 ? (
         items.map((item, index) => renderItem(item, index))
       ) : (
         <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 col-span-full">
@@ -253,30 +297,6 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
   // Adding an explicit type assertion for the analysis
   const analysisData = analysis as ResearchData;
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white" />
-      </div>
-    );
-  }
-
-  if (error || !isSuccess) {
-    return (
-      <div className="text-center text-red-500 p-4">
-        {error || "Failed to fetch research data"}
-      </div>
-    );
-  }
-
-  if (!analysisData) {
-    return (
-      <div className="text-center p-4">
-        No analysis data available
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <header className="mb-8">
@@ -287,64 +307,86 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
       <div className="space-y-12">
         <section>
           <h2 className="text-2xl font-bold mb-4">Market Overview</h2>
-          <div 
-            className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg prose prose-invert max-w-none"
-            dangerouslySetInnerHTML={{ __html: analysisData.executiveSummary }} 
-          />
+          {isLoading ? (
+            <SkeletonTextBlock />
+          ) : error || !isSuccess ? (
+            <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 text-center text-red-500">
+              {error || "Failed to fetch research data"}
+            </div>
+          ) : !analysisData ? (
+            <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 text-center">
+              No analysis data available
+            </div>
+          ) : (
+            <div 
+              className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg prose prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: analysisData.executiveSummary }} 
+            />
+          )}
         </section>
 
         <ResearchSection
           icon={<KeyRound className="w-6 h-6" />}
           title="Top Product Triggers"
-          items={validateArray(analysisData.topTriggers)}
+          items={!isLoading && analysisData ? validateArray(analysisData.topTriggers) : []}
           renderItem={(trigger, index) => (
             <TriggerCard key={index} trigger={trigger as Trigger} />
           )}
           emptyMessage="No product triggers available"
+          isLoading={isLoading}
+          skeletonCount={3}
         />
 
         <ResearchSection
           icon={<TrendingUp className="w-6 h-6" />}
           title="Current Trends"
-          items={validateArray(analysisData.trends)}
+          items={!isLoading && analysisData ? validateArray(analysisData.trends) : []}
           renderItem={(trend, index) => (
             <TrendCard key={index} trend={trend as Trend} />
           )}
           emptyMessage="No trends available"
+          isLoading={isLoading}
+          skeletonCount={3}
         />
 
         <ResearchSection
           icon={<Eye className="w-6 h-6" />}
           title="Consumer Insights"
-          items={validateArray(analysisData.consumerInsights)}
+          items={!isLoading && analysisData ? validateArray(analysisData.consumerInsights) : []}
           renderItem={(insight, index) => (
             <InsightCard key={index} insight={insight as Insight} />
           )}
           emptyMessage="No consumer insights available"
+          isLoading={isLoading}
+          skeletonCount={3}
         />
 
         <ResearchSection
           icon={<Lightbulb className="w-6 h-6" />}
           title="Industry Insights"
-          items={validateArray(analysisData.industryInsights)}
+          items={!isLoading && analysisData ? validateArray(analysisData.industryInsights) : []}
           renderItem={(insight, index) => (
             <InsightCard key={index} insight={insight as Insight} />
           )}
           emptyMessage="No industry insights available"
+          isLoading={isLoading}
+          skeletonCount={3}
         />
 
         <ResearchSection
           icon={<Calendar className="w-6 h-6" />}
           title="Seasonal & Emerging Topics"
-          items={validateArray(analysisData.seasonalTopics)}
+          items={!isLoading && analysisData ? validateArray(analysisData.seasonalTopics) : []}
           renderItem={(topic, index) => (
             <SeasonalCard key={index} topic={topic as SeasonalTopic} />
           )}
           emptyMessage="No seasonal topics available"
+          isLoading={isLoading}
+          skeletonCount={3}
         />
       </div>
 
-      {googleResults && googleResults.length > 0 && (
+      {!isLoading && googleResults && googleResults.length > 0 && (
         <div className="mt-12 pt-12 border-t border-white/20">
           <ResearchSection
             icon={<Search className="w-6 h-6" />}
@@ -354,6 +396,22 @@ const MarketResearchDashboard: React.FC<MarketResearchProps> = ({ query }) => {
               <GoogleSourceCard key={`source-${index}`} result={result as GoogleResult} />
             )}
             emptyMessage="No sources available"
+            isLoading={isLoading}
+            skeletonCount={3}
+          />
+        </div>
+      )}
+      
+      {isLoading && (
+        <div className="mt-12 pt-12 border-t border-white/20">
+          <ResearchSection
+            icon={<Search className="w-6 h-6" />}
+            title="Research Sources"
+            items={[]}
+            renderItem={() => null}
+            emptyMessage="No sources available"
+            isLoading={true}
+            skeletonCount={3}
           />
         </div>
       )}
