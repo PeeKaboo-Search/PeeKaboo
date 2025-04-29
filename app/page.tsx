@@ -21,6 +21,7 @@ import StrategyAnalysis from "@/app/components/StrategyAnalysis";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+const groqApiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
 
 const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
@@ -65,6 +66,11 @@ const SEARCH_COMPONENTS: SearchComponentConfig[] = [
   { name: 'StrategyAnalysis', component: StrategyAnalysis, propType: 'query' },
 ];
 
+// Interface for specialized queries
+interface SpecializedQueries {
+  [key: string]: string;
+}
+
 interface SearchFormProps {
   query: string;
   setQuery: (query: string) => void;
@@ -92,7 +98,7 @@ const SearchForm: React.FC<SearchFormProps> = ({
         className="search-button bg-white text-black"
         disabled={isSearching}
       >
-        {isSearching ? "Searching..." : "Search"}
+        {isSearching ? "Analyzing..." : "Search"}
       </button>
     </div>
   </form>
@@ -101,15 +107,19 @@ const SearchForm: React.FC<SearchFormProps> = ({
 interface ResultsSectionProps {
   submittedQuery: string;
   activeComponents: string[];
+  specializedQueries: SpecializedQueries;
 }
 
 const ResultsSection: React.FC<ResultsSectionProps> = ({ 
   submittedQuery, 
-  activeComponents 
+  activeComponents,
+  specializedQueries 
 }) => (
   <div className="results-container">
     <Suspense fallback={<div className="results-loader text-white">Loading components...</div>}>
       {SEARCH_COMPONENTS.filter(comp => activeComponents.includes(comp.name)).map((config) => {
+        const optimizedQuery = specializedQueries[config.name] || submittedQuery;
+        
         if (config.propType === 'query') {
           const Component = config.component;
           return (
@@ -118,7 +128,7 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
               className="result-card bg-black text-white border border-gray-800"
               data-component={config.name.toLowerCase()}
             >
-              <Component query={submittedQuery} />
+              <Component query={optimizedQuery} />
             </div>
           );
         } else {
@@ -129,7 +139,7 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
               className="result-card bg-black text-white border border-gray-800"
               data-component={config.name.toLowerCase()}
             >
-              <Component keyword={submittedQuery} />
+              <Component keyword={optimizedQuery} />
             </div>
           );
         }
@@ -145,6 +155,7 @@ const Page: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [activeComponents, setActiveComponents] = useState<string[]>([]);
   const [isSideHistoryOpen, setIsSideHistoryOpen] = useState(false);
+  const [specializedQueries, setSpecializedQueries] = useState<SpecializedQueries>({});
 
   useEffect(() => {
     const checkUser = async () => {
@@ -164,7 +175,84 @@ const Page: React.FC = () => {
     };
   }, []);
 
-  const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
+  // Function to generate specialized queries using Groq API
+  const generateSpecializedQueries = async (userQuery: string): Promise<SpecializedQueries> => {
+    try {
+      const prompt = `
+You are a query optimization expert. Given the user's search query: "${userQuery}", 
+generate specialized, optimized search queries for different platforms and search engines. 
+
+Return ONLY a JSON object with the following structure, with NO additional explanation:
+
+{
+  "ImageResult": "optimized query for Google Images",
+  "GoogleAnalytics": "optimized query for Google Search",
+  "PlayStoreAnalytics": "relevant app names only",
+  "RedditAnalytics": "optimized query for direct search on Reddit",
+  "YouTubeVideos": "optimized query for YouTube API",
+  "QuoraAnalysis": "optimized query for Quora API",
+  "XAnalytics": "optimized query for Twitter/X API",
+  "FacebookAdsAnalysis": "optimized keyword for Facebook Ads Library",
+  "StrategyAnalysis": "optimized query for Google Search"
+}
+
+Guidelines:
+- For ImageResult: Add terms like "image", "visual", "picture" if appropriate
+- For GoogleAnalytics: Create a comprehensive search query with relevant keywords
+- For PlayStoreAnalytics: Only include app names or app categories, no other terms
+- For RedditAnalytics: Format for Reddit-specific search, dont use site:, dont mention subreddits
+- For YouTubeVideos: Format for video search, include terms like "tutorial", "review", "study", "research" if appropriate
+- For QuoraAnalysis: Format as questions when possible
+- For XAnalytics: Include relevant hashtags with # symbol if appropriate
+- For FacebookAdsAnalysis: Focus on advertiser name or product type or product name, only one name
+- For StrategyAnalysis: Create a comprehensive search query for strategic analysis
+
+Remember to return ONLY the JSON object with no additional text.
+`;
+
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${groqApiKey}`
+        },
+        body: JSON.stringify({
+          model: "llama3-70b-8192",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.2,
+          max_tokens: 1000
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Groq API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices[0].message.content;
+      
+      // Parse the JSON response
+      try {
+        // Handle when the response includes markdown code blocks
+        const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || 
+                       content.match(/```\s*([\s\S]*?)\s*```/) ||
+                       [null, content];
+        
+        const jsonString = jsonMatch[1] || content;
+        const parsed = JSON.parse(jsonString.trim());
+        return parsed;
+      } catch (parseError) {
+        console.error("Failed to parse Groq response:", parseError);
+        console.log("Raw response:", content);
+        return {};
+      }
+    } catch (error) {
+      console.error("Error generating specialized queries:", error);
+      return {};
+    }
+  };
+
+  const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     
     const componentsToSearch = activeComponents.length > 0 
@@ -175,9 +263,15 @@ const Page: React.FC = () => {
     setActiveComponents(componentsToSearch);
     setIsSearching(true);
 
-    setTimeout(() => {
+    try {
+      // Generate specialized queries using Groq
+      const optimizedQueries = await generateSpecializedQueries(query);
+      setSpecializedQueries(optimizedQueries);
+    } catch (error) {
+      console.error("Error in query optimization:", error);
+    } finally {
       setIsSearching(false);
-    }, 1500);
+    }
   };
 
   const toggleComponent = (componentName: string) => {
@@ -241,6 +335,7 @@ const Page: React.FC = () => {
           const captureApplicationState = () => {
             return {
               query: submittedQuery || '',
+              specializedQueries: specializedQueries || {},
               activeComponents: activeComponents || [],
               timestamp: new Date().toISOString(),
               userContext: user ? {
@@ -323,6 +418,7 @@ const Page: React.FC = () => {
         .insert({
           user_id: user.id,
           query: submittedQuery,
+          specialized_queries: specializedQueries,
           active_components: activeComponents,
           html_url: publicUrl,
           created_at: new Date().toISOString()
@@ -447,7 +543,8 @@ const Page: React.FC = () => {
       {submittedQuery && (
         <ResultsSection 
           submittedQuery={submittedQuery} 
-          activeComponents={activeComponents} 
+          activeComponents={activeComponents}
+          specializedQueries={specializedQueries}
         />
       )}
     </div>

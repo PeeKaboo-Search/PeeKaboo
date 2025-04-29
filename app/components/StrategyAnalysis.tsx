@@ -5,12 +5,13 @@ import {
   TrendingUp,
   Lightbulb, BarChart, 
   Target, Building2,
-  Clock, DollarSign,
   BookOpen, FileText,
-  RefreshCw, Medal
+  Medal,
+  Crosshair, MessageSquare,
+  Megaphone, Award
 } from "lucide-react";
 import { Progress } from "@/app/components/ui/progress";
-import { useMarketingStrategy } from "@/app/api/strategyAnalytics"; 
+import { useMarketingStrategy } from "@/app/api/strategyAnalytics"; // Updated import to match new API file
 
 // Types
 interface MarketingStrategyProps {
@@ -25,6 +26,7 @@ interface CardProps {
   scoreLabel?: string;
   timing?: string;
   highlightValue?: string;
+  icon?: React.ReactNode;
 }
 
 interface SectionProps<T> {
@@ -86,16 +88,26 @@ interface StorytellingStrategy {
   engagementTriggers: string[];
 }
 
+interface PositioningElement {
+  title: string;
+  description: string;
+  items?: string[];
+  icon: React.ReactNode;
+}
+
 // Helper functions
 const validateArray = <T,>(data: T[] | undefined | null): T[] => {
   return Array.isArray(data) ? data : [];
 };
 
 // Base card component
-const StrategyCard = memo(({ title, description, items, score, scoreLabel, timing, highlightValue }: CardProps) => (
+const StrategyCard = memo(({ title, description, items, score, scoreLabel, timing, highlightValue, icon }: CardProps) => (
   <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg border border-gray-800">
     <div className="flex justify-between items-center mb-4">
-      <h3 className="text-xl font-semibold">{title}</h3>
+      <h3 className="text-xl font-semibold flex items-center gap-2">
+        {icon}
+        {title}
+      </h3>
       {timing && <span className="text-sm opacity-70">{timing}</span>}
       {highlightValue && <span className="bg-blue-500/30 text-white px-3 py-1 rounded-full text-sm">{highlightValue}</span>}
     </div>
@@ -122,6 +134,18 @@ const StrategyCard = memo(({ title, description, items, score, scoreLabel, timin
 
 StrategyCard.displayName = 'StrategyCard';
 
+// Positioning Strategy Card Component
+const PositioningCard = memo(({ element }: { element: PositioningElement }) => (
+  <StrategyCard
+    title={element.title}
+    description={element.description}
+    items={element.items}
+    icon={element.icon}
+  />
+));
+
+PositioningCard.displayName = 'PositioningCard';
+
 // Specialized card components
 const CompetitorCard = memo(({ competitor }: { competitor: Competitor }) => (
   <StrategyCard
@@ -136,6 +160,7 @@ const CompetitorCard = memo(({ competitor }: { competitor: Competitor }) => (
     ]}
     score={competitor.marketShare}
     scoreLabel="Market Share"
+    icon={<Building2 className="w-4 h-4" />}
   />
 ));
 
@@ -151,6 +176,7 @@ const CaseStudyCard = memo(({ caseStudy }: { caseStudy: CaseStudy }) => (
       ...caseStudy.keyLearnings.map(learning => `<strong>Key Learning:</strong> ${learning}`),
       `<strong>Applicability:</strong> ${caseStudy.applicability}`
     ]}
+    icon={<BookOpen className="w-4 h-4" />}
   />
 ));
 
@@ -168,6 +194,7 @@ const TacticCard = memo(({ tactic }: { tactic: MarketingTactic }) => (
     ]}
     score={tactic.expectedROI}
     scoreLabel="Expected ROI"
+    icon={<Medal className="w-4 h-4" />}
   />
 ));
 
@@ -185,6 +212,7 @@ const ContentPillarCard = memo(({ pillar }: { pillar: ContentPillar }) => (
     score={pillar.audienceResonance}
     scoreLabel="Audience Resonance"
     highlightValue={pillar.frequencyRecommendation}
+    icon={<Lightbulb className="w-4 h-4" />}
   />
 ));
 
@@ -200,6 +228,7 @@ const StorytellingCard = memo(({ strategy }: { strategy: StorytellingStrategy })
       ...strategy.emotionalHooks.map(hook => `<strong>Emotional Hook:</strong> ${hook}`),
       ...strategy.engagementTriggers.map(trigger => `<strong>Engagement Trigger:</strong> ${trigger}`)
     ]}
+    icon={<TrendingUp className="w-4 h-4" />}
   />
 ));
 
@@ -232,7 +261,7 @@ const StrategySection = <T,>({
 
 // Main component
 const MarketingStrategyDashboard: React.FC<MarketingStrategyProps> = ({ query }) => {
-  const { strategyData, analyzeStrategy, isLoading, error } = useMarketingStrategy();
+  const { strategyData, analyzeStrategy, isLoading, error } = useMarketingStrategy(); // Updated to match new API hook
   const [hasSearched, setHasSearched] = useState(false);
 
   useEffect(() => {
@@ -272,8 +301,39 @@ const MarketingStrategyDashboard: React.FC<MarketingStrategyProps> = ({ query })
 
   const { strategy } = strategyData.data;
 
-  // Extract market analysis for the overview section
+  // Extract market analysis and positioning strategy
   const { marketAnalysis, positioningStrategy } = strategy;
+  
+  // Create positioning strategy cards
+  const positioningCards: PositioningElement[] = [
+    {
+      title: "Unique Value Proposition",
+      description: positioningStrategy.uniqueValueProposition,
+      icon: <Target className="w-4 h-4" />
+    },
+    {
+      title: "Key Differentiators",
+      description: "What sets your brand apart from competitors",
+      items: positioningStrategy.keyDifferentiators,
+      icon: <Award className="w-4 h-4" />
+    },
+    {
+      title: "Messaging Framework",
+      description: "Core messages that resonate with your audience",
+      items: positioningStrategy.messagingFramework,
+      icon: <MessageSquare className="w-4 h-4" />
+    },
+    {
+      title: "Brand Voice",
+      description: positioningStrategy.brandVoice,
+      icon: <Megaphone className="w-4 h-4" />
+    },
+    {
+      title: "Perception Mapping",
+      description: positioningStrategy.perceptionMapping,
+      icon: <Crosshair className="w-4 h-4" />
+    }
+  ];
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -336,41 +396,16 @@ const MarketingStrategyDashboard: React.FC<MarketingStrategyProps> = ({ query })
           </div>
         </section>
 
-        {/* Positioning Strategy */}
+        {/* Positioning Strategy - Now using individual cards */}
         <section>
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
             <Target className="w-6 h-6" />
             Positioning Strategy
           </h2>
-          <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg border border-gray-800">
-            <h3 className="text-xl font-semibold mb-4">Unique Value Proposition</h3>
-            <p className="text-lg mb-4 font-medium">{positioningStrategy.uniqueValueProposition}</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-              <div>
-                <h4 className="font-semibold mb-2">Key Differentiators</h4>
-                <ul className="space-y-1">
-                  {positioningStrategy.keyDifferentiators.map((item, idx) => (
-                    <li key={idx} className="text-sm">{item}</li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-2">Messaging Framework</h4>
-                <ul className="space-y-1">
-                  {positioningStrategy.messagingFramework.map((item, idx) => (
-                    <li key={idx} className="text-sm">{item}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-            <div className="mt-4">
-              <h4 className="font-semibold mb-2">Brand Voice</h4>
-              <p>{positioningStrategy.brandVoice}</p>
-            </div>
-            <div className="mt-4">
-              <h4 className="font-semibold mb-2">Perception Mapping</h4>
-              <p>{positioningStrategy.perceptionMapping}</p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {positioningCards.map((card, index) => (
+              <PositioningCard key={index} element={card} />
+            ))}
           </div>
         </section>
 
@@ -428,76 +463,6 @@ const MarketingStrategyDashboard: React.FC<MarketingStrategyProps> = ({ query })
           )}
           emptyMessage="No storytelling strategies available"
         />
-
-        {/* Budget & Timeline */}
-        <section className="mt-8">
-          <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
-            <DollarSign className="w-6 h-6" />
-            Budget & Implementation
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg border border-gray-800">
-              <h3 className="text-xl font-semibold mb-4">Budget Allocation</h3>
-              <p className="mb-2"><strong>Total Budget:</strong> {strategy.budgetAllocation.totalBudget}</p>
-              <p className="mb-4"><strong>Contingency Reserve:</strong> {strategy.budgetAllocation.contingencyReserve}%</p>
-              
-              <h4 className="font-semibold mb-2">Channel Breakdown</h4>
-              <div className="space-y-2">
-                {Object.entries(strategy.budgetAllocation.channelBreakdown).map(([channel, percentage]) => (
-                  <div key={channel} className="space-y-1">
-                    <div className="flex justify-between">
-                      <span>{channel}</span>
-                      <span>{percentage}%</span>
-                    </div>
-                    <Progress value={percentage} className="h-2" />
-                  </div>
-                ))}
-              </div>
-              
-              <h4 className="font-semibold mt-4 mb-2">Quarterly Distribution</h4>
-              <div className="grid grid-cols-4 gap-2">
-                {strategy.budgetAllocation.quarterlyDistribution.map((percentage, idx) => (
-                  <div key={idx} className="text-center">
-                    <div className="mb-1">Q{idx+1}</div>
-                    <Progress value={percentage} className="h-2 mb-1" />
-                    <div className="text-sm">{percentage}%</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg border border-gray-800">
-              <h3 className="text-xl font-semibold mb-4">Implementation Timeline</h3>
-              
-              <h4 className="font-semibold mb-2">Phases</h4>
-              <ul className="space-y-1 mb-4">
-                {strategy.implementationTimeline.phases.map((phase, idx) => (
-                  <li key={idx} className="text-sm flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    {phase}
-                  </li>
-                ))}
-              </ul>
-              
-              <h4 className="font-semibold mb-2">Key Milestones</h4>
-              <ul className="space-y-1 mb-4">
-                {strategy.implementationTimeline.milestones.map((milestone, idx) => (
-                  <li key={idx} className="text-sm flex items-center gap-2">
-                    <RefreshCw className="w-4 h-4" />
-                    {milestone}
-                  </li>
-                ))}
-              </ul>
-              
-              <h4 className="font-semibold mb-2">Critical Path</h4>
-              <ul className="space-y-1">
-                {strategy.implementationTimeline.criticalPath.map((path, idx) => (
-                  <li key={idx} className="text-sm">{path}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </section>
       </div>
     </div>
   );

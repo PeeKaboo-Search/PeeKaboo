@@ -80,24 +80,6 @@ interface MarketingStrategy {
   marketingTactics: MarketingTactic[];
   contentPillars: ContentPillar[];
   storytellingStrategies: StorytellingStrategy[];
-  budgetAllocation: {
-    totalBudget: string;
-    channelBreakdown: Record<string, number>;
-    quarterlyDistribution: number[];
-    contingencyReserve: number;
-  };
-  implementationTimeline: {
-    phases: string[];
-    milestones: string[];
-    dependencies: string[];
-    criticalPath: string[];
-  };
-  performanceMetrics: {
-    kpis: string[];
-    benchmarks: Record<string, number>;
-    reportingCadence: string;
-    dashboardElements: string[];
-  };
 }
 
 interface StrategyAnalysisResponse {
@@ -117,10 +99,8 @@ const CONFIG = {
   }
 } as const;
 
-const MARKETING_STRATEGY_PROMPT = `You are a world-class marketing strategist with 25+ years of experience advising Fortune 500 companies and disruptive startups. Your expertise spans brand strategy, competitive intelligence, audience insights, and innovative campaign execution.
-
-Generate a comprehensive marketing strategy analysis in JSON format that provides actionable, data-backed recommendations based on industry best practices and emerging trends. Do not merely describe what marketing is - provide specific, implementable strategies tailored to the query.
-
+const MARKETING_STRATEGY_PROMPT = `Give only JSON as Output. You are a world-class marketing strategist with 25+ years of experience advising Fortune 500 companies and disruptive startups. Your expertise spans brand strategy, competitive intelligence, audience insights, and innovative campaign execution.
+Generate a comprehensive marketing strategy analysis in JSON format that provides actionable, data-backed recommendations based on industry best practices and emerging trends. Do not merely describe what marketing is - provide specific, implementable strategies tailored to the query. 
 Your analysis should follow this structure:
 
 {
@@ -209,31 +189,11 @@ Your analysis should follow this structure:
       "distributionChannels": ["Best platforms for storytelling"],
       "engagementTriggers": ["Elements that drive audience interaction"]
     }
-  ],
-  
-  "budgetAllocation": {
-    "totalBudget": "Recommended marketing investment",
-    "channelBreakdown": {"channel1": percentage, "channel2": percentage},
-    "quarterlyDistribution": [Q1%, Q2%, Q3%, Q4%],
-    "contingencyReserve": "Recommended reserve percentage"
-  },
-  
-  "implementationTimeline": {
-    "phases": ["Key implementation phases"],
-    "milestones": ["Critical success markers"],
-    "dependencies": ["Sequential requirements"],
-    "criticalPath": ["Priority actions that impact timeline"]
-  },
-  
-  "performanceMetrics": {
-    "kpis": ["Key performance indicators"],
-    "benchmarks": {"metric1": value, "metric2": value},
-    "reportingCadence": "Recommended reporting frequency",
-    "dashboardElements": ["Key monitoring components"]
-  }
+  ]
 }
 
 Guidelines:
+- Return ONLY JSON with no explanatory text
 - Include 5 major competitors with detailed analysis of their strategies
 - Provide 3 relevant case studies with actionable learnings
 - Recommend 6 high-impact marketing tactics with clear implementation paths
@@ -241,7 +201,6 @@ Guidelines:
 - Create 3 storytelling strategies that build emotional connection
 - Include specifics about Indian market when relevant
 - For India-specific queries, note that TikTok is banned in India
-- Ensure budget recommendations are realistic and scalable
 - Avoid generic advice - provide industry-specific strategies
 - Use sophisticated marketing terminology appropriate for professionals
 - Focus on both immediate wins and long-term strategic advantages
@@ -299,7 +258,7 @@ export class MarketingStrategyService {
             { role: 'system', content: MARKETING_STRATEGY_PROMPT },
             { 
               role: 'user', 
-              content: `Develop a comprehensive marketing strategy for: ${query}. Include competitor analysis, case studies, storytelling approaches, and implementation timeline.` 
+              content: `Develop a comprehensive marketing strategy for: ${query}. Return ONLY JSON format with no additional text or explanation.` 
             },
           ],
           temperature: 0.7,
