@@ -136,7 +136,7 @@ interface GroqResponse {
 }
 
 // Search params interface
-interface SearchParams {
+export interface SearchParams {
   relevance?: 'relevance' | 'hot' | 'new' | 'top' | 'comments';
   timeframe?: 'all' | 'year' | 'month' | 'week' | 'day' | 'hour';
 }
@@ -150,8 +150,7 @@ const containsQueryTerms = (title: string, query: string): boolean => {
 };
 
 export const fetchMarketingInsights = async (
-  query: string,
-  searchParams: SearchParams = { relevance: 'relevance', timeframe: 'all' }
+  query: string
 ): Promise<{ results: RedditResult[]; insights: MarketingInsight } | null> => {
   try {
     const redditClientId = process.env.NEXT_PUBLIC_REDDIT_CLIENT_ID;
@@ -180,8 +179,6 @@ export const fetchMarketingInsights = async (
     const accessToken = authData.access_token;
     
     const results: RedditResult[] = [];
-    
-    // Always use 'all' for timeframe - removed unused 'sort' variable
     
     // Search across Reddit with fixed 'all' timeframe and increased limit
     const searchUrl = `https://oauth.reddit.com/search?q=${encodeURIComponent(query)}&limit=100&t=all`;
