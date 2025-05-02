@@ -29,20 +29,17 @@ import { Skeleton } from "@/app/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/app/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
 import { Badge } from "@/app/components/ui/badge";
-import "@/app/styles/YouTubeAnalytics.css";
+import "@/app/styles/YouTubeAnalytics.module.css";
 
-// Error state interface
 interface ErrorState {
   message: string;
   code: string;
 }
 
-// Props interface for the component
 interface YouTubeVideosProps {
   query: string;
 }
 
-// Additional interfaces
 interface PainPoint {
   title: string;
   description: string;
@@ -90,14 +87,12 @@ interface AnalysisCardProps {
   sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed';
 }
 
-// Ensure VideoStatistics type is strict
 const ensureVideoStatistics = (stats: Partial<VideoStatistics>): VideoStatistics => ({
   viewCount: stats.viewCount || '0',
   likeCount: stats.likeCount || '0',
   commentCount: stats.commentCount || '0'
 });
 
-// Helper functions
 const formatNumber = (num: string) => {
   const n = parseInt(num);
   if (isNaN(n)) return 'N/A';
@@ -119,9 +114,8 @@ const getSentimentColor = (sentiment?: 'positive' | 'negative' | 'neutral' | 'mi
   }
 };
 
-// Analysis Card Components
 const AnalysisCard = memo(({ title, description, items, score, scoreLabel, sentiment }: AnalysisCardProps) => (
-  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4 shadow-lg h-full flex flex-col">
+  <div className="bg-black/10 backdrop-blur-lg rounded-lg p-4 shadow-lg h-full flex flex-col">
     <div className="flex justify-between items-center mb-3">
       <h3 className="text-lg font-semibold">{title}</h3>
       {sentiment && (
@@ -202,7 +196,6 @@ const TriggerCard = memo(({ trigger }: { trigger: EmotionalTrigger }) => (
 ));
 TriggerCard.displayName = 'TriggerCard';
 
-// VideoCard component
 const VideoCard = memo(({ 
   video, 
   statistics, 
@@ -216,7 +209,7 @@ const VideoCard = memo(({
 }) => (
   <Card
     className={`youtube-video-card flex-shrink-0 w-72 cursor-pointer snap-start transition-all hover:shadow-lg
-      ${isSelected ? 'ring-2 ring-primary shadow-md' : ''}`}
+      ${isSelected ? 'ring-2 ring-red-600 shadow-md' : ''}`}
     onClick={onClick}
   >
     <CardContent className="p-0">
@@ -281,9 +274,8 @@ const VideoCard = memo(({
 ));
 VideoCard.displayName = 'VideoCard';
 
-// Comment item component
 const CommentItemComponent = memo(({ comment }: { comment: CommentItemType }) => (
-  <div className="p-3 border rounded-lg transition-all hover:bg-white/5">
+  <div className="p-3 border rounded-lg transition-all hover:bg-black/5">
     <div className="flex items-start gap-3">
       {comment.snippet.topLevelComment.snippet.authorProfileImageUrl && (
         <div className="relative w-8 h-8 overflow-hidden rounded-full flex-shrink-0">
@@ -317,7 +309,6 @@ const CommentItemComponent = memo(({ comment }: { comment: CommentItemType }) =>
 ));
 CommentItemComponent.displayName = 'CommentItemComponent';
 
-// Main YouTube component
 const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [statistics, setStatistics] = useState<Record<string, VideoStatistics>>({});
@@ -327,7 +318,6 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
   const [nextPageToken, setNextPageToken] = useState<string | undefined>();
   const [loadingMore, setLoadingMore] = useState(false);
   
-  // Comments state
   const [comments, setComments] = useState<CommentThreadResponse | null>(null);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentAnalysis, setCommentAnalysis] = useState<CommentAnalysisType | null>(null);
@@ -335,15 +325,12 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [activeTab, setActiveTab] = useState("pain-points");
   
-  // Scrolling state
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [startX, setStartX] = useState<number>(0);
   const [scrollLeft, setScrollLeft] = useState<number>(0);
   
-  // Refs for scrolling
   const videosSliderRef = useRef<HTMLDivElement>(null);
   
-  // Scrolling handlers
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!videosSliderRef.current) return;
     setIsDragging(true);
@@ -369,7 +356,6 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
     }
   };
 
-  // Load more videos when user clicks "Load More"
   const loadMoreVideos = async () => {
     if (!nextPageToken || loadingMore) return;
     try {
@@ -379,7 +365,6 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
       setVideos(newVideos);
       setNextPageToken(data.nextPageToken);
 
-      // Extract and update statistics
       const newStats: Record<string, VideoStatistics> = { ...statistics };
       data.items.forEach(video => {
         const videoId = video.id.videoId;
@@ -399,14 +384,12 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
     }
   };
 
-  // Handle video selection
   const handleVideoSelect = (videoId: string) => {
     setSelectedVideo(videoId);
-    setShowAnalysis(false); // Reset analysis view when selecting a new video
+    setShowAnalysis(false);
     fetchComments(videoId);
   };
 
-  // Fetch comments for selected video
   const fetchComments = async (videoId: string) => {
     if (!videoId) return;
     
@@ -427,7 +410,6 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
     }
   };
 
-  // Handle analyze comments action
   const handleAnalyzeComments = async () => {
     if (!selectedVideo) return;
     
@@ -449,12 +431,10 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
     }
   };
 
-  // Reset analysis view
   const handleBackToComments = () => {
     setShowAnalysis(false);
   };
 
-  // Initial data fetching
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -467,7 +447,6 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
         setVideos(data.items);
         setNextPageToken(data.nextPageToken);
 
-        // Extract statistics from the search results
         const newStats: Record<string, VideoStatistics> = {};
         data.items.forEach(video => {
           const videoId = video.id.videoId;
@@ -492,7 +471,6 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
     }
   }, [query]);
 
-  // Render loading state
   if (loading && !videos.length) {
     return (
       <div className="youtube-videos-container space-y-6">
@@ -502,7 +480,7 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="bg-white/5 rounded-lg overflow-hidden">
+            <div key={i} className="bg-black/5 rounded-lg overflow-hidden">
               <Skeleton className="w-full h-40" />
               <div className="p-4 space-y-2">
                 <Skeleton className="h-4 w-3/4" />
@@ -554,10 +532,9 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
         </div>
       )}
 
-      {/* Video carousel - only show when not viewing analysis */}
       {!showAnalysis && (
         <div 
-          className="youtube-videos-slider relative overflow-x-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
+          className="youtube-videos-slider relative overflow-x-auto scrollbar-thin scrollbar-thumb-red-600/20 scrollbar-track-transparent"
           ref={videosSliderRef}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
@@ -578,7 +555,6 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
         </div>
       )}
 
-      {/* Comments and Analysis Section */}
       {selectedVideo && !showAnalysis && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -586,7 +562,7 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
             <Button
               onClick={handleAnalyzeComments}
               disabled={isAnalyzing || !comments || comments.items.length === 0}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-red-600 hover:bg-red-700"
             >
               {isAnalyzing ? (
                 <>
@@ -602,11 +578,10 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
             </Button>
           </div>
           
-          {/* Comments List */}
           {commentsLoading ? (
             <div className="space-y-3">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="border border-white/10 rounded-lg p-4 animate-pulse">
+                <div key={i} className="border border-black/10 rounded-lg p-4 animate-pulse">
                   <div className="flex items-start gap-3">
                     <Skeleton className="h-8 w-8 rounded-full" />
                     <div className="flex-1 space-y-2">
@@ -626,7 +601,7 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
               <p className="text-muted-foreground">No comments found for this video.</p>
             </div>
           ) : (
-            <div className="space-y-3 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+            <div className="space-y-3 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-red-600/20 scrollbar-track-transparent">
               {comments.items.slice(0, 10).map((comment) => (
                 <CommentItemComponent key={comment.id} comment={comment} />
               ))}
@@ -640,7 +615,6 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
         </div>
       )}
 
-      {/* Analysis Results Section */}
       {showAnalysis && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
@@ -649,7 +623,7 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
               variant="outline" 
               size="sm"
               onClick={handleBackToComments}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 border-red-600 text-red-600 hover:bg-red-600/10"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Video
@@ -659,16 +633,16 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
           {commentAnalysis?.success && commentAnalysis.data ? (
             <>
               <section>
-                <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4">
+                <div className="bg-black/10 backdrop-blur-lg rounded-lg p-4">
                   <p className="text-sm whitespace-pre-line">{commentAnalysis.data.analysis.overview}</p>
                 </div>
               </section>
 
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid grid-cols-3">
-                  <TabsTrigger value="pain-points">Pain Points</TabsTrigger>
-                  <TabsTrigger value="user-experiences">User Experiences</TabsTrigger>
-                  <TabsTrigger value="emotional-triggers">Emotional Triggers</TabsTrigger>
+                <TabsList className="grid grid-cols-3 bg-black/20">
+                  <TabsTrigger value="pain-points" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Pain Points</TabsTrigger>
+                  <TabsTrigger value="user-experiences" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">User Experiences</TabsTrigger>
+                  <TabsTrigger value="emotional-triggers" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Emotional Triggers</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="pain-points" className="mt-4">
@@ -722,7 +696,7 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
 
               <section>
                 <h2 className="text-lg font-bold mb-3">Market Implications</h2>
-                <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4">
+                <div className="bg-black/10 backdrop-blur-lg rounded-lg p-4">
                   <p className="text-sm whitespace-pre-line">{commentAnalysis.data.analysis.marketImplications}</p>
                 </div>
               </section>

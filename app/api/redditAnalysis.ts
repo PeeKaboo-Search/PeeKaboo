@@ -141,6 +141,14 @@ interface SearchParams {
   timeframe?: 'all' | 'year' | 'month' | 'week' | 'day' | 'hour';
 }
 
+// Helper function to check if query terms appear in the title
+const containsQueryTerms = (title: string, query: string): boolean => {
+  const queryTerms = query.toLowerCase().split(' ');
+  const titleLower = title.toLowerCase();
+  
+  return queryTerms.some(term => titleLower.includes(term));
+};
+
 export const fetchMarketingInsights = async (
   query: string,
   searchParams: SearchParams = { relevance: 'relevance', timeframe: 'all' }
@@ -173,22 +181,16 @@ export const fetchMarketingInsights = async (
     
     const results: RedditResult[] = [];
     
-    // Set sort and time parameters based on input
+    // Always use 'all' for timeframe
     const sort = searchParams.relevance || 'relevance';
-    const time = searchParams.timeframe || 'all';
     
-    // Search across Reddit with sort and time parameters
-    let searchUrl = `https://oauth.reddit.com/search?q=${encodeURIComponent(query)}&limit=25&sort=${sort}`;
-    
-    // Only add t parameter when sort type requires it (top, controversial)
-    if (['top', 'controversial'].includes(sort)) {
-      searchUrl += `&t=${time}`;
-    }
+    // Search across Reddit with fixed 'all' timeframe and increased limit
+    let searchUrl = `https://oauth.reddit.com/search?q=${encodeURIComponent(query)}&limit=100&t=all`;
     
     const searchResponse = await fetch(searchUrl, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
-        'User-Agent': 'MarketingInsights/3.0',
+        'User-Agent': 'MarketingInsights/3.1',
       },
     });
 
@@ -198,23 +200,24 @@ export const fetchMarketingInsights = async (
 
     const searchData = await searchResponse.json() as RedditSearchResponse;
     
-    // Filter posts with actual content
+    // Filter posts with actual content AND titles that include at least one query term
     const relevantPosts = searchData.data.children
       .filter((post: RedditPost) => 
         post.data.selftext && 
         post.data.selftext.length > 50 &&
-        post.data.num_comments > 0
+        post.data.num_comments > 0 &&
+        containsQueryTerms(post.data.title, query)
       );
     
-    // Process up to 5 posts
-    for (const post of relevantPosts.slice(0, 5)) {
+    // Process up to 10 posts (increased from 5)
+    for (const post of relevantPosts.slice(0, 10)) {
       // Get comments for this post
       const commentsResponse = await fetch(
-        `https://oauth.reddit.com${post.data.permalink}?limit=10&depth=1`,
+        `https://oauth.reddit.com${post.data.permalink}?limit=15&depth=1`,
         {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
-            'User-Agent': 'MarketingInsights/3.0',
+            'User-Agent': 'MarketingInsights/3.1',
           },
         }
       );
@@ -223,15 +226,16 @@ export const fetchMarketingInsights = async (
       
       const commentsData = await commentsResponse.json() as RedditCommentsResponse;
       
-      // Extract top 5 comments (if available)
+      // Extract top 8 comments (increased from 5)
       const topComments = commentsData[1]?.data?.children
         .filter((comment: RedditComment) => 
           comment.kind === 't1' && 
           comment.data?.body && 
-          !comment.data.stickied
+          !comment.data.stickied &&
+          comment.data.body.length > 5 // Ensure comment has meaningful content
         )
         .sort((a: RedditComment, b: RedditComment) => b.data.score - a.data.score)
-        .slice(0, 5)
+        .slice(0, 8)
         .map((comment: RedditComment) => ({
           body: comment.data.body,
           score: comment.data.score,
@@ -253,7 +257,7 @@ export const fetchMarketingInsights = async (
     }
 
     if (results.length === 0) {
-      throw new Error("Insufficient data from Reddit Search API.");
+      throw new Error("Insufficient data from Reddit Search API or no titles matched query terms.");
     }
 
     // Prepare a more focused dataset for Groq to reduce token usage
@@ -261,14 +265,14 @@ export const fetchMarketingInsights = async (
       title: post.title,
       subreddit: post.subreddit,
       content: post.snippet,
-      comments: post.top_comments?.map(c => c.body).join(" | ").slice(0, 500) || "",
+      comments: post.top_comments?.map(c => c.body).join(" | ").slice(0, 800) || "", // Increased comment text
       engagement: {
         upvote_ratio: post.engagement_metrics?.upvote_ratio,
         comment_count: post.engagement_metrics?.comment_count
       }
     }));
 
-    // Streamlined Groq API prompt
+    // Keep the original Groq API prompt as specified
     const context = `As a specialized market research analyst, analyze these Reddit discussions to provide marketing insights. Focus on key trends, consumer sentiment, and actionable recommendations. Return findings in JSON format:
     {
       "overview": "Brief analysis of market dynamics and consumer behavior patterns",

@@ -25,6 +25,8 @@ import { Button } from '@/app/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
 import { Skeleton } from "@/app/components/ui/skeleton";
 import { Badge } from "@/app/components/ui/badge";
+import "@/app/styles/YouTubeAnalytics.module.css";
+
 
 interface ErrorState {
   message: string;
@@ -97,7 +99,7 @@ const getSentimentColor = (sentiment?: 'positive' | 'negative' | 'neutral' | 'mi
 };
 
 const AnalysisCard = memo(({ title, description, items, score, scoreLabel, sentiment }: AnalysisCardProps) => (
-  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4 shadow-lg h-full flex flex-col">
+  <div className="bg-black/10 backdrop-blur-lg rounded-lg p-4 shadow-lg h-full flex flex-col">
     <div className="flex justify-between items-center mb-3">
       <h3 className="text-lg font-semibold">{title}</h3>
       {sentiment && (
@@ -121,9 +123,9 @@ const AnalysisCard = memo(({ title, description, items, score, scoreLabel, senti
         <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-secondary">
           <div 
             className={`h-full transition-all ${
-              score > 75 ? "bg-green-500" : 
+              score > 75 ? "bg-red-600" : 
               score > 50 ? "bg-amber-500" : 
-              score > 25 ? "bg-orange-500" : "bg-red-500"
+              score > 25 ? "bg-orange-500" : "bg-red-600"
             }`}
             style={{ width: `${score}%` }}
           />
@@ -179,7 +181,7 @@ const TriggerCard = memo(({ trigger }: { trigger: EmotionalTrigger }) => (
 TriggerCard.displayName = 'TriggerCard';
 
 const CommentItemComponent = memo(({ comment }: { comment: CommentItemType }) => (
-  <div className="p-3 border rounded-lg transition-all hover:bg-white/5">
+  <div className="p-3 border rounded-lg transition-all hover:bg-black/5">
     <div className="flex items-start gap-3">
       {comment.snippet.topLevelComment.snippet.authorProfileImageUrl && (
         <div className="relative w-8 h-8 overflow-hidden rounded-full flex-shrink-0">
@@ -273,7 +275,7 @@ const CommentAnalysis: React.FC<CommentAnalysisProps> = ({ videoId, videoTitle }
         <Button
           onClick={handleAnalyzeComments}
           disabled={isAnalyzing || !comments || comments.items.length === 0}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 bg-red-600 hover:bg-red-700"
         >
           {isAnalyzing ? (
             <>
@@ -289,15 +291,13 @@ const CommentAnalysis: React.FC<CommentAnalysisProps> = ({ videoId, videoTitle }
         </Button>
       </div>
       
-      {/* Comments and Analysis Area */}
       <div className="space-y-6">
-        {/* Comments List Section */}
         {!showAnalysis && (
           <>
             {commentsLoading ? (
               <div className="space-y-3">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="border border-white/10 rounded-lg p-4 animate-pulse">
+                  <div key={i} className="border border-black/10 rounded-lg p-4 animate-pulse">
                     <div className="flex items-start gap-3">
                       <Skeleton className="h-8 w-8 rounded-full" />
                       <div className="flex-1 space-y-2">
@@ -317,7 +317,7 @@ const CommentAnalysis: React.FC<CommentAnalysisProps> = ({ videoId, videoTitle }
                 <p className="text-muted-foreground">No comments found for this video.</p>
               </div>
             ) : (
-              <div className="space-y-3 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+              <div className="space-y-3 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-black/20 scrollbar-track-transparent">
                 {comments.items.slice(0, 10).map((comment) => (
                   <CommentItemComponent key={comment.id} comment={comment} />
                 ))}
@@ -331,7 +331,6 @@ const CommentAnalysis: React.FC<CommentAnalysisProps> = ({ videoId, videoTitle }
           </>
         )}
 
-        {/* Analysis Section */}
         {showAnalysis && (
           <div className="space-y-6">
             {commentAnalysis?.success && commentAnalysis.data ? (
@@ -347,7 +346,7 @@ const CommentAnalysis: React.FC<CommentAnalysisProps> = ({ videoId, videoTitle }
                       Back to Comments
                     </Button>
                   </div>
-                  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4">
+                  <div className="bg-black/10 backdrop-blur-lg rounded-lg p-4">
                     <p className="text-sm whitespace-pre-line">{commentAnalysis.data.analysis.overview}</p>
                   </div>
                 </section>
@@ -422,7 +421,7 @@ const CommentAnalysis: React.FC<CommentAnalysisProps> = ({ videoId, videoTitle }
                     <Target className="w-5 h-5" />
                     Market Implications
                   </h2>
-                  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4">
+                  <div className="bg-black/10 backdrop-blur-lg rounded-lg p-4">
                     <p className="text-sm whitespace-pre-line">{commentAnalysis.data.analysis.marketImplications}</p>
                   </div>
                 </section>

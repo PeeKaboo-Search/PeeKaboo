@@ -197,11 +197,11 @@ Return ONLY a JSON object with the following structure, with NO additional expla
 }
 
 Guidelines:
-- For ImageResult: Add terms like "image", "visual", "picture" if appropriate
+- For ImageResult: Add terms like "aesthetic","image", "visual", "picture" if appropriate
 - For GoogleAnalytics: Create a comprehensive search query add words like "study" or "research" or "benifits" if appropriate
 - For PlayStoreAnalytics: Only include app name or app categories, no other terms
 - For RedditAnalytics: Format for Reddit-specific search, dont use site:, dont mention subreddits add words like "study" or "research" or "benifits" if appropriate
-- For YouTubeVideos: Format for video search, include terms like "tutorial", "review", "study", "research" if appropriate
+- For YouTubeVideos: Format for video search, include terms like "study", "research" if appropriate
 - For QuoraAnalysis: Format as questions when possible
 - For XAnalytics: Include relevant hashtags with # symbol if appropriate
 - For FacebookAdsAnalysis: Focus on advertiser name or product type or product name, only one name, or name of the possible advertiser
