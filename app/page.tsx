@@ -181,7 +181,7 @@ const Page: React.FC = () => {
       const prompt = `
 You are a query optimization expert. Given the user's search query: "${userQuery}", 
 generate specialized, optimized search queries for different platforms and search engines. 
-
+Don't add Random Words, Only add same or relatable words or only just structure the query properly.
 Return ONLY a JSON object with the following structure, with NO additional explanation:
 
 {
@@ -198,13 +198,13 @@ Return ONLY a JSON object with the following structure, with NO additional expla
 
 Guidelines:
 - For ImageResult: Add terms like "image", "visual", "picture" if appropriate
-- For GoogleAnalytics: Create a comprehensive search query with relevant keywords
-- For PlayStoreAnalytics: Only include app names or app categories, no other terms
-- For RedditAnalytics: Format for Reddit-specific search, dont use site:, dont mention subreddits
+- For GoogleAnalytics: Create a comprehensive search query add words like "study" or "research" or "benifits" if appropriate
+- For PlayStoreAnalytics: Only include app name or app categories, no other terms
+- For RedditAnalytics: Format for Reddit-specific search, dont use site:, dont mention subreddits add words like "study" or "research" or "benifits" if appropriate
 - For YouTubeVideos: Format for video search, include terms like "tutorial", "review", "study", "research" if appropriate
 - For QuoraAnalysis: Format as questions when possible
 - For XAnalytics: Include relevant hashtags with # symbol if appropriate
-- For FacebookAdsAnalysis: Focus on advertiser name or product type or product name, only one name
+- For FacebookAdsAnalysis: Focus on advertiser name or product type or product name, only one name, or name of the possible advertiser
 - For StrategyAnalysis: Create a comprehensive search query for strategic analysis
 
 Remember to return ONLY the JSON object with no additional text.
