@@ -29,7 +29,7 @@ import { Skeleton } from "@/app/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/app/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
 import { Badge } from "@/app/components/ui/badge";
-import "@/app/styles/YouTubeAnalytics.module.css";
+import "@/app/styles/YouTubeAnalytics.css";
 
 interface ErrorState {
   message: string;
