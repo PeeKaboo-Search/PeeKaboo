@@ -93,7 +93,8 @@ export class TwitterAnalysisService {
     MAX_TWEETS: 50,
     MAX_TWEETS_FOR_ANALYSIS: 30,
     MAX_CONTENT_LENGTH: 100,
-    GROQ_MODEL: 'llama3-70b-8192',    API_KEYS: {
+    GROQ_MODEL: 'meta-llama/llama-4-maverick-17b-128e-instruct',    
+    API_KEYS: {
       RAPID_API: process.env.NEXT_PUBLIC_XRAPID_API_KEY,
       GROQ: process.env.NEXT_PUBLIC_GROQ_API_KEY
     },

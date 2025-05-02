@@ -504,7 +504,7 @@ IMPORTANT: Return VALID JSON only with no additional text before or after the JS
     };
 
     const payload = {
-      model: 'llama3-70b-8192',      
+      model: 'meta-llama/llama-4-maverick-17b-128e-instruct',      
       messages: [
         analysisPrompt,
         {

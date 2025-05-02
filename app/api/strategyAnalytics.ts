@@ -253,7 +253,7 @@ export class MarketingStrategyService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama3-70b-8192',          
+          model: 'meta-llama/llama-4-maverick-17b-128e-instruct',          
           messages: [
             { role: 'system', content: MARKETING_STRATEGY_PROMPT },
             { 

@@ -330,7 +330,7 @@ export const fetchMarketingInsights = async (
         "Authorization": `Bearer ${groqApiKey}`,
       },
       body: JSON.stringify({
-        model: "llama3-70b-8192",
+        model: "meta-llama/llama-4-maverick-17b-128e-instruct",
         messages: [
           { role: "system", content: context },
           { role: "user", content: JSON.stringify(groqInputData) },

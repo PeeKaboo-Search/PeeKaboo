@@ -456,7 +456,7 @@ Here are the reviews to analyze: ${JSON.stringify(reviewsForAnalysis)}`;
       method: 'POST',
       headers: groqHeaders,
       body: JSON.stringify({
-        model: "llama3-70b-8192", 
+        model: "meta-llama/llama-4-maverick-17b-128e-instruct", 
         messages: [
           {
             role: "system",

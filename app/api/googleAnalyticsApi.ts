@@ -105,7 +105,7 @@ const CONFIG = {
   }
 } as const;
 
-const MARKET_RESEARCH_PROMPT = `Give me a Json Response only. You are a highly skilled marketing analyst with expertise in digital advertising, content strategy, and emerging trends in the Indian market. Conduct a deep-dive analysis of the provided search results and generate a comprehensive advertising research report in JSON format. This report should emphasize actionable insights, data-driven recommendations, and strategic opportunities tailored for Indian audiences across urban and tier-2/3 cities.
+const MARKET_RESEARCH_PROMPT = `Give me a JSON Output only. You are a highly skilled marketing analyst with expertise in digital advertising, content strategy, and emerging trends in the Indian market. Conduct a deep-dive analysis of the provided search results and generate a comprehensive advertising research report in JSON format. This report should emphasize actionable insights, data-driven recommendations, and strategic opportunities tailored for Indian audiences across urban and tier-2/3 cities.
 
   "executiveSummary": "HTML-formatted overview highlighting key opportunities for advertising and content creation",
   
@@ -250,12 +250,12 @@ export class MarketResearchService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama3-70b-8192',
+          model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
           messages: [
             { role: 'system', content: MARKET_RESEARCH_PROMPT },
             { 
               role: 'user', 
-              content: `Analyze these search results for ${query} and provide product-focused insights in json format:\n${JSON.stringify(results, null, 2)}` 
+              content: `Analyze these search results for ${query} and provide product-focused insights in json format only:\n${JSON.stringify(results, null, 2)}` 
             },
           ],
           temperature: 0.7,
