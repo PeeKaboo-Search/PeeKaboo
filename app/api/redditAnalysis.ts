@@ -181,11 +181,10 @@ export const fetchMarketingInsights = async (
     
     const results: RedditResult[] = [];
     
-    // Always use 'all' for timeframe
-    const sort = searchParams.relevance || 'relevance';
+    // Always use 'all' for timeframe - removed unused 'sort' variable
     
     // Search across Reddit with fixed 'all' timeframe and increased limit
-    let searchUrl = `https://oauth.reddit.com/search?q=${encodeURIComponent(query)}&limit=100&t=all`;
+    const searchUrl = `https://oauth.reddit.com/search?q=${encodeURIComponent(query)}&limit=100&t=all`;
     
     const searchResponse = await fetch(searchUrl, {
       headers: {
