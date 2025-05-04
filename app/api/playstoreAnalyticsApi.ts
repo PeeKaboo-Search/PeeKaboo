@@ -62,6 +62,7 @@ export interface Review {
 export interface ReviewAnalysis {
   success: boolean;
   error?: string;
+  debug?: any; // Added for debugging purposes
   data?: {
     appId: string;
     appName: string;
@@ -177,28 +178,59 @@ const API_HOST = 'store-apps.p.rapidapi.com';
 const API_KEY = process.env.NEXT_PUBLIC_PRAPID_API_KEY;
 const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY;
 
+// Helper function for debugging API responses
+const debugApiResponse = async (response: Response, context: string): Promise<any> => {
+  const contentType = response.headers.get('content-type');
+  let data;
+  
+  try {
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.clone().json();
+    } else {
+      data = await response.clone().text();
+    }
+    console.log(`[DEBUG] ${context} response:`, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+      data
+    });
+    return data;
+  } catch (error) {
+    console.error(`[DEBUG] Failed to parse ${context} response:`, error);
+    return null;
+  }
+};
+
 export const searchApps = async (query: string): Promise<AppBasic[]> => {
   try {
     const url = `https://${API_HOST}/search?q=${encodeURIComponent(query)}&limit=10`;
     
-    // Fix: Use Record<string, string> for headers to satisfy HeadersInit type
+    console.log(`[DEBUG] Searching apps with URL: ${url}`);
+    
     const headers: Record<string, string> = {
       'x-rapidapi-key': API_KEY || '',
       'x-rapidapi-host': API_HOST
     };
+    
+    console.log(`[DEBUG] API Key available: ${!!API_KEY}`);
     
     const response = await fetch(url, {
       method: 'GET',
       headers
     });
     
+    // Debug response
+    await debugApiResponse(response, 'searchApps');
+    
     if (!response.ok) {
-      throw new Error(`Failed to search apps: ${response.status}`);
+      throw new Error(`Failed to search apps: ${response.status} ${response.statusText}`);
     }
     
     const result = await response.json() as SearchApiResponse;
     
     if (result.status !== "OK" || !result.data || !result.data.apps) {
+      console.error('[DEBUG] Invalid API response:', result);
       throw new Error('Invalid response format from API');
     }
     
@@ -211,7 +243,7 @@ export const searchApps = async (query: string): Promise<AppBasic[]> => {
     }));
     
   } catch (error) {
-    console.error('Error searching apps:', error);
+    console.error('[DEBUG] Error searching apps:', error);
     throw new Error(error instanceof Error ? error.message : 'Failed to search apps');
   }
 };
@@ -220,7 +252,8 @@ export const getAppDetails = async (appId: string): Promise<App> => {
   try {
     const url = `https://${API_HOST}/app-details?app_id=${encodeURIComponent(appId)}`;
     
-    // Fix: Use Record<string, string> for headers to satisfy HeadersInit type
+    console.log(`[DEBUG] Getting app details with URL: ${url}`);
+    
     const headers: Record<string, string> = {
       'x-rapidapi-key': API_KEY || '',
       'x-rapidapi-host': API_HOST
@@ -231,20 +264,24 @@ export const getAppDetails = async (appId: string): Promise<App> => {
       headers
     });
     
+    // Debug response
+    await debugApiResponse(response, 'getAppDetails');
+    
     if (!response.ok) {
-      throw new Error(`Failed to get app details: ${response.status}`);
+      throw new Error(`Failed to get app details: ${response.status} ${response.statusText}`);
     }
     
     const result = await response.json() as ApiResponse<App>;
     
     if (result.status !== "OK" || !result.data) {
+      console.error('[DEBUG] Invalid API response:', result);
       throw new Error('Invalid response format from API');
     }
     
     return result.data;
     
   } catch (error) {
-    console.error('Error getting app details:', error);
+    console.error('[DEBUG] Error getting app details:', error);
     throw new Error(error instanceof Error ? error.message : 'Failed to get app details');
   }
 };
@@ -256,33 +293,46 @@ export const getAppReviews = async (
   rating: 'ANY' | '1' | '2' | '3' | '4' | '5' = 'ANY'
 ): Promise<Review[]> => {
   try {
+    // Construct the URL following the exact format from the demo
     const url = `https://${API_HOST}/app-reviews?app_id=${encodeURIComponent(appId)}&limit=${limit}&sort_by=${sortBy}&device=PHONE&rating=${rating}&region=us&language=en`;
     
-    // Fix: Use Record<string, string> for headers to satisfy HeadersInit type
+    console.log(`[DEBUG] Getting app reviews with URL: ${url}`);
+    
     const headers: Record<string, string> = {
       'x-rapidapi-key': API_KEY || '',
       'x-rapidapi-host': API_HOST
     };
+    
+    console.log(`[DEBUG] Request headers:`, headers);
     
     const response = await fetch(url, {
       method: 'GET',
       headers
     });
     
+    // Full debug of the response
+    const debugData = await debugApiResponse(response, 'getAppReviews');
+    
     if (!response.ok) {
-      throw new Error(`Failed to get app reviews: ${response.status}`);
+      console.error(`[DEBUG] Failed API request. Status: ${response.status}, Status Text: ${response.statusText}`);
+      console.error(`[DEBUG] Response data:`, debugData);
+      throw new Error(`Failed to get app reviews: ${response.status} ${response.statusText}`);
     }
     
+    // Clone response for JSON parsing
     const result = await response.json() as ReviewsApiResponse;
     
     if (result.status !== "OK" || !result.data || !result.data.reviews) {
-      throw new Error('Invalid response format from API');
+      console.error('[DEBUG] Invalid API response format:', result);
+      throw new Error(`Invalid response format from API: ${JSON.stringify(result)}`);
     }
+    
+    console.log(`[DEBUG] Successfully retrieved ${result.data.reviews.length} reviews`);
     
     return result.data.reviews;
     
   } catch (error) {
-    console.error('Error getting app reviews:', error);
+    console.error('[DEBUG] Error getting app reviews:', error);
     throw new Error(error instanceof Error ? error.message : 'Failed to get app reviews');
   }
 };
@@ -293,32 +343,131 @@ export const analyzeAppReviews = async (
   numberOfReviews: number = 50
 ): Promise<ReviewAnalysis> => {
   try {
-    // Get a mix of reviews for better analysis - most relevant plus newest plus some negative reviews
-    const mostRelevantReviews = await getAppReviews(appId, Math.floor(numberOfReviews * 0.4), 'MOST_RELEVANT');
-    const newestReviews = await getAppReviews(appId, Math.floor(numberOfReviews * 0.3), 'NEWEST');
+    console.log(`[DEBUG] Starting review analysis for app: ${appId}, requesting ${numberOfReviews} reviews`);
     
-    // Get some negative reviews specifically (ratings 1-3)
-    const negativeReviews1 = await getAppReviews(appId, Math.floor(numberOfReviews * 0.1), 'MOST_RELEVANT', '1');
-    const negativeReviews2 = await getAppReviews(appId, Math.floor(numberOfReviews * 0.1), 'MOST_RELEVANT', '2');
-    const negativeReviews3 = await getAppReviews(appId, Math.floor(numberOfReviews * 0.1), 'MOST_RELEVANT', '3');
+    const debugInfo: any = {
+      reviewCounts: {},
+      apiCalls: [],
+      errors: []
+    };
+    
+    // Track review fetching attempts
+    const fetchReviews = async (
+      id: string, 
+      limit: number, 
+      sort: 'MOST_RELEVANT' | 'NEWEST',
+      ratingFilter: 'ANY' | '1' | '2' | '3' | '4' | '5' = 'ANY'
+    ): Promise<Review[]> => {
+      try {
+        debugInfo.apiCalls.push({
+          timestamp: new Date().toISOString(),
+          endpoint: 'getAppReviews',
+          params: { id, limit, sort, ratingFilter }
+        });
+        
+        const reviews = await getAppReviews(id, limit, sort, ratingFilter);
+        debugInfo.reviewCounts[`${sort}_${ratingFilter}`] = reviews.length;
+        return reviews;
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        debugInfo.errors.push({
+          timestamp: new Date().toISOString(),
+          endpoint: 'getAppReviews',
+          params: { id, limit, sort, ratingFilter },
+          error: errorMsg
+        });
+        console.error(`[DEBUG] Error fetching ${sort} reviews with rating ${ratingFilter}:`, errorMsg);
+        return []; // Return empty array instead of failing completely
+      }
+    };
+    
+    // Try to get reviews with error handling for each batch
+    let mostRelevantReviews: Review[] = [];
+    let newestReviews: Review[] = [];
+    let negativeReviews1: Review[] = [];
+    let negativeReviews2: Review[] = [];
+    let negativeReviews3: Review[] = [];
+    
+    // Use smaller batch sizes to reduce chance of API errors
+    const batchSize = Math.min(20, Math.floor(numberOfReviews / 5));
+    
+    try {
+      mostRelevantReviews = await fetchReviews(appId, batchSize, 'MOST_RELEVANT');
+    } catch (error) {
+      console.error('[DEBUG] Failed to fetch most relevant reviews:', error);
+    }
+    
+    try {
+      newestReviews = await fetchReviews(appId, batchSize, 'NEWEST');
+    } catch (error) {
+      console.error('[DEBUG] Failed to fetch newest reviews:', error);
+    }
+    
+    try {
+      negativeReviews1 = await fetchReviews(appId, Math.floor(batchSize/3), 'MOST_RELEVANT', '1');
+    } catch (error) {
+      console.error('[DEBUG] Failed to fetch negative reviews (1 star):', error);
+    }
+    
+    try {
+      negativeReviews2 = await fetchReviews(appId, Math.floor(batchSize/3), 'MOST_RELEVANT', '2');
+    } catch (error) {
+      console.error('[DEBUG] Failed to fetch negative reviews (2 star):', error);
+    }
+    
+    try {
+      negativeReviews3 = await fetchReviews(appId, Math.floor(batchSize/3), 'MOST_RELEVANT', '3');
+    } catch (error) {
+      console.error('[DEBUG] Failed to fetch negative reviews (3 star):', error);
+    }
     
     // Combine and deduplicate reviews
-    const allReviews = [...mostRelevantReviews, ...newestReviews, ...negativeReviews1, ...negativeReviews2, ...negativeReviews3];
-    const uniqueReviews = Array.from(new Map(allReviews.map(review => [review.review_id, review])).values());
+    const allReviews = [
+      ...mostRelevantReviews, 
+      ...newestReviews, 
+      ...negativeReviews1, 
+      ...negativeReviews2, 
+      ...negativeReviews3
+    ];
+    
+    const uniqueReviews = Array.from(
+      new Map(allReviews.map(review => [review.review_id, review])).values()
+    );
+    
+    console.log(`[DEBUG] Total reviews collected: ${allReviews.length}, Unique reviews: ${uniqueReviews.length}`);
+    debugInfo.totalReviews = allReviews.length;
+    debugInfo.uniqueReviews = uniqueReviews.length;
     
     if (uniqueReviews.length === 0) {
+      console.error('[DEBUG] No reviews available for analysis');
       return {
         success: false,
-        error: 'No reviews available for analysis'
+        error: 'No reviews available for analysis',
+        debug: debugInfo
       };
     }
     
     // Get app details for additional context
     let appDetails: App | null = null;
     try {
+      debugInfo.apiCalls.push({
+        timestamp: new Date().toISOString(),
+        endpoint: 'getAppDetails',
+        params: { appId }
+      });
+      
       appDetails = await getAppDetails(appId);
+      debugInfo.appDetailsSuccess = true;
     } catch (error) {
-      console.warn('Could not fetch app details:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      debugInfo.errors.push({
+        timestamp: new Date().toISOString(),
+        endpoint: 'getAppDetails',
+        params: { appId },
+        error: errorMsg
+      });
+      console.warn('[DEBUG] Could not fetch app details:', errorMsg);
+      debugInfo.appDetailsSuccess = false;
     }
     
     const reviewsForAnalysis: ReviewForAnalysis[] = uniqueReviews.map(review => ({
@@ -330,12 +479,18 @@ export const analyzeAppReviews = async (
       version: review.author_app_version
     }));
     
+    // Groq API processing
+    console.log(`[DEBUG] Preparing to send ${reviewsForAnalysis.length} reviews to Groq API`);
+    
     const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
     
     const groqHeaders: Record<string, string> = {
       'Authorization': `Bearer ${GROQ_API_KEY || ''}`,
       'Content-Type': 'application/json'
     };
+    
+    console.log(`[DEBUG] Groq API Key available: ${!!GROQ_API_KEY}`);
+    debugInfo.groqApiKeyAvailable = !!GROQ_API_KEY;
     
     const systemPrompt = `You are an expert product analyst specializing in mobile app reviews. 
 Your task is to provide deep, actionable insights from user reviews that can guide product decisions.
@@ -451,60 +606,154 @@ Format your response exactly according to this JSON schema:
 }
 
 Here are the reviews to analyze: ${JSON.stringify(reviewsForAnalysis)}`;
+
+    // Sample a subset of reviews if we have too many to avoid request size limits
+    if (reviewsForAnalysis.length > 100) {
+      console.log('[DEBUG] Too many reviews, sampling 100 for analysis');
+      // Take a representative sample: 40 most recent, mix of ratings
+      const sampledReviews = reviewsForAnalysis
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 100);
+      
+      debugInfo.reviewsSampled = true;
+      debugInfo.sampledReviewCount = sampledReviews.length;
+      
+      const userPromptAdjusted = userPrompt.replace(
+        `Here are the reviews to analyze: ${JSON.stringify(reviewsForAnalysis)}`,
+        `Here are the reviews to analyze (sampled from ${reviewsForAnalysis.length} total reviews): ${JSON.stringify(sampledReviews)}`
+      );
+    }
     
-    const groqResponse = await fetch(groqUrl, {
-      method: 'POST',
-      headers: groqHeaders,
-      body: JSON.stringify({
-        model: "meta-llama/llama-4-maverick-17b-128e-instruct", 
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt
-          },
-          {
-            role: "user",
-            content: userPrompt
-          }
-        ],
-        temperature: 0.3, // Lower temperature for more consistent analysis
-        max_tokens: 4500,
-        response_format: { type: 'json_object' },
-      })
+    console.log('[DEBUG] Sending request to Groq API');
+    debugInfo.apiCalls.push({
+      timestamp: new Date().toISOString(),
+      endpoint: 'groqApi',
+      params: { reviewsCount: reviewsForAnalysis.length }
     });
     
-    if (!groqResponse.ok) {
-      console.error('Groq analysis failed:', await groqResponse.text());
-      throw new Error(`Failed to analyze reviews: ${groqResponse.status}`);
-    }
-    
-    const analysisResult = await groqResponse.json() as GroqResponse;
-    
-    if (!analysisResult.choices || !analysisResult.choices[0]?.message?.content) {
-      throw new Error('Invalid response from Groq');
-    }
-    
     try {
-      const analysisData = JSON.parse(analysisResult.choices[0].message.content);
+      const groqResponse = await fetch(groqUrl, {
+        method: 'POST',
+        headers: groqHeaders,
+        body: JSON.stringify({
+          model: "meta-llama/llama-4-maverick-17b-128e-instruct", 
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt
+            },
+            {
+              role: "user",
+              content: userPrompt
+            }
+          ],
+          temperature: 0.3, // Lower temperature for more consistent analysis
+          max_tokens: 4500,
+          response_format: { type: 'json_object' },
+        })
+      });
       
-      return {
-        success: true,
-        data: analysisData
+      // Debug Groq response
+      const groqResponseText = await groqResponse.text();
+      console.log(`[DEBUG] Groq API response status: ${groqResponse.status}`);
+      debugInfo.groqResponse = {
+        status: groqResponse.status,
+        statusText: groqResponse.statusText,
+        headers: Object.fromEntries(groqResponse.headers.entries())
       };
       
-    } catch (parseError) {
-      console.error('Error parsing analysis JSON:', parseError);
+      if (!groqResponse.ok) {
+        console.error('[DEBUG] Groq analysis failed:', groqResponseText);
+        debugInfo.errors.push({
+          timestamp: new Date().toISOString(),
+          endpoint: 'groqApi',
+          error: groqResponseText
+        });
+        
+        return {
+          success: false,
+          error: `Failed to analyze reviews: ${groqResponse.status} ${groqResponse.statusText}`,
+          debug: debugInfo
+        };
+      }
+      
+      // Parse the Groq response as JSON
+      let analysisResult;
+      try {
+        analysisResult = JSON.parse(groqResponseText) as GroqResponse;
+        debugInfo.groqResponseParsed = true;
+      } catch (parseError) {
+        console.error('[DEBUG] Error parsing Groq response as JSON:', parseError);
+        debugInfo.errors.push({
+          timestamp: new Date().toISOString(),
+          endpoint: 'groqApiParsing',
+          error: parseError instanceof Error ? parseError.message : 'Unknown error'
+        });
+        
+        return {
+          success: false,
+          error: 'Failed to parse Groq API response as JSON',
+          debug: {
+            ...debugInfo,
+            groqResponseText: groqResponseText.substring(0, 1000) + '...' // Include partial response for debugging
+          }
+        };
+      }
+      
+      if (!analysisResult.choices || !analysisResult.choices[0]?.message?.content) {
+        console.error('[DEBUG] Invalid structure in Groq response:', analysisResult);
+        return {
+          success: false,
+          error: 'Invalid response structure from Groq',
+          debug: {
+            ...debugInfo,
+            groqResponseStructure: analysisResult
+          }
+        };
+      }
+      
+      try {
+        const analysisData = JSON.parse(analysisResult.choices[0].message.content);
+        console.log('[DEBUG] Successfully parsed analysis data');
+        
+        return {
+          success: true,
+          data: analysisData,
+          debug: debugInfo
+        };
+        
+      } catch (parseError) {
+        console.error('[DEBUG] Error parsing analysis JSON from Groq content:', parseError);
+        return {
+          success: false,
+          error: 'Failed to parse analysis results from Groq content',
+          debug: {
+            ...debugInfo,
+            groqContent: analysisResult.choices[0].message.content.substring(0, 1000) + '...'
+          }
+        };
+      }
+    } catch (groqError) {
+      console.error('[DEBUG] Error during Groq API call:', groqError);
       return {
         success: false,
-        error: 'Failed to parse analysis results'
+        error: groqError instanceof Error ? groqError.message : 'Failed to call Groq API',
+        debug: debugInfo
       };
     }
     
   } catch (error) {
-    console.error('Error analyzing app reviews:', error);
+    console.error('[DEBUG] Top-level error in analyzeAppReviews:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to analyze app reviews'
+      error: error instanceof Error ? error.message : 'Failed to analyze app reviews',
+      debug: {
+        timestamp: new Date().toISOString(),
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack
+        } : 'Unknown error'
+      }
     };
   }
 };
