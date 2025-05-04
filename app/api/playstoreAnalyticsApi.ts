@@ -160,6 +160,10 @@ interface DebugInfo {
   groqResponseText?: string;
   groqResponseStructure?: unknown;
   groqContent?: string;
+  error?: {
+    message: string;
+    stack?: string;
+  };
 }
 
 // Define interfaces for API responses
@@ -784,14 +788,13 @@ Here are the reviews to analyze${isSampled ? ` (sampled from ${reviewsForAnalysi
       success: false,
       error: error instanceof Error ? error.message : 'Failed to analyze app reviews',
       debug: {
-        timestamp: new Date().toISOString(),
+        reviewCounts: {},
+        apiCalls: [],
+        errors: [],
         error: error instanceof Error ? {
           message: error.message,
           stack: error.stack
-        } : 'Unknown error',
-        reviewCounts: {},
-        apiCalls: [],
-        errors: []
+        } : undefined
       }
     };
   }
