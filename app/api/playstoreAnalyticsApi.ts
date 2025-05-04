@@ -1,5 +1,3 @@
-// /app/api/playstoreAnalyticsApi.ts
-
 export interface AppBasic {
   app_id: string;
   app_name: string;
@@ -131,7 +129,6 @@ export interface ReviewAnalysis {
   };
 }
 
-// Define a debug info interface
 interface DebugInfo {
   reviewCounts: Record<string, number>;
   apiCalls: Array<{
@@ -166,7 +163,6 @@ interface DebugInfo {
   };
 }
 
-// Define interfaces for API responses
 interface SearchApiResponse {
   status: string;
   data: {
@@ -209,11 +205,12 @@ interface GroqResponse {
   }>;
 }
 
+type RatingFilter = 'ANY' | 'ONE_STAR' | 'TWO_STARS' | 'THREE_STARS' | 'FOUR_STARS' | 'FIVE_STARS';
+
 const API_HOST = 'store-apps.p.rapidapi.com';
 const API_KEY = process.env.NEXT_PUBLIC_PRAPID_API_KEY;
 const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY;
 
-// Helper function for debugging API responses
 const debugApiResponse = async (response: Response, context: string): Promise<unknown> => {
   const contentType = response.headers.get('content-type');
   let data: unknown;
@@ -255,7 +252,6 @@ export const searchApps = async (query: string): Promise<AppBasic[]> => {
       headers
     });
     
-    // Debug response
     await debugApiResponse(response, 'searchApps');
     
     if (!response.ok) {
@@ -299,7 +295,6 @@ export const getAppDetails = async (appId: string): Promise<App> => {
       headers
     });
     
-    // Debug response
     await debugApiResponse(response, 'getAppDetails');
     
     if (!response.ok) {
@@ -321,6 +316,19 @@ export const getAppDetails = async (appId: string): Promise<App> => {
   }
 };
 
+const mapNumericRatingToString = (rating: 'ANY' | '1' | '2' | '3' | '4' | '5'): RatingFilter => {
+  const ratingMap: Record<string, RatingFilter> = {
+    'ANY': 'ANY',
+    '1': 'ONE_STAR',
+    '2': 'TWO_STARS',
+    '3': 'THREE_STARS',
+    '4': 'FOUR_STARS',
+    '5': 'FIVE_STARS'
+  };
+  
+  return ratingMap[rating] || 'ANY';
+};
+
 export const getAppReviews = async (
   appId: string, 
   limit: number = 20, 
@@ -328,8 +336,8 @@ export const getAppReviews = async (
   rating: 'ANY' | '1' | '2' | '3' | '4' | '5' = 'ANY'
 ): Promise<Review[]> => {
   try {
-    // Construct the URL following the exact format from the demo
-    const url = `https://${API_HOST}/app-reviews?app_id=${encodeURIComponent(appId)}&limit=${limit}&sort_by=${sortBy}&device=PHONE&rating=${rating}&region=us&language=en`;
+    const ratingParam = mapNumericRatingToString(rating);
+    const url = `https://${API_HOST}/app-reviews?app_id=${encodeURIComponent(appId)}&limit=${limit}&sort_by=${sortBy}&device=PHONE&rating=${ratingParam}&region=us&language=en`;
     
     console.log(`[DEBUG] Getting app reviews with URL: ${url}`);
     
@@ -345,7 +353,6 @@ export const getAppReviews = async (
       headers
     });
     
-    // Full debug of the response
     const debugData = await debugApiResponse(response, 'getAppReviews');
     
     if (!response.ok) {
@@ -354,7 +361,6 @@ export const getAppReviews = async (
       throw new Error(`Failed to get app reviews: ${response.status} ${response.statusText}`);
     }
     
-    // Clone response for JSON parsing
     const result = await response.json() as ReviewsApiResponse;
     
     if (result.status !== "OK" || !result.data || !result.data.reviews) {
@@ -386,7 +392,6 @@ export const analyzeAppReviews = async (
       errors: []
     };
     
-    // Track review fetching attempts
     const fetchReviews = async (
       id: string, 
       limit: number, 
@@ -412,18 +417,16 @@ export const analyzeAppReviews = async (
           error: errorMsg
         });
         console.error(`[DEBUG] Error fetching ${sort} reviews with rating ${ratingFilter}:`, errorMsg);
-        return []; // Return empty array instead of failing completely
+        return [];
       }
     };
     
-    // Try to get reviews with error handling for each batch
     let mostRelevantReviews: Review[] = [];
     let newestReviews: Review[] = [];
     let negativeReviews1: Review[] = [];
     let negativeReviews2: Review[] = [];
     let negativeReviews3: Review[] = [];
     
-    // Use smaller batch sizes to reduce chance of API errors
     const batchSize = Math.min(20, Math.floor(numberOfReviews / 5));
     
     try {
@@ -456,7 +459,6 @@ export const analyzeAppReviews = async (
       console.error('[DEBUG] Failed to fetch negative reviews (3 star):', error);
     }
     
-    // Combine and deduplicate reviews
     const allReviews = [
       ...mostRelevantReviews, 
       ...newestReviews, 
@@ -482,7 +484,6 @@ export const analyzeAppReviews = async (
       };
     }
     
-    // Get app details for additional context
     let appDetails: App | null = null;
     try {
       debugInfo.apiCalls.push({
@@ -514,7 +515,6 @@ export const analyzeAppReviews = async (
       version: review.author_app_version
     }));
     
-    // Groq API processing
     console.log(`[DEBUG] Preparing to send ${reviewsForAnalysis.length} reviews to Groq API`);
     
     const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
@@ -541,7 +541,6 @@ Guidelines:
 
 Be precise and data-driven in your analysis. Respond only with JSON in the exact format requested.`;
 
-    // Create the user prompt with app info
     const createUserPrompt = (reviews: ReviewForAnalysis[], isSampled = false) => {
       return `Analyze these ${reviews.length} reviews for the app "${appName}" (ID: ${appId}).
 ${appDetails ? `
@@ -645,13 +644,11 @@ Format your response exactly according to this JSON schema:
 Here are the reviews to analyze${isSampled ? ` (sampled from ${reviewsForAnalysis.length} total reviews)` : ''}: ${JSON.stringify(reviews)}`;
     };
 
-    // Sample reviews if necessary to avoid request size limits
     let reviewsToSend = reviewsForAnalysis;
     let isSampled = false;
     
     if (reviewsForAnalysis.length > 100) {
       console.log('[DEBUG] Too many reviews, sampling 100 for analysis');
-      // Take a representative sample: sort by timestamp (newest first) and take first 100
       reviewsToSend = reviewsForAnalysis
         .sort((a, b) => b.timestamp - a.timestamp)
         .slice(0, 100);
@@ -661,7 +658,6 @@ Here are the reviews to analyze${isSampled ? ` (sampled from ${reviewsForAnalysi
       isSampled = true;
     }
     
-    // Generate the user prompt with the appropriate reviews
     const userPrompt = createUserPrompt(reviewsToSend, isSampled);
     
     console.log('[DEBUG] Sending request to Groq API');
@@ -687,13 +683,12 @@ Here are the reviews to analyze${isSampled ? ` (sampled from ${reviewsForAnalysi
               content: userPrompt
             }
           ],
-          temperature: 0.3, // Lower temperature for more consistent analysis
+          temperature: 0.3,
           max_tokens: 4500,
           response_format: { type: 'json_object' },
         })
       });
       
-      // Debug Groq response
       const groqResponseText = await groqResponse.text();
       console.log(`[DEBUG] Groq API response status: ${groqResponse.status}`);
       debugInfo.groqResponse = {
@@ -717,7 +712,6 @@ Here are the reviews to analyze${isSampled ? ` (sampled from ${reviewsForAnalysi
         };
       }
       
-      // Parse the Groq response as JSON
       let analysisResult;
       try {
         analysisResult = JSON.parse(groqResponseText) as GroqResponse;
@@ -735,7 +729,7 @@ Here are the reviews to analyze${isSampled ? ` (sampled from ${reviewsForAnalysi
           error: 'Failed to parse Groq API response as JSON',
           debug: {
             ...debugInfo,
-            groqResponseText: groqResponseText.substring(0, 1000) + '...' // Include partial response for debugging
+            groqResponseText: groqResponseText.substring(0, 1000) + '...'
           }
         };
       }
