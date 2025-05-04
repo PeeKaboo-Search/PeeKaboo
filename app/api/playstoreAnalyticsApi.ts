@@ -62,7 +62,7 @@ export interface Review {
 export interface ReviewAnalysis {
   success: boolean;
   error?: string;
-  debug?: any; // Added for debugging purposes
+  debug?: DebugInfo;
   data?: {
     appId: string;
     appName: string;
@@ -131,6 +131,37 @@ export interface ReviewAnalysis {
   };
 }
 
+// Define a debug info interface to replace 'any'
+interface DebugInfo {
+  reviewCounts: Record<string, number>;
+  apiCalls: Array<{
+    timestamp: string;
+    endpoint: string;
+    params: Record<string, unknown>;
+  }>;
+  errors: Array<{
+    timestamp: string;
+    endpoint: string;
+    params?: Record<string, unknown>;
+    error: string;
+  }>;
+  totalReviews?: number;
+  uniqueReviews?: number;
+  appDetailsSuccess?: boolean;
+  groqApiKeyAvailable?: boolean;
+  reviewsSampled?: boolean;
+  sampledReviewCount?: number;
+  groqResponse?: {
+    status: number;
+    statusText: string;
+    headers: Record<string, string>;
+  };
+  groqResponseParsed?: boolean;
+  groqResponseText?: string;
+  groqResponseStructure?: unknown;
+  groqContent?: string;
+}
+
 // Define interfaces for API responses
 interface SearchApiResponse {
   status: string;
@@ -174,14 +205,21 @@ interface GroqResponse {
   }>;
 }
 
+interface ApiResponseDebugData {
+  status: number;
+  statusText: string;
+  headers: Record<string, string>;
+  data: unknown;
+}
+
 const API_HOST = 'store-apps.p.rapidapi.com';
 const API_KEY = process.env.NEXT_PUBLIC_PRAPID_API_KEY;
 const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY;
 
 // Helper function for debugging API responses
-const debugApiResponse = async (response: Response, context: string): Promise<any> => {
+const debugApiResponse = async (response: Response, context: string): Promise<unknown> => {
   const contentType = response.headers.get('content-type');
-  let data;
+  let data: unknown;
   
   try {
     if (contentType && contentType.includes('application/json')) {
@@ -345,7 +383,7 @@ export const analyzeAppReviews = async (
   try {
     console.log(`[DEBUG] Starting review analysis for app: ${appId}, requesting ${numberOfReviews} reviews`);
     
-    const debugInfo: any = {
+    const debugInfo: DebugInfo = {
       reviewCounts: {},
       apiCalls: [],
       errors: []
@@ -506,7 +544,9 @@ Guidelines:
 
 Be precise and data-driven in your analysis. Respond only with JSON in the exact format requested.`;
 
-    const userPrompt = `Analyze these ${reviewsForAnalysis.length} reviews for the app "${appName}" (ID: ${appId}).
+    // Create the user prompt with app info
+    const createUserPrompt = (reviews: ReviewForAnalysis[], isSampled = false) => {
+      return `Analyze these ${reviews.length} reviews for the app "${appName}" (ID: ${appId}).
 ${appDetails ? `
 App Category: ${appDetails.app_category}
 Downloads: ${appDetails.num_downloads}
@@ -605,30 +645,33 @@ Format your response exactly according to this JSON schema:
   ]
 }
 
-Here are the reviews to analyze: ${JSON.stringify(reviewsForAnalysis)}`;
+Here are the reviews to analyze${isSampled ? ` (sampled from ${reviewsForAnalysis.length} total reviews)` : ''}: ${JSON.stringify(reviews)}`;
+    };
 
-    // Sample a subset of reviews if we have too many to avoid request size limits
+    // Sample reviews if necessary to avoid request size limits
+    let reviewsToSend = reviewsForAnalysis;
+    let isSampled = false;
+    
     if (reviewsForAnalysis.length > 100) {
       console.log('[DEBUG] Too many reviews, sampling 100 for analysis');
-      // Take a representative sample: 40 most recent, mix of ratings
-      const sampledReviews = reviewsForAnalysis
+      // Take a representative sample: sort by timestamp (newest first) and take first 100
+      reviewsToSend = reviewsForAnalysis
         .sort((a, b) => b.timestamp - a.timestamp)
         .slice(0, 100);
       
       debugInfo.reviewsSampled = true;
-      debugInfo.sampledReviewCount = sampledReviews.length;
-      
-      const userPromptAdjusted = userPrompt.replace(
-        `Here are the reviews to analyze: ${JSON.stringify(reviewsForAnalysis)}`,
-        `Here are the reviews to analyze (sampled from ${reviewsForAnalysis.length} total reviews): ${JSON.stringify(sampledReviews)}`
-      );
+      debugInfo.sampledReviewCount = reviewsToSend.length;
+      isSampled = true;
     }
+    
+    // Generate the user prompt with the appropriate reviews
+    const userPrompt = createUserPrompt(reviewsToSend, isSampled);
     
     console.log('[DEBUG] Sending request to Groq API');
     debugInfo.apiCalls.push({
       timestamp: new Date().toISOString(),
       endpoint: 'groqApi',
-      params: { reviewsCount: reviewsForAnalysis.length }
+      params: { reviewsCount: reviewsToSend.length }
     });
     
     try {
@@ -752,7 +795,10 @@ Here are the reviews to analyze: ${JSON.stringify(reviewsForAnalysis)}`;
         error: error instanceof Error ? {
           message: error.message,
           stack: error.stack
-        } : 'Unknown error'
+        } : 'Unknown error',
+        reviewCounts: {},
+        apiCalls: [],
+        errors: []
       }
     };
   }
