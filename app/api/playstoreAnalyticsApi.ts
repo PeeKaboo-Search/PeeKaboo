@@ -131,7 +131,7 @@ export interface ReviewAnalysis {
   };
 }
 
-// Define a debug info interface to replace 'any'
+// Define a debug info interface
 interface DebugInfo {
   reviewCounts: Record<string, number>;
   apiCalls: Array<{
@@ -203,13 +203,6 @@ interface GroqResponse {
       content: string;
     };
   }>;
-}
-
-interface ApiResponseDebugData {
-  status: number;
-  statusText: string;
-  headers: Record<string, string>;
-  data: unknown;
 }
 
 const API_HOST = 'store-apps.p.rapidapi.com';
