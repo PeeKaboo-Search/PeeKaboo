@@ -1,0 +1,77 @@
+import { SpecializedQueries } from "@/types";
+
+const groqApiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+
+export const generateSpecializedQueries = async (userQuery: string): Promise<SpecializedQueries> => {
+  try {
+    const prompt = `
+You are a query optimization expert. Given the user's search query: "${userQuery}", 
+generate specialized, optimized search queries for different platforms and search engines. 
+Don't add Random Words, Only add same or relatable words or only just structure the query properly.
+Return ONLY a JSON object with the following structure, with NO additional explanation:
+
+{
+  "ImageResult": "optimized query for Google Images",
+  "GoogleAnalytics": "optimized query for Google Search",
+  "PlayStoreAnalytics": "relevant app names only",
+  "RedditAnalytics": "optimized query for direct search on Reddit",
+  "YouTubeVideos": "optimized query for YouTube API",
+  "QuoraAnalysis": "optimized query for Quora API",
+  "XAnalytics": "optimized query for Twitter/X API",
+  "FacebookAdsAnalysis": "optimized keyword for Facebook Ads Library",
+  "StrategyAnalysis": "optimized query for Google Search"
+}
+
+Guidelines:
+- For ImageResult: Add terms like "aesthetic","image", "visual", "picture" if appropriate
+- For GoogleAnalytics: Create a comprehensive search query add words like "study" or "research" or "benifits" if appropriate
+- For PlayStoreAnalytics: Only include app name or app categories, no other terms
+- For RedditAnalytics: Format for Reddit-specific search, dont use site:, dont mention subreddits add words like "study" or "research" or "benifits" if appropriate
+- For YouTubeVideos: Format for video search, include terms like "study", "research" if appropriate
+- For QuoraAnalysis: Format as questions when possible
+- For XAnalytics: Include relevant hashtags with # symbol if appropriate
+- For FacebookAdsAnalysis: Focus on advertiser name or product type or product name, only one name, or name of the possible advertiser
+- For StrategyAnalysis: Create a comprehensive search query for strategic analysis
+
+Remember to return ONLY the JSON object with no additional text.
+`;
+
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${groqApiKey}`
+      },
+      body: JSON.stringify({
+        model: "llama3-70b-8192",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.2,
+        max_tokens: 1000
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Groq API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices[0].message.content;
+    
+    try {
+      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || 
+                     content.match(/```\s*([\s\S]*?)\s*```/) ||
+                     [null, content];
+      
+      const jsonString = jsonMatch[1] || content;
+      const parsed = JSON.parse(jsonString.trim());
+      return parsed;
+    } catch (parseError) {
+      console.error("Failed to parse Groq response:", parseError);
+      console.log("Raw response:", content);
+      return {};
+    }
+  } catch (error) {
+    console.error("Error generating specialized queries:", error);
+    return {};
+  }
+};

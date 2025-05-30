@@ -17,7 +17,7 @@ import {
   VideoStatistics,
   CommentThreadResponse,
   CommentAnalysis as CommentAnalysisType
-} from '@/app/types/youtube';
+} from '@/types/youtube';
 import { 
   searchYouTubeVideos, 
   getVideoComments,

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, memo } from "react";
+import React, { useEffect, useState, memo, useCallback } from "react";
 import { 
   BarChart, MessageCircle, 
   Lightbulb, TrendingUp, 
@@ -15,19 +15,50 @@ const validateArray = <T,>(data: T[] | undefined | null): T[] => {
   return Array.isArray(data) ? data : [];
 };
 
+// Helper function to check if a URL is a valid image URL
+const isValidImageUrl = (url: string): boolean => {
+  if (!url) return false;
+  
+  // Check if it's a t.co link (Twitter's URL shortener - can't be used directly)
+  if (url.includes('t.co/')) return false;
+  
+  // Check for common image extensions
+  const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?.*)?$/i;
+  if (imageExtensions.test(url)) return true;
+  
+  // Check for known image hosting domains
+  const imageHosts = [
+    'pbs.twimg.com',
+    'media.githubusercontent.com',
+    'i.imgur.com',
+    'cdn.discordapp.com',
+    'images.unsplash.com',
+    'via.placeholder.com'
+  ];
+  
+  return imageHosts.some(host => url.includes(host));
+};
+
+// Helper function to extract potential image URLs from tweet content
+const extractImageUrls = (content: string): string[] => {
+  const urlRegex = /https?:\/\/[^\s]+/g;
+  const urls = content.match(urlRegex) || [];
+  return urls.filter(isValidImageUrl);
+};
+
 // Skeleton components
 const CardSkeleton = () => (
-  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg animate-pulse">
+  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg animate-pulse h-full">
     <div className="flex justify-between items-center mb-4">
       <div className="h-7 bg-white/20 rounded w-1/3"></div>
       <div className="h-4 bg-white/20 rounded w-16"></div>
     </div>
-    <div className="space-y-4">
+    <div className="space-y-4 flex-1">
       <div className="h-4 bg-white/20 rounded w-full"></div>
       <div className="h-4 bg-white/20 rounded w-5/6"></div>
       <div className="h-4 bg-white/20 rounded w-4/6"></div>
     </div>
-    <div className="mt-4 space-y-2">
+    <div className="mt-auto pt-4 space-y-2">
       <div className="h-2 bg-white/20 rounded w-full"></div>
       <div className="h-4 bg-white/20 rounded w-1/4"></div>
     </div>
@@ -36,12 +67,13 @@ const CardSkeleton = () => (
 
 interface SkeletonSectionProps {
   count?: number;
+  title?: string;
 }
 
-const SkeletonSection = ({ count = 3 }: SkeletonSectionProps) => (
+const SkeletonSection = ({ count = 3, title }: SkeletonSectionProps) => (
   <section className="mt-8">
-    <div className="flex items-center gap-2 h-8 bg-white/20 rounded w-48 mb-4"></div>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="flex items-center gap-2 h-8 bg-white/20 rounded w-48 mb-6"></div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {Array(count).fill(0).map((_, index) => (
         <CardSkeleton key={index} />
       ))}
@@ -61,34 +93,39 @@ interface AnalysisCardProps {
 }
 
 const AnalysisCard = memo(({ title, description, items, score, scoreLabel, timing, icon }: AnalysisCardProps) => (
-  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full">
-    <div className="flex justify-between items-center mb-4">
-      <h3 className="text-xl font-semibold flex items-center gap-2">
+  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full flex flex-col">
+    <div className="flex justify-between items-start mb-4">
+      <h3 className="text-xl font-semibold flex items-center gap-2 flex-1">
         {icon}
-        {title}
+        <span className="break-words">{title}</span>
       </h3>
-      {timing && <span className="text-sm opacity-70">{timing}</span>}
+      {timing && <span className="text-sm opacity-70 ml-2 flex-shrink-0">{timing}</span>}
     </div>
-    <div className="space-y-4">
+    
+    <div className="flex-1 space-y-4">
       {typeof description === 'string' ? (
-        <p dangerouslySetInnerHTML={{ __html: description }} />
+        <p className="text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: description }} />
       ) : (
-        description
+        <div className="text-sm leading-relaxed">{description}</div>
       )}
+      
       {items && items.length > 0 && (
-        <ul className="space-y-2 mt-4">
+        <ul className="space-y-2">
           {items.map((item, idx) => (
-            <li key={idx} className="text-sm" dangerouslySetInnerHTML={{ __html: item }} />
+            <li key={idx} className="text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: item }} />
           ))}
         </ul>
       )}
     </div>
+    
     {score !== undefined && (
-      <div className="mt-4 space-y-2">
-        <Progress value={score * 10} className="h-2" />
-        <span className="text-sm">
-          {scoreLabel}: {score}/10
-        </span>
+      <div className="mt-4 pt-4 border-t border-white/20 flex-shrink-0">
+        <div className="space-y-2">
+          <Progress value={score * 10} className="h-2" />
+          <span className="text-sm font-medium">
+            {scoreLabel}: {score}/10
+          </span>
+        </div>
       </div>
     )}
   </div>
@@ -121,27 +158,27 @@ const OverviewCard = memo(({ overview, sentiment }: OverviewCardProps) => {
 
   return (
     <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-6">
         <h3 className="text-xl font-semibold flex items-center gap-2">
           <BarChart className="w-5 h-5" />
           Overview & Sentiment
         </h3>
       </div>
       
-      <div className="space-y-4">
-        <p>{overview}</p>
+      <div className="space-y-6">
+        <p className="text-sm leading-relaxed">{overview}</p>
         
-        <div className="mt-6 pt-4 border-t border-white/20">
-          <div className="flex items-center justify-between">
+        <div className="pt-4 border-t border-white/20">
+          <div className="flex items-center justify-between mb-4">
             <p className={`text-lg font-medium ${getSentimentColor()}`}>
               {sentiment.label.toUpperCase()} SENTIMENT
             </p>
-            <span className="text-sm">
+            <span className="text-sm opacity-70">
               Confidence: {(sentiment.confidence * 100).toFixed(1)}%
             </span>
           </div>
           
-          <div className="mt-4 space-y-2">
+          <div className="space-y-2">
             <Progress value={sentimentPercentage} className="h-2" />
             <span className="text-sm">
               Sentiment Score: {sentiment.score.toFixed(2)} ({sentimentPercentage}%)
@@ -170,7 +207,7 @@ interface TriggerCardProps {
 // Trigger Card
 const TriggerCard = memo(({ trigger }: TriggerCardProps) => (
   <AnalysisCard
-    icon={<AlertTriangle className="w-4 h-4" />}
+    icon={<AlertTriangle className="w-4 h-4 flex-shrink-0" />}
     title={trigger.name}
     description={trigger.description}
     items={[
@@ -200,7 +237,7 @@ interface TrendCardProps {
 // Current Trend Card
 const TrendCard = memo(({ trend }: TrendCardProps) => (
   <AnalysisCard
-    icon={<TrendingUp className="w-4 h-4" />}
+    icon={<TrendingUp className="w-4 h-4 flex-shrink-0" />}
     title={trend.name}
     description={trend.description}
     items={[
@@ -230,7 +267,7 @@ interface UpcomingTrendCardProps {
 // Upcoming Trend Card
 const UpcomingTrendCard = memo(({ trend }: UpcomingTrendCardProps) => (
   <AnalysisCard
-    icon={<Lightbulb className="w-4 h-4" />}
+    icon={<Lightbulb className="w-4 h-4 flex-shrink-0" />}
     title={trend.name}
     description={trend.description}
     items={[
@@ -259,7 +296,49 @@ interface TweetCardProps {
   tweet: TweetData;
 }
 
-// Tweet Card
+// Image component with error handling
+const TweetImage = memo(({ src, alt }: { src: string; alt: string }) => {
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+
+  const handleImageError = () => {
+    setImageError(true);
+    setImageLoading(false);
+  };
+
+  const handleImageLoad = () => {
+    setImageLoading(false);
+  };
+
+  if (imageError || !isValidImageUrl(src)) {
+    return null; // Don't render anything if image fails to load or URL is invalid
+  }
+
+  return (
+    <div className="mb-3 relative h-32 flex-shrink-0">
+      {imageLoading && (
+        <div className="absolute inset-0 bg-white/10 animate-pulse rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-white/30 border-t-white/60 rounded-full animate-spin"></div>
+        </div>
+      )}
+      <Image 
+        src={src} 
+        alt={alt} 
+        fill
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        className={`rounded-lg object-cover transition-opacity duration-300 ${
+          imageLoading ? 'opacity-0' : 'opacity-100'
+        }`}
+        onError={handleImageError}
+        onLoad={handleImageLoad}
+      />
+    </div>
+  );
+});
+
+TweetImage.displayName = 'TweetImage';
+
+// Tweet Card with improved image handling
 const TweetCard = memo(({ tweet }: TweetCardProps) => {
   const date = new Date(tweet.created_at);
   const formattedDate = date.toLocaleDateString('en-US', {
@@ -268,41 +347,53 @@ const TweetCard = memo(({ tweet }: TweetCardProps) => {
     year: 'numeric'
   });
 
-  // Check for t.co links in content that might be images
-  const hasImageLink = tweet.content.includes('t.co/') || tweet.media_url;
-  const imageUrl = tweet.media_url || (hasImageLink ? '/api/placeholder/300/200' : undefined);
+  // Get the best available image URL
+  const getImageUrl = (): string | null => {
+    // First priority: explicit media_url if it's valid
+    if (tweet.media_url && isValidImageUrl(tweet.media_url)) {
+      return tweet.media_url;
+    }
+
+    // Second priority: extract valid image URLs from content
+    const extractedUrls = extractImageUrls(tweet.content);
+    if (extractedUrls.length > 0) {
+      return extractedUrls[0]; // Use the first valid image URL found
+    }
+
+    return null; // No valid image URL found
+  };
+
+  const imageUrl = getImageUrl();
 
   return (
-    <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full">
+    <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full flex flex-col">
       <div className="flex items-center gap-2 mb-3">
-        <span className="font-medium">@{tweet.author}</span>
+        <span className="font-medium text-sm">@{tweet.author}</span>
       </div>
-      <div className="text-lg mb-3">{tweet.content}</div>
+      
+      <div className="text-sm leading-relaxed mb-3 flex-1">{tweet.content}</div>
       
       {imageUrl && (
-        <div className="mb-3 relative h-40">
-          <Image 
-            src={imageUrl} 
-            alt="Tweet media" 
-            fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className="rounded-lg object-cover"
-          />
-        </div>
+        <TweetImage src={imageUrl} alt="Tweet media" />
       )}
       
       {tweet.hashtags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3">
-          {tweet.hashtags.map((tag, idx) => (
+        <div className="flex flex-wrap gap-1 mb-3">
+          {tweet.hashtags.slice(0, 3).map((tag, idx) => (
             <span key={idx} className="text-xs px-2 py-1 bg-blue-500/40 rounded-full">
               {tag}
             </span>
           ))}
+          {tweet.hashtags.length > 3 && (
+            <span className="text-xs px-2 py-1 bg-gray-500/40 rounded-full">
+              +{tweet.hashtags.length - 3}
+            </span>
+          )}
         </div>
       )}
       
-      <div className="flex justify-between text-sm mt-4 pt-2 border-t border-white/20">
-        <span>Engagement: {tweet.engagement}</span>
+      <div className="flex justify-between text-xs pt-2 border-t border-white/20 flex-shrink-0">
+        <span>Engagement: {tweet.engagement.toLocaleString()}</span>
         <span>{formattedDate}</span>
       </div>
     </div>
@@ -323,19 +414,21 @@ interface HashtagCardProps {
 
 // Hashtag Card
 const HashtagCard = memo(({ hashtags }: HashtagCardProps) => (
-  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full">
+  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full flex flex-col">
     <h3 className="text-xl font-semibold flex items-center gap-2 mb-4">
       <Target className="w-5 h-5" />
       Top Hashtags
     </h3>
-    <div className="space-y-3">
-      {hashtags.map((hashtag, index) => (
+    <div className="space-y-3 flex-1">
+      {hashtags.slice(0, 8).map((hashtag, index) => (
         <div key={index} className="flex items-center justify-between">
-          <span className="text-blue-400">{hashtag.tag}</span>
-          <div className="flex items-center gap-4">
-            <span className="text-sm">Count: {hashtag.count}</span>
-            <div className="w-24">
-              <Progress value={hashtag.relevance * 10} className="h-2" />
+          <span className="text-blue-400 text-sm font-medium truncate flex-1 mr-2">{hashtag.tag}</span>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <span className="text-xs text-white/70 min-w-[60px] text-right">
+              {hashtag.count.toLocaleString()}
+            </span>
+            <div className="w-16">
+              <Progress value={hashtag.relevance * 10} className="h-1.5" />
             </div>
           </div>
         </div>
@@ -351,41 +444,44 @@ interface DataSummaryCardProps {
 }
 
 // Data Summary Card
-const DataSummaryCard = memo(({ tweets }: DataSummaryCardProps) => (
-  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full">
-    <h3 className="text-xl font-semibold mb-4">Data Summary</h3>
-    <ul className="space-y-2">
-      <li className="flex justify-between">
-        <span>Total tweets analyzed:</span>
-        <span className="font-medium">{tweets.length}</span>
-      </li>
-      <li className="flex justify-between">
-        <span>Average engagement:</span>
-        <span className="font-medium">
-          {Math.round(tweets.reduce((sum, tweet) => sum + tweet.engagement, 0) / tweets.length)}
-        </span>
-      </li>
-      <li className="flex justify-between">
-        <span>Total hashtags:</span>
-        <span className="font-medium">
-          {tweets.reduce((sum, tweet) => sum + tweet.hashtags.length, 0)}
-        </span>
-      </li>
-      <li className="flex justify-between">
-        <span>Analysis timestamp:</span>
-        <span className="font-medium">
-          {new Date().toLocaleString()}
-        </span>
-      </li>
-      <li className="flex justify-between">
-        <span>Unique authors:</span>
-        <span className="font-medium">
-          {new Set(tweets.map(tweet => tweet.author)).size}
-        </span>
-      </li>
-    </ul>
-  </div>
-));
+const DataSummaryCard = memo(({ tweets }: DataSummaryCardProps) => {
+  const avgEngagement = tweets.length > 0 
+    ? Math.round(tweets.reduce((sum, tweet) => sum + tweet.engagement, 0) / tweets.length)
+    : 0;
+  
+  const totalHashtags = tweets.reduce((sum, tweet) => sum + tweet.hashtags.length, 0);
+  const uniqueAuthors = new Set(tweets.map(tweet => tweet.author)).size;
+
+  return (
+    <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg h-full flex flex-col">
+      <h3 className="text-xl font-semibold mb-4">Data Summary</h3>
+      <div className="space-y-3 flex-1">
+        <div className="flex justify-between items-center">
+          <span className="text-sm">Total tweets analyzed:</span>
+          <span className="font-medium text-sm">{tweets.length.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm">Average engagement:</span>
+          <span className="font-medium text-sm">{avgEngagement.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm">Total hashtags:</span>
+          <span className="font-medium text-sm">{totalHashtags.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm">Unique authors:</span>
+          <span className="font-medium text-sm">{uniqueAuthors.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between items-center pt-2 border-t border-white/20">
+          <span className="text-sm">Analysis timestamp:</span>
+          <span className="font-medium text-xs">
+            {new Date().toLocaleString()}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+});
 
 DataSummaryCard.displayName = 'DataSummaryCard';
 
@@ -401,30 +497,36 @@ interface InsightsCardProps {
 
 // Insights Card
 const InsightsCard = memo(({ insights }: InsightsCardProps) => (
-  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg col-span-1 md:col-span-3">
-    <h3 className="text-xl font-semibold mb-4">Trend Insights</h3>
+  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg">
+    <h3 className="text-xl font-semibold mb-6">Trend Insights</h3>
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div>
-        <h4 className="font-medium mb-2">Industry Comparisons</h4>
+      <div className="space-y-3">
+        <h4 className="font-medium text-lg">Industry Comparisons</h4>
         <ul className="space-y-2">
           {insights.comparisons.map((item, idx) => (
-            <li key={idx} className="text-sm">{item}</li>
+            <li key={idx} className="text-sm leading-relaxed">
+              • {item}
+            </li>
           ))}
         </ul>
       </div>
-      <div>
-        <h4 className="font-medium mb-2">Actionable Insights</h4>
+      <div className="space-y-3">
+        <h4 className="font-medium text-lg">Actionable Insights</h4>
         <ul className="space-y-2">
           {insights.actionableInsights.map((item, idx) => (
-            <li key={idx} className="text-sm">{item}</li>
+            <li key={idx} className="text-sm leading-relaxed">
+              • {item}
+            </li>
           ))}
         </ul>
       </div>
-      <div>
-        <h4 className="font-medium mb-2">Demographic Patterns</h4>
+      <div className="space-y-3">
+        <h4 className="font-medium text-lg">Demographic Patterns</h4>
         <ul className="space-y-2">
           {insights.demographicPatterns.map((item, idx) => (
-            <li key={idx} className="text-sm">{item}</li>
+            <li key={idx} className="text-sm leading-relaxed">
+              • {item}
+            </li>
           ))}
         </ul>
       </div>
@@ -448,23 +550,29 @@ const TwitterAnalysisDashboard = memo(({
   options
 }: TwitterAnalysisDashboardProps) => {
   const { data, isLoading, error, analyze } = useTwitterAnalysis();
-  const [hasSearched, setHasSearched] = useState(false);
+  const [hasAnalyzed, setHasAnalyzed] = useState(false);
+
+  // Memoize the analyze function to prevent unnecessary re-calls
+  const handleAnalyze = useCallback(async () => {
+    if (!query.trim() || hasAnalyzed || isLoading) return;
+    
+    try {
+      await analyze(query, options);
+      setHasAnalyzed(true);
+    } catch (err) {
+      console.error('Analysis failed:', err);
+    }
+  }, [query, options, analyze, hasAnalyzed, isLoading]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!query.trim() || hasSearched) return;
-      await analyze(query, options);
-      setHasSearched(true);
-    };
-
-    fetchData();
-  }, [query, options, analyze, hasSearched]);
+    handleAnalyze();
+  }, [handleAnalyze]);
 
   const renderSkeleton = () => (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <header className="mb-8">
-        <div className="h-10 bg-white/20 rounded w-1/2 mb-2"></div>
-        <div className="h-6 bg-white/20 rounded w-1/3"></div>
+        <div className="h-10 bg-white/20 rounded w-1/2 mb-2 animate-pulse"></div>
+        <div className="h-6 bg-white/20 rounded w-1/3 animate-pulse"></div>
       </header>
 
       <div className="space-y-8">
@@ -475,26 +583,25 @@ const TwitterAnalysisDashboard = memo(({
           </div>
         </section>
 
-        {/* Triggers Skeleton */}
-        <SkeletonSection count={3} />
-
-        {/* Current Trends Skeleton */}
-        <SkeletonSection count={3} />
-
-        {/* Upcoming Trends Skeleton */}
-        <SkeletonSection count={3} />
+        {/* Multiple sections with 3-column layout */}
+        <SkeletonSection count={3} title="Key Engagement Triggers" />
+        <SkeletonSection count={3} title="Current Trends" />
+        <SkeletonSection count={3} title="Upcoming Trends" />
 
         {/* Hashtags & Data Summary Skeleton */}
         <section className="mt-8">
-          <div className="h-8 bg-white/20 rounded w-48 mb-4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="h-8 bg-white/20 rounded w-48 mb-6 animate-pulse"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <CardSkeleton />
             <CardSkeleton />
+            <div className="hidden lg:block">
+              <CardSkeleton />
+            </div>
           </div>
         </section>
 
         {/* Top Tweets Skeleton */}
-        <SkeletonSection count={3} />
+        <SkeletonSection count={3} title="Top Tweets" />
       </div>
     </div>
   );
@@ -505,15 +612,29 @@ const TwitterAnalysisDashboard = memo(({
 
   if (error || !data?.analysis) {
     return (
-      <div className="text-center text-red-500 p-4 bg-white/10 backdrop-blur-sm rounded-lg">
-        <h3 className="text-xl font-bold mb-2">Analysis Error</h3>
-        <p>{error || "Failed to fetch Twitter analysis data"}</p>
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="text-center p-8 bg-white/10 backdrop-blur-sm rounded-lg border border-red-500/20">
+          <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h3 className="text-xl font-bold mb-2 text-red-400">Analysis Error</h3>
+          <p className="text-sm text-white/70 mb-4">
+            {error || "Failed to fetch Twitter analysis data"}
+          </p>
+          <button 
+            onClick={() => {
+              setHasAnalyzed(false);
+              handleAnalyze();
+            }}
+            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-sm font-medium transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
 
   const { analysis, tweets } = data;
-  const topTweets = tweets.slice(0, 3); // Get top 3 tweets by engagement
+  const topTweets = tweets.slice(0, 6); // Get top 6 tweets for better 3-column layout
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -526,24 +647,22 @@ const TwitterAnalysisDashboard = memo(({
         </p>
       </header>
 
-      <div className="space-y-8">
+      <div className="space-y-12">
         {/* Overview & Sentiment */}
         <section>
-          <div className="grid grid-cols-1 gap-6">
-            <OverviewCard 
-              overview={analysis.overview} 
-              sentiment={analysis.sentimentAnalysis} 
-            />
-          </div>
+          <OverviewCard 
+            overview={analysis.overview} 
+            sentiment={analysis.sentimentAnalysis} 
+          />
         </section>
 
         {/* Triggers */}
-        <section className="mt-8">
-          <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
+        <section>
+          <h2 className="flex items-center gap-2 text-2xl font-bold mb-6">
             <AlertTriangle className="w-6 h-6" />
             Key Engagement Triggers
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {validateArray(analysis.triggers).map((trigger, index) => (
               <TriggerCard key={index} trigger={trigger} />
             ))}
@@ -551,12 +670,12 @@ const TwitterAnalysisDashboard = memo(({
         </section>
 
         {/* Current Trends */}
-        <section className="mt-8">
-          <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
+        <section>
+          <h2 className="flex items-center gap-2 text-2xl font-bold mb-6">
             <TrendingUp className="w-6 h-6" />
             Current Trends
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {validateArray(analysis.currentTrends).map((trend, index) => (
               <TrendCard key={index} trend={trend} />
             ))}
@@ -564,12 +683,12 @@ const TwitterAnalysisDashboard = memo(({
         </section>
 
         {/* Upcoming Trends */}
-        <section className="mt-8">
-          <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
+        <section>
+          <h2 className="flex items-center gap-2 text-2xl font-bold mb-6">
             <Lightbulb className="w-6 h-6" />
             Upcoming Trends
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {validateArray(analysis.upcomingTrends).map((trend, index) => (
               <UpcomingTrendCard key={index} trend={trend} />
             ))}
@@ -577,35 +696,35 @@ const TwitterAnalysisDashboard = memo(({
         </section>
 
         {/* Insights */}
-        <section className="mt-8">
-          <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
+        <section>
+          <h2 className="flex items-center gap-2 text-2xl font-bold mb-6">
             <MessageCircle className="w-6 h-6" />
             Trend Insights
           </h2>
-          <div className="grid grid-cols-1 gap-6">
-            <InsightsCard insights={analysis.trendInsights} />
-          </div>
+          <InsightsCard insights={analysis.trendInsights} />
         </section>
 
         {/* Hashtags & Data Summary */}
-        <section className="mt-8">
-          <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
+        <section>
+          <h2 className="flex items-center gap-2 text-2xl font-bold mb-6">
             <Target className="w-6 h-6" />
             Analysis Data
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <HashtagCard hashtags={analysis.relevantHashtags} />
             <DataSummaryCard tweets={tweets} />
+            {/* Third column placeholder for future content or spacing */}
+            <div className="hidden lg:block"></div>
           </div>
         </section>
 
         {/* Top Tweets */}
-        <section className="mt-8">
-          <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
+        <section>
+          <h2 className="flex items-center gap-2 text-2xl font-bold mb-6">
             <MessageCircle className="w-6 h-6" />
             Top Tweets
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {topTweets.map((tweet, index) => (
               <TweetCard key={index} tweet={tweet} />
             ))}
