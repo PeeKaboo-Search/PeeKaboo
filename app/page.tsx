@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useContext } from "react";
-import { LayoutContext } from "./layout";
+import { LayoutContext } from './context/LayoutContext';
 import "styles/page.css";
 // Import new components
 import AuthComponent from "@/app/components/main/AuthComponent";
