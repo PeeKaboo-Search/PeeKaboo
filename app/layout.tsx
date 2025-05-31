@@ -5,6 +5,7 @@ import { User, AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { SideHistory } from "@/app/components/SideHistory";
 import { Menu, Save } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { LayoutContext } from "@/app/context/LayoutContext";
 import "@/styles/global.css";
 
 const geistSans = Geist({
@@ -15,17 +16,6 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
-});
-
-// Create a context for sharing user state and save functionality
-export const LayoutContext = React.createContext<{
-  user: User | null;
-  handleSave: (() => Promise<void>) | null;
-  setSaveHandler: (handler: () => Promise<void>) => void;
-}>({
-  user: null,
-  handleSave: null,
-  setSaveHandler: () => {},
 });
 
 export default function RootLayout({
