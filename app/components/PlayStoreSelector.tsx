@@ -25,7 +25,21 @@ interface AppSelectionProps {
   query: string;
 }
 
-// AppCard component with larger icons
+// Loading skeleton component for apps
+const AppCardSkeleton = memo(() => (
+  <div className="flex-shrink-0 w-32 snap-start">
+    <div className="flex flex-col items-center gap-2 p-2">
+      <Skeleton className="w-20 h-20 rounded-xl" />
+      <div className="w-full space-y-1">
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-2 w-3/4 mx-auto" />
+      </div>
+    </div>
+  </div>
+));
+AppCardSkeleton.displayName = 'AppCardSkeleton';
+
+// AppCard component with glassmorphism styling
 const AppCard = memo(({ 
   app, 
   isSelected, 
@@ -35,29 +49,53 @@ const AppCard = memo(({
   isSelected: boolean,
   onClick: () => void
 }) => (
-  <Card
-    className={`app-card flex-shrink-0 w-72 cursor-pointer snap-start transition-all hover:shadow-lg
-      ${isSelected ? 'ring-2 ring-primary shadow-md' : ''}`}
+  <div
+    className={`flex-shrink-0 w-32 cursor-pointer snap-start transition-all duration-300 hover:scale-105
+      ${isSelected ? 'transform scale-105' : ''}`}
     onClick={onClick}
   >
-    <CardContent className="p-4">
-      <div className="flex flex-col items-center gap-3">
-        <div className="relative w-24 h-24 flex-shrink-0">
-          <Image
-            src={app.app_icon}
-            alt={app.app_name}
-            fill
-            sizes="(max-width: 768px) 96px, 96px"
-            className="object-cover rounded-lg"
-          />
-        </div>
-        <div className="flex-1 text-center min-w-0">
-          <h3 className="font-semibold line-clamp-2">{app.app_name}</h3>
-          <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{app.app_id}</p>
-        </div>
+    <div className="flex flex-col items-center gap-2 p-2">
+      <div className={`relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden transition-all duration-300
+        ${isSelected 
+          ? 'ring-2 ring-white/30 ring-offset-2 ring-offset-transparent shadow-xl shadow-white/10' 
+          : 'hover:shadow-lg hover:ring-1 hover:ring-white/20'
+        }`}>
+        <Image
+          src={app.app_icon}
+          alt={app.app_name}
+          fill
+          sizes="80px"
+          className="object-cover"
+        />
+        {/* Selection indicator overlay */}
+        {isSelected && (
+          <div className="absolute inset-0 bg-white/10 backdrop-blur-sm flex items-center justify-center">
+            <div className="w-6 h-6 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30">
+              <svg 
+                className="w-3 h-3 text-white" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={3} 
+                  d="M5 13l4 4L19 7" 
+                />
+              </svg>
+            </div>
+          </div>
+        )}
       </div>
-    </CardContent>
-  </Card>
+      <div className="text-center min-w-0 w-full">
+        <h3 className={`font-medium text-xs line-clamp-2 transition-colors duration-300
+          ${isSelected ? 'text-white font-semibold' : 'text-white/80 hover:text-white'}`}>
+          {app.app_name}
+        </h3>
+      </div>
+    </div>
+  </div>
 ));
 AppCard.displayName = 'AppCard';
 
@@ -151,38 +189,49 @@ const AppSelection: React.FC<AppSelectionProps> = ({ query }) => {
   }, [query]);
 
   // Scroll to left and right buttons for app slider
-  const scrollLeft20 = () => {
+  const scrollLeftBtn = () => {
     if (appsSliderRef.current) {
-      appsSliderRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+      appsSliderRef.current.scrollBy({ left: -256, behavior: 'smooth' });
     }
   };
 
-  const scrollRight20 = () => {
+  const scrollRightBtn = () => {
     if (appsSliderRef.current) {
-      appsSliderRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+      appsSliderRef.current.scrollBy({ left: 256, behavior: 'smooth' });
     }
   };
 
   // Render loading state
   if (loading && !apps.length) {
     return (
-      <div className="app-analytics-container space-y-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold">App Analytics</h2>
-          <p className="text-sm text-muted-foreground">Searching for &quot;{query}&quot;...</p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white/5 rounded-lg overflow-hidden">
-              <div className="p-4 flex items-center gap-3">
-                <Skeleton className="w-24 h-24 rounded-lg" />
-                <div className="space-y-2 flex-1">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        <header className="mb-6">
+          <h1 className="text-3xl font-bold mb-2">App Analytics</h1>
+          <p className="text-lg opacity-70">Searching for: <span className="font-medium text-white">&quot;{query}&quot;</span></p>
+        </header>
+
+        <div className="space-y-8">
+          <section className="mb-6">
+            <Skeleton className="h-7 w-56 mb-3" />
+            <Skeleton className="h-5 w-80" />
+          </section>
+
+          {/* Glassmorphism card container for loading */}
+          <div className="relative bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl">
+            <div className="relative">
+              <div className="apps-slider mx-6 px-2">
+                <div className="flex gap-4 py-4">
+                  {[...Array(6)].map((_, i) => (
+                    <AppCardSkeleton key={i} />
+                  ))}
                 </div>
               </div>
             </div>
-          ))}
+          </div>
+          
+          <div className="flex justify-center mt-6">
+            <Skeleton className="h-10 w-40 rounded-xl" />
+          </div>
         </div>
       </div>
     );
@@ -201,79 +250,77 @@ const AppSelection: React.FC<AppSelectionProps> = ({ query }) => {
 
   // Otherwise show the selection UI
   return (
-    <div className="app-analytics-container space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">App Analytics</h2>
-        <p className="text-sm text-muted-foreground">Results for &quot;{query}&quot;</p>
-      </div>
+    <div className="max-w-6xl mx-auto px-4 py-6">
+      <header className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">App Analytics</h1>
+        <p className="text-lg opacity-70">Results for: <span className="font-medium text-white">&quot;{query}&quot;</span></p>
+      </header>
 
-      {error && (
-        <div className="p-4 bg-red-500/10 text-red-400 rounded-lg flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4" />
-          <p>{error.message}</p>
-        </div>
-      )}
-
-      <div className="mb-2">
-        <h3 className="text-lg font-semibold mb-2">Select an app to analyze</h3>
-        <p className="text-muted-foreground text-sm">
-        Choose an app below to analyze its reviews and get comprehensive insights.
-        </p>
-      </div>
-      
-      {/* Apps carousel with navigation buttons */}
-      <div className="relative">
-        <Button 
-          variant="outline" 
-          size="icon" 
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-background/80 backdrop-blur-sm"
-          onClick={scrollLeft20}
-        >
-          <ChevronRight className="h-4 w-4 rotate-180" />
-        </Button>
-        
-        <div 
-          className="apps-slider relative overflow-x-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent mx-8 px-2"
-          ref={appsSliderRef}
-          onMouseDown={handleMouseDown}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
-          onMouseMove={handleMouseMove}
-        >
-          <div className="flex gap-6 py-4 px-2">
-            {apps.map((app) => (
-              <AppCard
-                key={`app-${app.app_id}`}
-                app={app}
-                isSelected={selectedApp === app.app_id}
-                onClick={() => handleAppSelect(app.app_id)}
-              />
-            ))}
+      <div className="space-y-8">
+        {error && (
+          <div className="p-3 bg-red-500/10 backdrop-blur-sm text-red-400 rounded-xl flex items-center gap-2 mb-4 border border-red-500/20">
+            <AlertTriangle className="h-4 w-4" />
+            <p>{error.message}</p>
           </div>
+        )}
+
+        <section className="mb-6">
+          <h2 className="text-2xl font-bold mb-3">Select an app to analyze</h2>
+          <p className="text-lg opacity-70">
+            Choose an app below to analyze its reviews and get comprehensive insights.
+          </p>
+        </section>
+      
+        {/* Glassmorphism card container for apps */}
+        <div className="relative bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl">
+          <button 
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all duration-200 rounded-full flex items-center justify-center border border-white/20 shadow-lg"
+            onClick={scrollLeftBtn}
+          >
+            <ChevronRight className="h-4 w-4 rotate-180 text-white/80" />
+          </button>
+          
+          <div 
+            className="apps-slider relative overflow-x-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent mx-6 px-2"
+            ref={appsSliderRef}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+            onMouseMove={handleMouseMove}
+          >
+            <div className="flex gap-4 py-4 px-2">
+              {apps.map((app) => (
+                <AppCard
+                  key={`app-${app.app_id}`}
+                  app={app}
+                  isSelected={selectedApp === app.app_id}
+                  onClick={() => handleAppSelect(app.app_id)}
+                />
+              ))}
+            </div>
+          </div>
+          
+          <button 
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all duration-200 rounded-full flex items-center justify-center border border-white/20 shadow-lg"
+            onClick={scrollRightBtn}
+          >
+            <ChevronRight className="h-4 w-4 text-white/80" />
+          </button>
         </div>
         
-        <Button 
-          variant="outline" 
-          size="icon" 
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-background/80 backdrop-blur-sm"
-          onClick={scrollRight20}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+        {/* Glassmorphism analyze button */}
+        {selectedApp && (
+          <div className="flex justify-center mt-6">
+            <button 
+              onClick={handleProceedToAnalysis}
+              className="px-8 py-3 text-base font-medium flex items-center gap-3 hover:scale-105 transition-all duration-300 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl shadow-lg hover:bg-white/15 hover:shadow-xl hover:border-white/30 text-white"
+            >
+              Analyze Selected App
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
-      
-      {/* App selection confirmation */}
-      {selectedApp && (
-        <div className="flex justify-center mt-6">
-          <Button 
-            onClick={handleProceedToAnalysis}
-            className="px-8 py-2 flex items-center gap-2"
-          >
-            Analyze Selected App
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
     </div>
   );
 };
