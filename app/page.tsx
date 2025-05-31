@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { User, AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { SideHistory } from "@/app/components/SideHistory";
 import { Menu, Save } from "lucide-react";
-import "app/styles/page.css";
+import "styles/page.css";
 
 // Import new components
 import AuthComponent from "@/app/components/main/AuthComponent";

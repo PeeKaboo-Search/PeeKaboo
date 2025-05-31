@@ -2,7 +2,7 @@ import React from 'react';  // Add this import to resolve the error
 
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google"; 
-import "@/app/styles/global.css";
+import "@/styles/global.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

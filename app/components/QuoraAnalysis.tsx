@@ -7,7 +7,7 @@ import {
   TrendingUp, Target, Users 
 } from 'lucide-react';
 import { Progress } from "@/app/components/ui/progress";
-import "@/app/styles/QuoraAnalytics.css"
+import "@/styles/QuoraAnalytics.css"
 
 
 // Types

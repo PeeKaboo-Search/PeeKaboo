@@ -25,7 +25,7 @@ import { Button } from '@/app/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
 import { Skeleton } from "@/app/components/ui/skeleton";
 import { Badge } from "@/app/components/ui/badge";
-import "@/app/styles/YouTubeAnalytics.css";
+import "@/styles/YouTubeAnalytics.css";
 
 
 interface ErrorState {

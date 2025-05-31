@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { Progress } from "@/app/components/ui/progress";
 import { useMarketResearch } from "@/app/api/googleAnalyticsApi";
-import "@/app/styles/GoogleAnalytics.css"
+import "@/styles/GoogleAnalytics.css"
 
 // Types
 interface MarketResearchProps {

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, Suspense, lazy, memo } from "react";
 import { fetchMarketingInsights } from "@/app/api/redditAnalysis";
 import { Activity, Brain, Target, TrendingUp } from "lucide-react";
-import "@/app/styles/reddit-analysis.css";
+import "@/styles/reddit-analysis.css";
 
 // Define interfaces for the missing types
 interface PainPoint {
