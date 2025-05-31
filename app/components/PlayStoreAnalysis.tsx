@@ -14,7 +14,6 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { getAppReviews, analyzeAppReviews } from '@/app/api/playstoreAnalyticsApi';
-import { Card, CardContent } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Progress } from "@/app/components/ui/progress";
 import { Badge } from "@/app/components/ui/badge";
@@ -24,10 +23,6 @@ interface AppAnalysisProps {
   appId: string;
   appName: string;
   onBackToSelection: () => void;
-}
-
-interface ArrayLike {
-  length: number;
 }
 
 // Skeleton components
@@ -300,7 +295,7 @@ const UserExperienceCard = memo(({
         <div className="max-h-16 overflow-y-auto space-y-2">
           {experience.userQuotes.slice(0, 2).map((quote, i) => (
             <p key={i} className="text-sm italic text-gray-300 leading-relaxed">
-              "{truncateText(quote, 60)}"
+              &ldquo;{truncateText(quote, 60)}&rdquo;
             </p>
           ))}
         </div>
