@@ -569,7 +569,7 @@ Format your response exactly according to this JSON schema:
     "overview": "string - A concise executive summary of the key insights",
     "sentimentAnalysis": {
       "overall": "positive|negative|neutral|mixed",
-      "score": "number - normalized sentiment score from -1 to 1",
+      "score": "number - normalized sentiment score from 0 to 10",
       "distribution": {
         "positive": "number - percentage of positive reviews",
         "neutral": "number - percentage of neutral reviews",

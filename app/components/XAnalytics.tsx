@@ -70,7 +70,7 @@ interface SkeletonSectionProps {
   title?: string;
 }
 
-const SkeletonSection = ({ count = 3, title }: SkeletonSectionProps) => (
+const SkeletonSection = ({ count = 3}: SkeletonSectionProps) => (
   <section className="mt-8">
     <div className="flex items-center gap-2 h-8 bg-white/20 rounded w-48 mb-6"></div>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

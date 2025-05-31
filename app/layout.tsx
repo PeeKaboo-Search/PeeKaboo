@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google"; 
 import { User, AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { SideHistory } from "@/app/components/SideHistory";
@@ -52,8 +51,18 @@ export default function RootLayout({
       }
     );
 
-    // Add scroll listener
-    const handleScroll = () => setScrollY(window.scrollY);
+    // Add smooth scroll listener with requestAnimationFrame for better performance
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          setScrollY(window.scrollY);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    
     window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
@@ -95,42 +104,52 @@ export default function RootLayout({
                 onSignOut={handleSignOut}
               />
               
-              {/* Fixed floating menu button */}
+              {/* Fixed floating menu button with smooth movement */}
               {!isSideHistoryOpen && (
                 <button 
                   onClick={() => setIsSideHistoryOpen(!isSideHistoryOpen)}
-                  className="absolute z-[9999] bg-white/20 backdrop-blur-sm p-2 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out hover:bg-white/30"
+                  className="
+                    fixed z-[9999] 
+                    bg-white/20 backdrop-blur-sm 
+                    p-2 rounded-full 
+                    shadow-lg hover:shadow-xl 
+                    transition-all duration-300 ease-in-out 
+                    hover:bg-white/30 hover:scale-110
+                    will-change-transform
+                  "
                   style={{ 
                     left: '16px',
-                    top: `${scrollY + 16}px`,
-                    position: 'absolute'
+                    transform: `translateY(${scrollY + 16}px)`,
+                    transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease'
                   }}
                   aria-label="Open history menu"
                 >
-                  <Menu className="text-white w-6 h-6" />
+                  <Menu className="text-white w-6 h-6 transition-transform duration-200" />
                 </button>
               )}
 
-              {/* Fixed floating save button */}
+              {/* Fixed floating save button with smooth movement */}
               <button 
                 onClick={handleSave} 
                 className="
-                  absolute z-[9999]
+                  fixed z-[9999]
                   bg-white/10 hover:bg-white/20 
                   backdrop-blur-md 
                   p-3 rounded-full 
-                  shadow-lg hover:shadow-xl
+                  shadow-lg hover:shadow-xl hover:scale-110
                   transition-all duration-300 ease-in-out
                   flex items-center justify-center
-                  border border-white/10 hover:border-white/30"
+                  border border-white/10 hover:border-white/30
+                  will-change-transform
+                "
                 style={{ 
                   right: '16px',
-                  top: `${scrollY + 16}px`,
-                  position: 'absolute'
+                  transform: `translateY(${scrollY + 16}px)`,
+                  transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease'
                 }}
                 aria-label="Save current search"
               >
-                <Save className="text-white/80 hover:text-white w-6 h-6" />
+                <Save className="text-white/80 hover:text-white w-6 h-6 transition-all duration-200" />
               </button>
             </>
           )}

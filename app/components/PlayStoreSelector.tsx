@@ -7,9 +7,7 @@ import {
   AlertTriangle,
   ArrowRight
 } from 'lucide-react';
-import { searchApps } from '@/app/api/playstoreAnalyticsApi';
-import { Card, CardContent } from '@/app/components/ui/card';
-import { Button } from '@/app/components/ui/button';
+import { searchApps } from '@/app/api/playstoreAnalyticsApi'; 
 import { Skeleton } from "@/app/components/ui/skeleton";
 import AppAnalysis from '@/app/components/PlayStoreAnalysis';
 import type { AppBasic } from '@/app/api/playstoreAnalyticsApi';

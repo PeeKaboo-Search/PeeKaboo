@@ -9,7 +9,6 @@ import ComponentToggle from "@/app/components/main/ComponentToggle"
 import ResultsSection from "@/app/components/main/ResultsSection";
 // Import services and config
 import { supabase } from "@/lib/supabase";
-import { SEARCH_COMPONENTS } from "@/config/searchComponents";
 import { generateSpecializedQueries } from "@/app/api/main/smartQuery";
 import { saveResults } from "@/app/api/main/save";
 import { SpecializedQueries } from "@/types";
