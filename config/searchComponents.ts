@@ -3,7 +3,7 @@ import ImageResult from "@/app/components/ImageResult";
 import GoogleAnalytics from "@/app/components/GoogleAnalytics";
 import PlayStoreAnalytics from "@/app/components/PlayStoreSelector";
 import RedditAnalytics from "@/app/components/RedditAnalytics";
-import YouTubeVideos from "@/app/components/YTvideos";
+import YouTubeVideos from "@/app/components/YoutubeVideos";
 import QuoraAnalysis from "@/app/components/QuoraAnalysis";
 import XAnalytics from "@/app/components/XAnalytics";
 import FacebookAdsAnalytics from "@/app/components/FacebookAdsAnalytics";

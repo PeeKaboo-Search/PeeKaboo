@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Geist, Geist_Mono } from "next/font/google"; 
 import { User, AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { SideHistory } from "@/app/components/SideHistory";
@@ -61,28 +61,32 @@ export default function RootLayout({
     };
   }, []);
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     await supabase.auth.signOut();
-  };
+  }, []);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (saveHandler) {
       await saveHandler();
     }
-  };
+  }, [saveHandler]);
 
-  const setSaveHandlerWrapper = (handler: () => Promise<void>) => {
+  // Use useCallback to memoize the setSaveHandler function
+  const setSaveHandlerWrapper = useCallback((handler: () => Promise<void>) => {
     setSaveHandler(() => handler);
-  };
+  }, []);
+
+  // Memoize the context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
+    user,
+    handleSave: user ? handleSave : null,
+    setSaveHandler: setSaveHandlerWrapper
+  }), [user, handleSave, setSaveHandlerWrapper]);
 
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <LayoutContext.Provider value={{ 
-          user, 
-          handleSave: user ? handleSave : null, 
-          setSaveHandler: setSaveHandlerWrapper 
-        }}>
+        <LayoutContext.Provider value={contextValue}>
           {/* Fixed floating sidebar and save buttons - only visible when logged in */}
           {user && (
             <>
