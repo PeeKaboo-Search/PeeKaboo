@@ -137,6 +137,37 @@ export const CommentAnalysisSchema = z.object({
   error: z.string().optional()
 });
 
+// Raw API response types for YouTube
+interface YouTubeRawSearchItem {
+  id: string | { kind?: string; videoId: string };
+  snippet: {
+    title: string;
+    description: string;
+    thumbnails: {
+      default: { url: string; width?: number; height?: number };
+      medium: { url: string; width?: number; height?: number };
+      high: { url: string; width?: number; height?: number };
+    };
+    channelTitle: string;
+    publishedAt: string;
+  };
+}
+
+interface YouTubeRawCommentItem {
+  id: string;
+  snippet: {
+    topLevelComment: {
+      id: string;
+      snippet: {
+        textDisplay: string;
+        textOriginal: string;
+        likeCount?: number;
+      };
+    };
+    totalReplyCount?: number;
+  };
+}
+
 // Type exports
 export type YouTubeVideo = z.infer<typeof YouTubeSearchItemSchema>;
 export type VideoStatistics = z.infer<typeof VideoStatisticsSchema>;
@@ -170,6 +201,7 @@ async function fetchWithTimeout(
 ): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
   try {
     const response = await fetch(url, {
       ...options,
@@ -225,7 +257,7 @@ export async function searchYouTubeVideos(query: string, pageToken?: string): Pr
 
     // Process search results to ensure consistent ID format
     const processedItems = searchResponse.data.items
-      .map((item: any) => {
+      .map((item: YouTubeRawSearchItem) => {
         // Ensure we have a valid video ID
         let videoId: string | null = null;
         
@@ -395,7 +427,7 @@ export async function getVideoComments(videoId: string, maxResults: number = 100
     // Process the response to match our schema
     const processedResponse = {
       ...response.data,
-      items: response.data.items.map((item: any) => ({
+      items: response.data.items.map((item: YouTubeRawCommentItem) => ({
         id: item.id,
         snippet: {
           topLevelComment: {
@@ -568,7 +600,7 @@ async function generateCommentAnalysis(videoTitle: string, commentText: string):
       "frequencyPattern": "Pattern of occurrence and context",
       "sentiment": "positive/negative/neutral/mixed"
     }
-  ] (exactly 2 items),
+  ] (exactly 3 items),
   "emotionalTriggers": [
     {
       "trigger": "Name of the emotional trigger",
@@ -577,7 +609,7 @@ async function generateCommentAnalysis(videoTitle: string, commentText: string):
       "responsePattern": "Typical viewer response to this trigger",
       "dominantEmotion": "Primary emotion associated with this trigger"
     }
-  ] (exactly 2 items),
+  ] (exactly 3 items),
   "marketImplications": "Strategic insights for content creation based on sentiment patterns"
 }`
   };
@@ -627,7 +659,6 @@ async function generateCommentAnalysis(videoTitle: string, commentText: string):
     }
 
     return analysis;
-
   } catch (error) {
     console.error('Groq API error:', error);
     throw new Error(
@@ -641,8 +672,10 @@ async function generateCommentAnalysis(videoTitle: string, commentText: string):
 // Utility function
 function sanitizeText(text: string, maxLength: number = 300): string {
   if (!text) return '';
+  
   const sanitized = text.replace(/\s+/g, ' ').trim();
   if (sanitized.length <= maxLength) return sanitized;
+  
   const truncated = sanitized.substring(0, maxLength);
   const lastSpaceIndex = truncated.lastIndexOf(' ');
   return (lastSpaceIndex > 0 ? truncated.substring(0, lastSpaceIndex) : truncated) + '...';

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, memo } from 'react';
 import Image from 'next/image';
-import { MetaAdAnalysisService } from '@/app/api/facebookAnalytics';
+import { MetaAdAnalysisService } from '@/api/facebookAnalytics';
 import { 
   MessageSquare, Eye, Target, 
   Users, Award, ArrowRight, Sparkles,

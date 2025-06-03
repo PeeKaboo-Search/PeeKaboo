@@ -3,15 +3,11 @@
 import React, { useState, memo } from 'react';
 import { 
   ArrowLeft,
-  TrendingUp,
   Users,
   Heart,
   AlertCircle,
   Target,
-  Activity,
-  MessageCircle,
-  Brain,
-  ChevronUp
+  Brain
 } from 'lucide-react';
 
 interface PainPoint {

@@ -1,6 +1,6 @@
 "use client";
-
 import React, { useEffect, useState, useRef, memo, MouseEvent } from 'react';
+import Image from 'next/image';
 import { 
   Eye, 
   ThumbsUp, 
@@ -11,7 +11,7 @@ import {
   Play,
   BarChart2
 } from 'lucide-react';
-import CommentAnalysis from '../components/YoutubeAnalytics';
+import CommentAnalysis from '@/app/components/YoutubeAnalytics';
 
 // Import API functions and types
 import { 
@@ -20,10 +20,9 @@ import {
   analyzeVideoComments,
   type YouTubeVideo,
   type VideoStatistics,
-  type YouTubeSearchResponse,
   type CommentThreadResponse,
   type CommentThread
-} from '../api/youtubeAnalytics';
+} from '@/api/youtubeAnalytics';
 
 interface ErrorState {
   message: string;
@@ -44,26 +43,115 @@ interface CommentItemProps {
   comment: CommentThread;
 }
 
+// Match the exact types from the CommentAnalysis component
+interface PainPoint {
+  title: string;
+  description: string;
+  possibleSolutions: string[];
+  frequency: number;
+  sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed';
+}
+
+interface UserExperience {
+  scenario: string;
+  impact: string;
+  frequencyPattern: string;
+  sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed';
+}
+
+interface EmotionalTrigger {
+  trigger: string;
+  context: string;
+  responsePattern: string;
+  dominantEmotion: string;
+  intensity: number;
+}
+
 interface CommentAnalysisData {
   success: boolean;
-  data?: any;
+  data?: {
+    analysis: {
+      overview: string;
+      painPoints: PainPoint[];
+      userExperiences: UserExperience[];
+      emotionalTriggers: EmotionalTrigger[];
+      marketImplications: string;
+    };
+  };
   error?: string;
+}
+
+// Define the API response structure (what we get from the API)
+interface APIPainPoint {
+  title: string;
+  description: string;
+  sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
+  frequency: number;
+  impact: number;
+  possibleSolutions?: string[];
+}
+
+interface APIUserExperience {
+  experience?: string;
+  scenario?: string;
+  count?: number;
+  frequency?: number;
+  sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
+  impact: string | number;
+  frequencyPattern: string;
+}
+
+interface APIEmotionalTrigger {
+  trigger: string;
+  emotion?: string;
+  dominantEmotion?: string;
+  impact?: 'high' | 'medium' | 'low';
+  intensity?: number;
+  frequency?: number;
+  context?: string;
+  responsePattern?: string;
+}
+
+interface APIAnalysisData {
+  overview: string;
+  painPoints: APIPainPoint[];
+  userExperiences: APIUserExperience[];
+  emotionalTriggers: APIEmotionalTrigger[];
+  marketImplications: string;
+}
+
+interface APICommentAnalysisResponse {
+  success: boolean;
+  data?: {
+    analysis: APIAnalysisData;
+  };
+  error?: string;
+}
+
+interface ResourceId {
+  videoId?: string;
+}
+
+interface VideoId {
+  videoId?: string;
+  kind?: string;
 }
 
 function getVideoId(item: YouTubeVideo): string | null {
   if (typeof item.id === 'string') return item.id;
   
   if (item.id && typeof item.id === 'object') {
-    if ('videoId' in item.id && typeof item.id.videoId === 'string') {
-      return item.id.videoId;
+    const videoIdObj = item.id as VideoId;
+    if ('videoId' in videoIdObj && typeof videoIdObj.videoId === 'string') {
+      return videoIdObj.videoId;
     }
-    if ('kind' in item.id && item.id.kind === 'youtube#video' && 'videoId' in item.id) {
-      return item.id.videoId as string;
+    if ('kind' in videoIdObj && videoIdObj.kind === 'youtube#video' && 'videoId' in videoIdObj) {
+      return videoIdObj.videoId as string;
     }
   }
   
   if (item.snippet && 'resourceId' in item.snippet) {
-    const resourceId = item.snippet.resourceId as any;
+    const resourceId = item.snippet.resourceId as ResourceId;
     if (resourceId && resourceId.videoId) {
       return resourceId.videoId;
     }
@@ -216,17 +304,72 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
     await fetchComments(videoId);
   };
 
-  const handleAnalyzeComments = async (): Promise<void> => {
-    if (!selectedVideo || !comments?.items || comments.items.length === 0) {
-      return;
+  const transformAPIResponseToExpectedFormat = (apiResponse: APICommentAnalysisResponse): CommentAnalysisData => {
+    if (!apiResponse.success || !apiResponse.data) {
+      return {
+        success: false,
+        error: apiResponse.error || 'Analysis failed'
+      };
     }
 
+    const apiAnalysis = apiResponse.data.analysis;
+
+    // Transform pain points to match CommentAnalysis component expectations
+    const painPoints: PainPoint[] = apiAnalysis.painPoints.map(point => ({
+      title: point.title,
+      description: point.description,
+      frequency: point.frequency,
+      sentiment: point.sentiment,
+      possibleSolutions: point.possibleSolutions || []
+    }));
+
+    // Transform user experiences to match CommentAnalysis component expectations
+    const userExperiences: UserExperience[] = apiAnalysis.userExperiences.map((exp: APIUserExperience) => ({
+      scenario: exp.scenario || exp.experience || '',
+      impact: typeof exp.impact === 'number' ? exp.impact.toString() : exp.impact.toString(),
+      frequencyPattern: exp.frequencyPattern || 'regular',
+      sentiment: exp.sentiment
+    }));
+
+    // Transform emotional triggers to match CommentAnalysis component expectations
+    const emotionalTriggers: EmotionalTrigger[] = apiAnalysis.emotionalTriggers.map((trigger: APIEmotionalTrigger) => ({
+      trigger: trigger.trigger,
+      context: trigger.context || '',
+      responsePattern: trigger.responsePattern || '',
+      dominantEmotion: trigger.dominantEmotion || trigger.emotion || 'neutral',
+      intensity: trigger.intensity || 0.5
+    }));
+
+    return {
+      success: true,
+      data: {
+        analysis: {
+          overview: apiAnalysis.overview,
+          painPoints,
+          userExperiences,
+          emotionalTriggers,
+          marketImplications: apiAnalysis.marketImplications
+        }
+      }
+    };
+  };
+
+  const handleAnalyzeComments = async (): Promise<void> => {
+    if (!selectedVideo || !comments?.items || comments.items.length === 0 || !selectedVideoTitle) {
+      return;
+    }
+    
     setIsAnalyzing(true);
     setCommentAnalysis(null);
-
+    
     try {
-      const analysisResult = await analyzeVideoComments(selectedVideo);
-      setCommentAnalysis(analysisResult);
+      // Get the API response
+      const apiResponse = await analyzeVideoComments(selectedVideo, selectedVideoTitle) as APICommentAnalysisResponse;
+      
+      // Transform it to match the expected interface
+      const transformedResult = transformAPIResponseToExpectedFormat(apiResponse);
+      
+      setCommentAnalysis(transformedResult);
       setShowAnalysis(true);
     } catch (err) {
       setCommentAnalysis({
@@ -243,7 +386,7 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
     setShowAnalysis(false);
   };
 
-  const VideoCard: React.FC<VideoCardProps> = memo(({ video, isSelected, onClick }) => {
+  const VideoCard = memo<VideoCardProps>(function VideoCard({ video, isSelected, onClick }) {
     const statistics = ensureVideoStatistics(video.statistics);
     
     const handleClick = (e: React.MouseEvent): void => {
@@ -261,9 +404,11 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
         onClick={handleClick}
       >
         <div className="relative w-full h-32 group">
-          <img
+          <Image
             src={video.snippet.thumbnails.medium.url}
             alt={video.snippet.title}
+            width={256}
+            height={128}
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-all duration-300"></div>
@@ -300,7 +445,7 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
     );
   });
 
-  const CommentItem: React.FC<CommentItemProps> = memo(({ comment }) => {
+  const CommentItem = memo<CommentItemProps>(function CommentItem({ comment }) {
     const commentText = comment.snippet.topLevelComment.snippet.textDisplay;
     const likeCount = comment.snippet.topLevelComment.snippet.likeCount;
     const replyCount = comment.snippet.totalReplyCount;
@@ -376,7 +521,6 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
         setLoading(false);
       }
     };
-
     fetchData();
   }, [query]);
 
@@ -555,5 +699,7 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
     </div>
   );
 };
+
+YouTubeVideos.displayName = 'YouTubeVideos';
 
 export default memo(YouTubeVideos);

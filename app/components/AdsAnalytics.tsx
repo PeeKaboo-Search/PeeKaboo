@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { fetchAdsSpendingAnalytics } from "@/app/api/adApi";
+import { fetchAdsSpendingAnalytics } from "@/api/adApi";
 import { 
   TrendingUp, 
   BarChart2, 

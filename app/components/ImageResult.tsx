@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import "@/styles/images.css";
-import { searchImages } from "@/app/api/imageSearchApi";
+import { searchImages } from "@/api/imageSearchApi";
 
 interface ImageResult {
   link: string;

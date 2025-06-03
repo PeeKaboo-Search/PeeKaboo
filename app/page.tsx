@@ -9,8 +9,8 @@ import ComponentToggle from "@/app/components/main/ComponentToggle"
 import ResultsSection from "@/app/components/main/ResultsSection";
 // Import services and config
 import { supabase } from "@/lib/supabase";
-import { generateSpecializedQueries } from "@/app/api/main/smartQuery";
-import { saveResults } from "@/app/api/main/save";
+import { generateSpecializedQueries } from "@/api/main/smartQuery";
+import { saveResults } from "@/api/main/save";
 import { SpecializedQueries } from "@/types";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";

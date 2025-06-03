@@ -1,12 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, memo, useRef } from 'react';
-import { QuoraAnalysisService } from '@/app/api/quoraAnalytics';
+import { QuoraAnalysisService } from '@/api/quoraAnalytics';
 import { 
   AlertCircle, Brain, Heart, 
   TrendingUp, Target, Users, ChevronUp 
 } from 'lucide-react';
-import { Progress } from "@/app/components/ui/progress";
 import "@/styles/QuoraAnalytics.css"
 
 // Types
