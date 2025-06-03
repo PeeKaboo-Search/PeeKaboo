@@ -7,7 +7,7 @@ import {
   KeyRound, Search
 } from "lucide-react";
 import { Progress } from "@/app/components/ui/progress";
-import { useMarketResearch } from "@/api/googleAnalyticsApi";
+import { useMarketResearch } from "@/app/api/googleAnalyticsApi";
 import "@/styles/GoogleAnalytics.css"
 
 // Types

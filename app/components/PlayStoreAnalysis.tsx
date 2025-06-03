@@ -13,11 +13,11 @@ import {
   Target,
   MessageSquare
 } from 'lucide-react';
-import { getAppReviews, analyzeAppReviews } from '@/api/playstoreAnalyticsApi';
+import { getAppReviews, analyzeAppReviews } from '@/app/api/playstoreAnalyticsApi';
 import { Button } from '@/app/components/ui/button';
 import { Progress } from "@/app/components/ui/progress";
 import { Badge } from "@/app/components/ui/badge";
-import type { Review, ReviewAnalysis } from '@/api/playstoreAnalyticsApi';
+import type { Review, ReviewAnalysis } from '@/app/api/playstoreAnalyticsApi';
 
 interface AppAnalysisProps {
   appId: string;

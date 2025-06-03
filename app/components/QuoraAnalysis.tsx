@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, memo, useRef } from 'react';
-import { QuoraAnalysisService } from '@/api/quoraAnalytics';
+import { QuoraAnalysisService } from '@/app/api/quoraAnalytics';
 import { 
   AlertCircle, Brain, Heart, 
   TrendingUp, Target, Users, ChevronUp 

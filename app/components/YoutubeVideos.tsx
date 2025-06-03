@@ -22,7 +22,7 @@ import {
   type VideoStatistics,
   type CommentThreadResponse,
   type CommentThread
-} from '@/api/youtubeAnalytics';
+} from '@/app/api/youtubeAnalytics';
 
 interface ErrorState {
   message: string;

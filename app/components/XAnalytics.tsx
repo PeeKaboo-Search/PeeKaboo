@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { Progress } from "@/app/components/ui/progress";
-import { useTwitterAnalysis } from "@/api/xAnalytics";
+import { useTwitterAnalysis } from "@/app/api/xAnalytics";
 
 const validateArray = <T,>(data: T[] | undefined | null): T[] => {
   return Array.isArray(data) ? data : [];

@@ -11,7 +11,7 @@ import {
   Megaphone, Award
 } from "lucide-react";
 import { Progress } from "@/app/components/ui/progress";
-import { useMarketingStrategy } from "@/api/strategyAnalytics"; // Updated import to match new API file
+import { useMarketingStrategy } from "@/app/api/strategyAnalytics"; // Updated import to match new API file
 
 // Types
 interface MarketingStrategyProps {

@@ -7,10 +7,10 @@ import {
   AlertTriangle,
   ArrowRight
 } from 'lucide-react';
-import { searchApps } from '@/api/playstoreAnalyticsApi'; 
+import { searchApps } from '@/app/api/playstoreAnalyticsApi'; 
 import { Skeleton } from "@/app/components/ui/skeleton";
 import AppAnalysis from '@/app/components/PlayStoreAnalysis';
-import type { AppBasic } from '@/api/playstoreAnalyticsApi';
+import type { AppBasic } from '@/app/api/playstoreAnalyticsApi';
 
 // Error state interface
 interface ErrorState {

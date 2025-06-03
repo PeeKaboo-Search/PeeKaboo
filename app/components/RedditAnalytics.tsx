@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, Suspense, lazy, memo } from "react";
-import { fetchMarketingInsights } from "@/api/redditAnalysis";
+import { fetchMarketingInsights } from "@/app/redditAnalysis";
 import { Activity, Brain, Target, TrendingUp } from "lucide-react";
 import "@/styles/reddit-analysis.css";
 
