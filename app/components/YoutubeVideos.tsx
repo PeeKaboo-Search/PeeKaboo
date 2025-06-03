@@ -8,13 +8,16 @@ import {
   Loader2, 
   ChevronRight,
   AlertTriangle,
-  Play
+  Play,
+  BarChart2
 } from 'lucide-react';
+import CommentAnalysis from '../components/YoutubeAnalytics';
 
 // Import API functions and types
 import { 
   searchYouTubeVideos, 
   getVideoComments,
+  analyzeVideoComments,
   type YouTubeVideo,
   type VideoStatistics,
   type YouTubeSearchResponse,
@@ -39,6 +42,12 @@ interface VideoCardProps {
 
 interface CommentItemProps {
   comment: CommentThread;
+}
+
+interface CommentAnalysisData {
+  success: boolean;
+  data?: any;
+  error?: string;
 }
 
 function getVideoId(item: YouTubeVideo): string | null {
@@ -76,6 +85,10 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
   const [commentsLoading, setCommentsLoading] = useState<boolean>(false);
   const [commentsError, setCommentsError] = useState<string | null>(null);
   
+  const [showAnalysis, setShowAnalysis] = useState<boolean>(false);
+  const [commentAnalysis, setCommentAnalysis] = useState<CommentAnalysisData | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  
   const dragStartRef = useRef<{ x: number; scrollLeft: number } | null>(null);
   const isDraggingRef = useRef(false);
   
@@ -87,7 +100,8 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
     commentCount: stats?.commentCount || '0'
   });
 
-  const formatNumber = (num: string | number): string => {
+  const formatNumber = (num: string | number | undefined): string => {
+    if (num === undefined || num === null) return 'N/A';
     const n = typeof num === 'string' ? parseInt(num, 10) : num;
     if (isNaN(n)) return 'N/A';
     if (n >= 1000000) return `${(n/1000000).toFixed(1)}M`;
@@ -189,12 +203,44 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
       return;
     }
     
+    // Reset analysis state when selecting new video
+    setShowAnalysis(false);
+    setCommentAnalysis(null);
+    setIsAnalyzing(false);
+    
     setSelectedVideo(videoId);
     setSelectedVideoTitle(video.snippet.title);
     setCommentsError(null);
     setComments(null);
     
     await fetchComments(videoId);
+  };
+
+  const handleAnalyzeComments = async (): Promise<void> => {
+    if (!selectedVideo || !comments?.items || comments.items.length === 0) {
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setCommentAnalysis(null);
+
+    try {
+      const analysisResult = await analyzeVideoComments(selectedVideo);
+      setCommentAnalysis(analysisResult);
+      setShowAnalysis(true);
+    } catch (err) {
+      setCommentAnalysis({
+        success: false,
+        error: err instanceof Error ? err.message : 'Failed to analyze comments'
+      });
+      setShowAnalysis(true);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleBackToComments = (): void => {
+    setShowAnalysis(false);
   };
 
   const VideoCard: React.FC<VideoCardProps> = memo(({ video, isSelected, onClick }) => {
@@ -315,6 +361,8 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
         setSelectedVideoTitle('');
         setComments(null);
         setCommentsError(null);
+        setShowAnalysis(false);
+        setCommentAnalysis(null);
         
         const data = await searchYouTubeVideos(query);
         setVideos(data.items);
@@ -331,6 +379,19 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
 
     fetchData();
   }, [query]);
+
+  // Show analysis component if active
+  if (showAnalysis) {
+    return (
+      <div className="w-full max-w-7xl mx-auto p-8">
+        <CommentAnalysis 
+          commentAnalysis={commentAnalysis}
+          isAnalyzing={isAnalyzing}
+          onBackToComments={handleBackToComments}
+        />
+      </div>
+    );
+  }
 
   if (loading && !videos.length) {
     return (
@@ -415,11 +476,32 @@ const YouTubeVideos: React.FC<YouTubeVideosProps> = ({ query }) => {
                 </p>
               )}
             </div>
-            {comments?.items && (
-              <span className="text-sm text-white/60">
-                {comments.items.length} comment{comments.items.length !== 1 ? 's' : ''}
-              </span>
-            )}
+            <div className="flex items-center gap-4">
+              {comments?.items && (
+                <span className="text-sm text-white/60">
+                  {comments.items.length} comment{comments.items.length !== 1 ? 's' : ''}
+                </span>
+              )}
+              {comments?.items && comments.items.length > 0 && (
+                <button
+                  onClick={handleAnalyzeComments}
+                  disabled={isAnalyzing}
+                  className="flex items-center gap-2 px-4 py-2 text-sm bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all text-white font-medium"
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <BarChart2 className="h-4 w-4" />
+                      Analyze Comments
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
           
           {commentsLoading ? (
