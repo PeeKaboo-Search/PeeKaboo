@@ -1,4 +1,3 @@
-"use client";
 import React, { useState, useEffect } from 'react';
 import { getAllApiModels, getAvailableGroqModels, updateModelName, ApiModel, GroqModel } from '../api/main/models';
 
@@ -210,7 +209,7 @@ const ApiModelSettings = () => {
           <ul className="text-sm text-gray-400 space-y-2">
             <li>• Drag any available Groq model from the right panel</li>
             <li>• Drop it onto any API configuration on the left to update the model</li>
-            <li>• Use "Apply to All" to set the same model for all API configurations</li>
+            <li>• Use &quot;Apply to All&quot; to set the same model for all API configurations</li>
             <li>• Changes are applied immediately and saved to your database</li>
           </ul>
         </div>
