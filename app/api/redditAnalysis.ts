@@ -79,6 +79,7 @@ interface RedditPostData {
   upvote_ratio: number;
   num_comments: number;
   total_awards_received: number;
+  created_utc: number;
 }
 
 interface RedditPost {
@@ -89,6 +90,7 @@ interface RedditPost {
 interface RedditSearchResponse {
   data: {
     children: RedditPost[];
+    after: string | null;
   };
 }
 
@@ -133,16 +135,48 @@ interface GroqResponse {
   }[];
 }
 
+// Search params interface
+export interface SearchParams {
+  relevance?: 'relevance' | 'hot' | 'new' | 'top' | 'comments';
+  timeframe?: 'all' | 'year' | 'month' | 'week' | 'day' | 'hour';
+}
+
+import { supabase } from '@/lib/supabase'; // Adjust this import path to your supabase client
+
+export async function getRedditAnalyticsModel() {
+  const { data } = await supabase
+    .from('api_models')
+    .select('model_name')
+    .eq('api_name', 'RedditAnalytics')
+    .single();
+  
+  return data?.model_name;
+}
+
+// Helper function to check if query terms appear in the title
+const containsQueryTerms = (title: string, query: string): boolean => {
+  const queryTerms = query.toLowerCase().split(' ');
+  const titleLower = title.toLowerCase();
+  
+  return queryTerms.some(term => titleLower.includes(term));
+};
+
 export const fetchMarketingInsights = async (
   query: string
 ): Promise<{ results: RedditResult[]; insights: MarketingInsight } | null> => {
   try {
     const redditClientId = process.env.NEXT_PUBLIC_REDDIT_CLIENT_ID;
     const redditClientSecret = process.env.NEXT_PUBLIC_REDDIT_CLIENT_SECRET;
-    const groqApiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+    const groqApiKey = process.env.NEXT_PUBLIC_REDDIT_GROQ_API_KEY;
 
     if (!redditClientId || !redditClientSecret || !groqApiKey) {
       throw new Error("API keys are missing. Check environment variables.");
+    }
+
+    // Get the model name from Supabase
+    const modelName = await getRedditAnalyticsModel();
+    if (!modelName) {
+      throw new Error("Model name not found in database");
     }
 
     // Reddit Authentication
@@ -161,94 +195,83 @@ export const fetchMarketingInsights = async (
 
     const authData = await authResponse.json() as RedditAuthResponse;
     const accessToken = authData.access_token;
-
-    // Focus on most relevant subreddits and get only 5 posts
-    const subreddits = [
-      'technology', 'products', 'business', 'marketing',
-      'startups', 'entrepreneurship', 'productmanagement'
-    ];
     
     const results: RedditResult[] = [];
-    let totalPosts = 0;
+    
+    // Search across Reddit with fixed 'all' timeframe and increased limit
+    const searchUrl = `https://oauth.reddit.com/search?q=${encodeURIComponent(query)}&limit=100&t=all`;
+    
+    const searchResponse = await fetch(searchUrl, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'User-Agent': 'MarketingInsights/3.1',
+      },
+    });
 
-    // Keep searching until we have 5 relevant posts
-    for (const subreddit of subreddits) {
-      if (totalPosts >= 5) break;
-      
-      const searchResponse = await fetch(
-        `https://oauth.reddit.com/r/${subreddit}/search?q=${encodeURIComponent(query)}&limit=5&sort=relevance`,
+    if (!searchResponse.ok) {
+      throw new Error(`Reddit Search error: ${searchResponse.status}`);
+    }
+
+    const searchData = await searchResponse.json() as RedditSearchResponse;
+    
+    // Filter posts with actual content AND titles that include at least one query term
+    const relevantPosts = searchData.data.children
+      .filter((post: RedditPost) => 
+        post.data.selftext && 
+        post.data.selftext.length > 50 &&
+        post.data.num_comments > 0 &&
+        containsQueryTerms(post.data.title, query)
+      );
+    
+    // Process up to 10 posts (increased from 5)
+    for (const post of relevantPosts.slice(0, 10)) {
+      // Get comments for this post
+      const commentsResponse = await fetch(
+        `https://oauth.reddit.com${post.data.permalink}?limit=15&depth=1`,
         {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
-            'User-Agent': 'MarketingInsights/3.0',
+            'User-Agent': 'MarketingInsights/3.1',
           },
         }
       );
-
-      if (!searchResponse.ok) continue;
-
-      const searchData = await searchResponse.json() as RedditSearchResponse;
       
-      // Filter posts with actual content
-      const relevantPosts = searchData.data.children
-        .filter((post: RedditPost) => 
-          post.data.selftext && 
-          post.data.selftext.length > 50 &&
-          post.data.num_comments > 0
-        );
+      if (!commentsResponse.ok) continue;
       
-      for (const post of relevantPosts) {
-        if (totalPosts >= 5) break;
-        
-        // Get comments for this post
-        const commentsResponse = await fetch(
-          `https://oauth.reddit.com${post.data.permalink}?limit=10&depth=1`,
-          {
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'User-Agent': 'MarketingInsights/3.0',
-            },
-          }
-        );
-        
-        if (!commentsResponse.ok) continue;
-        
-        const commentsData = await commentsResponse.json() as RedditCommentsResponse;
-        
-        // Extract top 5 comments (if available)
-        const topComments = commentsData[1]?.data?.children
-          .filter((comment: RedditComment) => 
-            comment.kind === 't1' && 
-            comment.data?.body && 
-            !comment.data.stickied
-          )
-          .sort((a: RedditComment, b: RedditComment) => b.data.score - a.data.score)
-          .slice(0, 5)
-          .map((comment: RedditComment) => ({
-            body: comment.data.body,
-            score: comment.data.score,
-            author: comment.data.author
-          })) || [];
-        
-        results.push({
-          title: post.data.title,
-          subreddit: post.data.subreddit,
-          snippet: post.data.selftext.slice(0, 300) + (post.data.selftext.length > 300 ? "..." : ""),
-          link: post.data.permalink ? `https://reddit.com${post.data.permalink}` : post.data.url,
-          engagement_metrics: {
-            upvote_ratio: post.data.upvote_ratio,
-            comment_count: post.data.num_comments,
-            awards: post.data.total_awards_received || 0
-          },
-          top_comments: topComments
-        });
-        
-        totalPosts++;
-      }
+      const commentsData = await commentsResponse.json() as RedditCommentsResponse;
+      
+      // Extract top 8 comments (increased from 5)
+      const topComments = commentsData[1]?.data?.children
+        .filter((comment: RedditComment) => 
+          comment.kind === 't1' && 
+          comment.data?.body && 
+          !comment.data.stickied &&
+          comment.data.body.length > 5 // Ensure comment has meaningful content
+        )
+        .sort((a: RedditComment, b: RedditComment) => b.data.score - a.data.score)
+        .slice(0, 8)
+        .map((comment: RedditComment) => ({
+          body: comment.data.body,
+          score: comment.data.score,
+          author: comment.data.author
+        })) || [];
+      
+      results.push({
+        title: post.data.title,
+        subreddit: post.data.subreddit,
+        snippet: post.data.selftext.slice(0, 300) + (post.data.selftext.length > 300 ? "..." : ""),
+        link: post.data.permalink ? `https://reddit.com${post.data.permalink}` : post.data.url,
+        engagement_metrics: {
+          upvote_ratio: post.data.upvote_ratio,
+          comment_count: post.data.num_comments,
+          awards: post.data.total_awards_received || 0
+        },
+        top_comments: topComments
+      });
     }
 
     if (results.length === 0) {
-      throw new Error("Insufficient data from Reddit Search API.");
+      throw new Error("Insufficient data from Reddit Search API or no titles matched query terms.");
     }
 
     // Prepare a more focused dataset for Groq to reduce token usage
@@ -256,14 +279,14 @@ export const fetchMarketingInsights = async (
       title: post.title,
       subreddit: post.subreddit,
       content: post.snippet,
-      comments: post.top_comments?.map(c => c.body).join(" | ").slice(0, 500) || "",
+      comments: post.top_comments?.map(c => c.body).join(" | ").slice(0, 800) || "", // Increased comment text
       engagement: {
         upvote_ratio: post.engagement_metrics?.upvote_ratio,
         comment_count: post.engagement_metrics?.comment_count
       }
     }));
 
-    // Streamlined Groq API prompt
+    // Keep the original Groq API prompt as specified
     const context = `As a specialized market research analyst, analyze these Reddit discussions to provide marketing insights. Focus on key trends, consumer sentiment, and actionable recommendations. Return findings in JSON format:
     {
       "overview": "Brief analysis of market dynamics and consumer behavior patterns",
@@ -325,13 +348,13 @@ export const fetchMarketingInsights = async (
         "Authorization": `Bearer ${groqApiKey}`,
       },
       body: JSON.stringify({
-        model: "deepseek-r1-distill-qwen-32b",
+        model: modelName, // Use dynamic model name from database
         messages: [
           { role: "system", content: context },
           { role: "user", content: JSON.stringify(groqInputData) },
         ],
-        temperature: 0.7,
-        max_tokens: 3000,
+        temperature: 0.2,
+        max_tokens: 3500,
         response_format: { type: 'json_object' },
       }),
     });

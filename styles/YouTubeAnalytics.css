@@ -1,0 +1,428 @@
+/* Design System */
+:root {
+  /* Core Colors */
+  --color-primary: #FF0000;     /* YouTube red */
+  --color-primary-red: #FF0000; /* Alias for main brand red */
+  --color-trends: #FF0000;      /* Trends section */
+  --color-consumer: #16A34A;    /* Consumer insights */
+  --color-industry: #7C3AED;    /* Industry insights */
+  --color-accent-purple: #7C3AED; /* Alias for industry insights */
+  --color-seasonal: #E11D48;    /* Seasonal topics */
+  
+  /* Dark Mode Base */
+  --background-deep: #000000;
+  --background-surface: #0a0a0a;
+  --background-elevated: #141414;
+  
+  /* Typography */
+  --font-display: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  --font-body: 'Inter', 'SF Pro Text', system-ui, sans-serif;
+  
+  /* Glass Effect */
+  --glass-background: rgba(10, 10, 10, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+/* Dialog Positioning Fixes */
+.DialogOverlay {
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.DialogContent {
+  position: absolute;
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  width: 95vw;
+  max-width: 80rem;
+  max-height: 90vh;
+  background-color: var(--background-surface);
+  border-radius: 16px;
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  z-index: 51;
+  display: flex;
+  flex-direction: column;
+  animation: dialogAppear 0.2s ease-out;
+  overflow: auto;
+}
+
+@keyframes dialogAppear {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.venom {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  max-height: 90vh;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.DialogContent > div {
+  overflow-y: auto;
+  max-height: calc(90vh - 120px); 
+}
+
+/* Base Styles */
+body {
+  background-color: var(--background-deep);
+  color: white;
+  font-family: var(--font-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Container Layout */
+.max-w-7xl {
+  max-width: 80rem;
+  margin: 0 auto;
+}
+
+/* Header Styling */
+.page-header h1 {
+  font-family: var(--font-display);
+  font-size: 2.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--color-primary);
+  margin-bottom: 0.5rem;
+}
+
+.page-header p {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.1rem;
+}
+
+/* Market Overview Section */
+.glass-card {
+  background: var(--glass-background);
+  backdrop-filter: blur(25px) saturate(400%);
+  -webkit-backdrop-filter: blur(25px) saturate(400%);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+/* Section Styling */
+.section-heading {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Card Base Styles */
+.rounded-lg {
+  border-radius: 1rem;
+}
+
+.shadow-lg {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+/* Section-specific Card Styling */
+/* Trends Section */
+.section-trends .section-card {
+  border-left: 4px solid var(--color-trends);
+}
+
+.section-trends .section-heading {
+  color: var(--color-trends);
+}
+
+.section-trends .progress-bar {
+  background-color: var(--color-trends);
+  opacity: 0.2;
+}
+
+.section-trends .progress-indicator {
+  background-color: var(--color-trends);
+}
+
+/* Consumer Insights Section */
+.section-consumer .section-card {
+  border-left: 4px solid var(--color-consumer);
+}
+
+.section-consumer .section-heading {
+  color: var(--color-consumer);
+}
+
+/* Industry Insights Section */
+.section-industry .section-card {
+  border-left: 4px solid var(--color-industry);
+}
+
+.section-industry .section-heading {
+  color: var(--color-industry);
+}
+
+/* Seasonal Topics Section */
+.section-seasonal .section-card {
+  border-left: 4px solid var(--color-seasonal);
+}
+
+.section-seasonal .section-heading {
+  color: var(--color-seasonal);
+}
+
+.section-seasonal .progress-bar {
+  background-color: var(--color-seasonal);
+  opacity: 0.2;
+}
+
+.section-seasonal .progress-indicator {
+  background-color: var(--color-seasonal);
+}
+
+/* Card Content Styling */
+.space-y-4 > * + * {
+  margin-top: 1rem;
+}
+
+/* Card Typography */
+.text-xl {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.text-sm {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Lists within Cards */
+.card-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card-list > * + * {
+  margin-top: 0.5rem;
+}
+
+.card-list-item {
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.card-list-item::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Progress Bar Styling */
+.progress-bar {
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.progress-indicator {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+/* Loading State */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* YouTube Videos Container Styles */
+.youtube-videos-container {
+  background-color: var(--background-deep);
+  color: white;
+  font-family: var(--font-body);
+  padding: 2rem;
+  position: relative;
+  z-index: 0;
+}
+
+.youtube-videos-heading {
+  font-family: var(--font-display);
+  color: var(--color-primary);
+  position: relative;
+  z-index: 2;
+}
+
+.youtube-videos-slider {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+}
+
+.youtube-videos-track {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 0;
+  position: relative;
+  z-index: 0;
+}
+
+.youtube-video-card {
+  background: var(--glass-background);
+  backdrop-filter: blur(25px) saturate(180%);
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  flex-shrink: 0;
+  width: 18rem;
+  cursor: pointer;
+}
+
+.youtube-video-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+}
+
+.youtube-video-thumbnail {
+  width: 100%;
+  height: 10rem;
+  object-fit: cover;
+  position: relative;
+  z-index: 2;
+}
+
+.youtube-video-content {
+  padding: 1rem;
+  position: relative;
+  z-index: 2;
+}
+
+.youtube-video-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 0.5rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.youtube-channel-title {
+  color: rgba(255,255,255,0.7);
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.youtube-video-stats {
+  display: flex;
+  gap: 1rem;
+  color: rgba(255,255,255,0.6);
+  font-size: 0.8rem;
+}
+
+.youtube-video-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.youtube-load-more-btn {
+  background: var(--glass-background);
+  backdrop-filter: blur(25px) saturate(180%);
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.youtube-load-more-btn:hover {
+  background: rgba(255,255,255,0.1);
+  transform: translateY(-3px);
+}
+
+/* Custom Scrollbar for YouTube Slider */
+.youtube-videos-slider::-webkit-scrollbar {
+  height: 8px;
+  background: rgba(255,255,255,0.1);
+}
+
+.youtube-videos-slider::-webkit-scrollbar-thumb {
+  background: var(--color-primary);
+  border-radius: 4px;
+}
+
+/* Responsive Grid */
+@media (max-width: 1024px) {
+  .grid-cols-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .grid-cols-2 {
+    grid-template-columns: 1fr;
+  }
+  
+  .page-header h1 {
+    font-size: 2rem;
+  }
+  
+  .max-w-7xl {
+    padding: 1rem;
+  }
+  
+  .youtube-videos-track {
+    gap: 0.5rem;
+  }
+  
+  .youtube-video-card {
+    width: 16rem;
+  }
+}
+
+/* Error States */
+.text-red-500 {
+  color: #EF4444;
+}
+
+/* Empty State */
+.text-center {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 2rem;
+}
