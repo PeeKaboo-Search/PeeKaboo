@@ -1,4 +1,6 @@
-// Original interfaces remain the same
+import { supabase } from '@/lib/supabase'; 
+
+
 interface QuoraAnswer {
   content: string;
   author: {
@@ -77,10 +79,16 @@ interface AnalysisData {
   marketImplications: string;
 }
 
+// Function to get QuoraAnalysis model from Supabase
+export async function getQuoraAnalysisModel() { 
+  const { data } = await supabase.from('api_models').select('model_name').eq('api_name', 'QuoraAnalysis').single() 
+  return data?.model_name
+}
+
 export class QuoraAnalysisService {
   private static readonly TIMEOUT = 30000;
-  private static readonly RAPIDAPI_KEY = process.env.NEXT_PUBLIC_QRAPIDAPI_KEY;
-  private static readonly GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+  private static readonly RAPIDAPI_KEY = process.env.NEXT_PUBLIC_QUORA_RAPID_API_KEY;
+  private static readonly GROQ_API_KEY = process.env.NEXT_PUBLIC_QUORA_GROQ_API_KEY;
 
   // Existing fetchWithTimeout method remains the same
   private static async fetchWithTimeout(
@@ -264,9 +272,22 @@ export class QuoraAnalysisService {
     };
   }
 
-  // Enhanced generateAnalysis method with structured prompt
+  // Enhanced generateAnalysis method with dynamic model fetching
   private static async generateAnalysis(query: string, content: string): Promise<string> {
     const url = 'https://api.groq.com/openai/v1/chat/completions';
+    
+    // Fetch model name from Supabase
+    let modelName: string;
+    try {
+      modelName = await getQuoraAnalysisModel();
+      if (!modelName) {
+        throw new Error('No model name found for QuoraAnalysis');
+      }
+    } catch (error) {
+      console.error('Failed to fetch model name from Supabase:', error);
+      // Fallback to default model if Supabase fetch fails
+      modelName = 'meta-llama/llama-4-maverick-17b-128e-instruct';
+    }
     
     const analysisPrompt = {
       role: 'system',
@@ -306,7 +327,7 @@ Ensure the analysis is data-driven, uses professional marketing terminology, and
     };
 
     const payload = {
-      model: 'meta-llama/llama-4-maverick-17b-128e-instruct',      
+      model: modelName,      
       messages: [
         analysisPrompt,
         {

@@ -1,3 +1,5 @@
+import { supabase } from '@/lib/supabase'; // Adjust this import path to your supabase client
+
 interface MetaAdItem {
   adid: string;
   adArchiveID: string;
@@ -130,15 +132,27 @@ interface AnalysisData {
   recommendedCounterStrategies: string;
 }
 
-export class MetaAdAnalysisService {
+
+  export class MetaAdAnalysisService {
   private static readonly TIMEOUT = 60000;
-  private static readonly RAPIDAPI_KEY = process.env.NEXT_PUBLIC_FRAPIDAPI_KEY;
-  private static readonly GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+  private static readonly RAPIDAPI_KEY = process.env.NEXT_PUBLIC_FACEBOOK_RAPIDAPI_KEY;
+  private static readonly GROQ_API_KEY = process.env.NEXT_PUBLIC_FACEBOOK_GROQ_API_KEY;
   
   // Enhanced configuration for better filtering
   private static readonly FETCH_MULTIPLIER = 3; // Fetch 3x more ads than needed
   private static readonly MIN_RELEVANCE_SCORE = 0.3; // Minimum keyword match score
   private static readonly MAX_INITIAL_FETCH = 200; // Maximum ads to fetch initially
+
+  // Get model name from Supabase
+  private static async getFacebookAdsAnalysisModel() {
+    const { data } = await supabase
+      .from('api_models')
+      .select('model_name')
+      .eq('api_name', 'FacebookAdsAnalysis')
+      .single()
+    
+    return data?.model_name
+  }
 
   // Fetch with timeout to prevent hanging requests
   private static async fetchWithTimeout(
@@ -737,6 +751,12 @@ export class MetaAdAnalysisService {
       throw new Error('No ad content available for analysis');
     }
     
+    // Get model name from Supabase
+    const modelName = await this.getFacebookAdsAnalysisModel();
+    if (!modelName) {
+      throw new Error('Failed to fetch model name from database');
+    }
+    
     // Enhanced content preparation with media URLs and relevance scores
     const combinedContent = adContent
       .map(ad => {
@@ -781,7 +801,7 @@ export class MetaAdAnalysisService {
       throw new Error('Empty content after processing ad data');
     }
     
-    console.log(`Generating analysis for query: ${query} with ${adContent.length} filtered/relevant ads`);
+    console.log(`Generating analysis for query: ${query} with ${adContent.length} filtered/relevant ads using model: ${modelName}`);
     
     const analysisPrompt = {
       role: 'system',
@@ -841,7 +861,7 @@ IMPORTANT: Return VALID JSON only with no additional text before or after the JS
     };
 
     const payload = {
-      model: 'meta-llama/llama-4-maverick-17b-128e-instruct',      
+      model: modelName,      
       messages: [
         analysisPrompt,
         {

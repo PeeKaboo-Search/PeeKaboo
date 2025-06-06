@@ -1,5 +1,12 @@
 import axios from 'axios';
 import { z } from 'zod';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 // Zod schemas for YouTube data
 const YouTubeVideoSnippetSchema = z.object({
@@ -180,9 +187,9 @@ export type CommentAnalysis = z.infer<typeof CommentAnalysisSchema>;
 // Constants
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
-const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+const GROQ_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_GROQ_API_KEY;
 const TIMEOUT = 30000;
-const MAX_COMMENTS_TO_ANALYZE = 50;
+const MAX_COMMENTS_TO_ANALYZE = 75;
 const MAX_COMMENT_LENGTH = 300;
 
 class ApiError extends Error {
@@ -191,6 +198,16 @@ class ApiError extends Error {
     super(message);
     this.code = code;
   }
+}
+
+// Function to get model name from Supabase
+export async function getYouTubeVideosModel() {
+  const { data } = await supabase
+    .from('api_models')
+    .select('model_name')
+    .eq('api_name', 'YouTubeVideos')
+    .single();
+  return data?.model_name;
 }
 
 // Helper function for fetch with timeout
@@ -559,6 +576,13 @@ function analyzeSentiment(text: string): 'positive' | 'negative' | 'neutral' | '
 }
 
 async function generateCommentAnalysis(videoTitle: string, commentText: string): Promise<string> {
+  // Get model name from Supabase
+  const modelName = await getYouTubeVideosModel();
+  
+  if (!modelName) {
+    throw new Error('Model name not found in database');
+  }
+
   const url = 'https://api.groq.com/openai/v1/chat/completions';
   
   const analysisPrompt = {
@@ -592,7 +616,7 @@ async function generateCommentAnalysis(videoTitle: string, commentText: string):
       "sentiment": "positive/negative/neutral/mixed",
       "possibleSolutions": ["Array of 2-3 potential content improvements"]
     }
-  ] (exactly 3 items),
+  ] (exactly 6 items),
   "userExperiences": [
     {
       "scenario": "Detailed description of the viewer experience",
@@ -615,7 +639,7 @@ async function generateCommentAnalysis(videoTitle: string, commentText: string):
   };
 
   const payload = {
-    model: 'llama3-8b-8192',
+    model: modelName, // Using dynamic model name from Supabase
     messages: [
       analysisPrompt,
       {
@@ -623,8 +647,8 @@ async function generateCommentAnalysis(videoTitle: string, commentText: string):
         content: commentText,
       },
     ],
-    temperature: 0.7,
-    max_tokens: 2500,
+    temperature: 0.5,
+    max_tokens: 3000,
     response_format: { type: 'json_object' },
   };
 

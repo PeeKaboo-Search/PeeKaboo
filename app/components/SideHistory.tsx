@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { createClient } from "@supabase/supabase-js";
-import { X, LogOut, History, User } from "lucide-react";
+import { X, LogOut, History, User, Settings } from "lucide-react";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!, 
@@ -94,6 +94,10 @@ export const SideHistory: React.FC<SideHistoryProps> = ({
     }
   };
 
+  const goToSettings = () => {
+    window.location.href = '/settings';
+  };
+
   return (
     <div 
       className={`absolute left-0 w-80 h-screen bg-black/90 backdrop-blur-md z-40 transform transition-transform duration-300 flex flex-col
@@ -108,12 +112,21 @@ export const SideHistory: React.FC<SideHistoryProps> = ({
           <History size={20} className="mr-2" />
           <span className="font-medium">History</span>
         </div>
-        <button 
-          onClick={onClose}
-          className="text-white/60 hover:text-white transition-colors"
-        >
-          <X size={20} />
-        </button>
+        <div className="flex items-center space-x-2">
+          <button 
+            onClick={goToSettings}
+            className="text-white/60 hover:text-white transition-colors"
+            title="Settings"
+          >
+            <Settings size={20} />
+          </button>
+          <button 
+            onClick={onClose}
+            className="text-white/60 hover:text-white transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
       </div>
 
       {/* Content */}

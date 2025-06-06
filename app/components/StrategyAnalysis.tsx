@@ -95,6 +95,115 @@ interface PositioningElement {
   icon: React.ReactNode;
 }
 
+// Skeleton Components
+const SkeletonCard = memo(() => (
+  <div className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg border border-gray-800 animate-pulse">
+    <div className="flex justify-between items-center mb-4">
+      <div className="flex items-center gap-2">
+        <div className="w-4 h-4 bg-gray-600 rounded"></div>
+        <div className="h-6 bg-gray-600 rounded w-32"></div>
+      </div>
+      <div className="h-4 bg-gray-600 rounded w-16"></div>
+    </div>
+    <div className="space-y-4">
+      <div className="h-4 bg-gray-600 rounded w-full"></div>
+      <div className="h-4 bg-gray-600 rounded w-3/4"></div>
+      <div className="space-y-2 mt-4">
+        <div className="h-3 bg-gray-600 rounded w-full"></div>
+        <div className="h-3 bg-gray-600 rounded w-5/6"></div>
+        <div className="h-3 bg-gray-600 rounded w-4/5"></div>
+      </div>
+    </div>
+    <div className="mt-4 space-y-2">
+      <div className="h-2 bg-gray-600 rounded w-full"></div>
+      <div className="h-4 bg-gray-600 rounded w-24"></div>
+    </div>
+  </div>
+));
+
+SkeletonCard.displayName = 'SkeletonCard';
+
+const SkeletonSection = memo(({ title, icon, cardCount = 3 }: { title: string; icon: React.ReactNode; cardCount?: number }) => (
+  <section className="mt-8">
+    <h2 className="flex items-center gap-2 text-2xl font-bold mb-4">
+      {icon}
+      {title}
+    </h2>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {Array.from({ length: cardCount }, (_, index) => (
+        <SkeletonCard key={index} />
+      ))}
+    </div>
+  </section>
+));
+
+SkeletonSection.displayName = 'SkeletonSection';
+
+const SkeletonMarketOverview = memo(() => (
+  <section>
+    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+      <BarChart className="w-6 h-6" />
+      Market Analysis
+    </h2>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {Array.from({ length: 4 }, (_, index) => (
+        <div key={index} className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg border border-gray-800 animate-pulse">
+          <div className="h-5 bg-gray-600 rounded w-24 mb-2"></div>
+          <div className="h-4 bg-gray-600 rounded w-full mb-4"></div>
+          <div className="mt-4">
+            <div className="h-2 bg-gray-600 rounded w-full mb-2"></div>
+            <div className="h-4 bg-gray-600 rounded w-20"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+));
+
+SkeletonMarketOverview.displayName = 'SkeletonMarketOverview';
+
+const SkeletonExecutiveSummary = memo(() => (
+  <section>
+    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+      <FileText className="w-6 h-6" />
+      Executive Summary
+    </h2>
+    <div className="mb-6 bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg border border-gray-800 animate-pulse">
+      <div className="space-y-3">
+        <div className="h-4 bg-gray-600 rounded w-full"></div>
+        <div className="h-4 bg-gray-600 rounded w-11/12"></div>
+        <div className="h-4 bg-gray-600 rounded w-10/12"></div>
+        <div className="h-4 bg-gray-600 rounded w-full"></div>
+        <div className="h-4 bg-gray-600 rounded w-9/12"></div>
+      </div>
+    </div>
+  </section>
+));
+
+SkeletonExecutiveSummary.displayName = 'SkeletonExecutiveSummary';
+
+const LoadingSkeleton = memo(() => (
+  <div className="max-w-7xl mx-auto px-4 py-8">
+    <header className="mb-8">
+      <div className="h-8 bg-gray-600 rounded w-80 mb-2 animate-pulse"></div>
+      <div className="h-6 bg-gray-600 rounded w-64 animate-pulse"></div>
+    </header>
+
+    <div className="space-y-8">
+      <SkeletonExecutiveSummary />
+      <SkeletonMarketOverview />
+      <SkeletonSection title="Positioning Strategy" icon={<Target className="w-6 h-6" />} cardCount={5} />
+      <SkeletonSection title="Competitor Analysis" icon={<Building2 className="w-6 h-6" />} />
+      <SkeletonSection title="Case Studies" icon={<BookOpen className="w-6 h-6" />} />
+      <SkeletonSection title="High-Impact Marketing Tactics" icon={<Medal className="w-6 h-6" />} />
+      <SkeletonSection title="Content Pillars" icon={<Lightbulb className="w-6 h-6" />} />
+      <SkeletonSection title="Storytelling Strategies" icon={<TrendingUp className="w-6 h-6" />} />
+    </div>
+  </div>
+));
+
+LoadingSkeleton.displayName = 'LoadingSkeleton';
+
 // Helper functions
 const validateArray = <T,>(data: T[] | undefined | null): T[] => {
   return Array.isArray(data) ? data : [];
@@ -275,12 +384,7 @@ const MarketingStrategyDashboard: React.FC<MarketingStrategyProps> = ({ query })
   }, [query, analyzeStrategy, hasSearched]);
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px] flex-col gap-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white" />
-        <p className="text-lg">Developing comprehensive marketing strategy...</p>
-      </div>
-    );
+    return <LoadingSkeleton />;
   }
 
   if (error || !strategyData?.success) {

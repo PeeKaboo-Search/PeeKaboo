@@ -1,9 +1,21 @@
 import { SpecializedQueries } from "@/types";
+import { supabase } from "@/lib/supabase"; // Adjust import path as needed
 
 const groqApiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
 
+export async function getSmartQueryModel() {
+  const { data } = await supabase
+    .from('api_models')
+    .select('model_name')
+    .eq('api_name', 'SmartQuery')
+    .single();
+  return data?.model_name;
+}
+
 export const generateSpecializedQueries = async (userQuery: string): Promise<SpecializedQueries> => {
   try {
+    const modelName = await getSmartQueryModel();
+    
     const prompt = `
 You are a query optimization expert. Given the user's search query: "${userQuery}", 
 generate specialized, optimized search queries for different platforms and search engines. 
@@ -26,7 +38,7 @@ Guidelines:
 - For ImageResult: Add terms like "aesthetic","image", "visual", "picture" if appropriate
 - For GoogleAnalytics: Create a comprehensive search query add words like "study" or "research" or "benifits" if appropriate
 - For PlayStoreAnalytics: Only include app name or app categories, no other terms
-- For RedditAnalytics: Format for Reddit-specific search, dont use site:, dont mention subreddits add words like "study" or "research" or "benifits" if appropriate
+- For RedditAnalytics: Format for Reddit-specific search, dont use site:, dont mention subreddits add words like "effects" or "experience" or "problems" if appropriate
 - For YouTubeVideos: Format for video search, include terms like "study", "research" if appropriate
 - For QuoraAnalysis: Format as questions when possible
 - For XAnalytics: Include relevant hashtags with # symbol if appropriate
@@ -43,9 +55,9 @@ Remember to return ONLY the JSON object with no additional text.
         "Authorization": `Bearer ${groqApiKey}`
       },
       body: JSON.stringify({
-        model: "llama3-70b-8192",
+        model: modelName,
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.2,
+        temperature: 0.1,
         max_tokens: 1000
       })
     });

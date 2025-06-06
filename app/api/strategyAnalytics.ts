@@ -1,4 +1,11 @@
 import { useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
+
+// Supabase client setup
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 // Types
 interface Competitor {
@@ -95,7 +102,7 @@ interface StrategyAnalysisResponse {
 const CONFIG = {
   REQUEST_TIMEOUT: 90000, // Extended timeout for more comprehensive analysis
   API_KEYS: {
-    GROQ: process.env.NEXT_PUBLIC_GROQ_API_KEY
+    GROQ: process.env.NEXT_PUBLIC_STRATEGY_GROQ_API_KEY
   }
 } as const;
 
@@ -193,6 +200,7 @@ Your analysis should follow this structure:
 }
 
 Guidelines:
+- Show the money in Rs
 - Return ONLY JSON with no explanatory text
 - Include 5 major competitors with detailed analysis of their strategies
 - Provide 3 relevant case studies with actionable learnings
@@ -209,6 +217,17 @@ Guidelines:
 - Incorporate both traditional and digital marketing approaches
 - Include specific examples, names, and metrics based on industry benchmarks
 - Prioritize recommendations based on impact and implementation difficulty`;
+
+// Function to get model name from Supabase
+export async function getStrategyAnalysisModel() {
+  const { data } = await supabase
+    .from('api_models')
+    .select('model_name')
+    .eq('api_name', 'StrategyAnalysis')
+    .single();
+  
+  return data?.model_name;
+}
 
 // Main service class
 export class MarketingStrategyService {
@@ -244,6 +263,13 @@ export class MarketingStrategyService {
   }
 
   private static async generateStrategyAnalysis(query: string): Promise<MarketingStrategy> {
+    // Fetch model name from Supabase
+    const modelName = await getStrategyAnalysisModel();
+    
+    if (!modelName) {
+      throw new Error('Model name not found in database');
+    }
+
     const response = await this.fetchWithTimeout(
       'https://api.groq.com/openai/v1/chat/completions',
       {
@@ -253,7 +279,7 @@ export class MarketingStrategyService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'meta-llama/llama-4-maverick-17b-128e-instruct',          
+          model: modelName,          
           messages: [
             { role: 'system', content: MARKETING_STRATEGY_PROMPT },
             { 
@@ -261,7 +287,7 @@ export class MarketingStrategyService {
               content: `Develop a comprehensive marketing strategy for: ${query}. Return ONLY JSON format with no additional text or explanation.` 
             },
           ],
-          temperature: 0.7,
+          temperature: 0.4,
           max_tokens: 4000,
           response_format: { type: 'json_object' },
         }),

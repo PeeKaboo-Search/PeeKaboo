@@ -1,3 +1,5 @@
+import { supabase } from '@/lib/supabase'
+
 export interface AppBasic {
   app_id: string;
   app_name: string;
@@ -208,8 +210,13 @@ interface GroqResponse {
 type RatingFilter = 'ANY' | 'ONE_STAR' | 'TWO_STARS' | 'THREE_STARS' | 'FOUR_STARS' | 'FIVE_STARS';
 
 const API_HOST = 'store-apps.p.rapidapi.com';
-const API_KEY = process.env.NEXT_PUBLIC_PRAPID_API_KEY;
-const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+const API_KEY = process.env.NEXT_PUBLIC_PLAYSTORE_RAPID_API_KEY;
+const GROQ_API_KEY = process.env.NEXT_PUBLIC_PLAYSTORE_GROQ_API_KEY;
+
+export async function getPlayStoreAnalyticsModel() {
+  const { data } = await supabase.from('api_models').select('model_name').eq('api_name', 'PlayStoreAnalytics').single()
+  return data?.model_name
+}
 
 const debugApiResponse = async (response: Response, context: string): Promise<unknown> => {
   const contentType = response.headers.get('content-type');
@@ -668,11 +675,14 @@ Here are the reviews to analyze${isSampled ? ` (sampled from ${reviewsForAnalysi
     });
     
     try {
+      // Fetch the model name from Supabase
+      const modelName = await getPlayStoreAnalyticsModel();
+      
       const groqResponse = await fetch(groqUrl, {
         method: 'POST',
         headers: groqHeaders,
         body: JSON.stringify({
-          model: "meta-llama/llama-4-maverick-17b-128e-instruct", 
+          model: modelName || "meta-llama/llama-4-maverick-17b-128e-instruct", // Fallback to original model if not found
           messages: [
             {
               role: "system",
@@ -683,7 +693,7 @@ Here are the reviews to analyze${isSampled ? ` (sampled from ${reviewsForAnalysi
               content: userPrompt
             }
           ],
-          temperature: 0.3,
+          temperature: 0.2,
           max_tokens: 4500,
           response_format: { type: 'json_object' },
         })

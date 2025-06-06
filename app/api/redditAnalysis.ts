@@ -141,6 +141,18 @@ export interface SearchParams {
   timeframe?: 'all' | 'year' | 'month' | 'week' | 'day' | 'hour';
 }
 
+import { supabase } from '@/lib/supabase'; // Adjust this import path to your supabase client
+
+export async function getRedditAnalyticsModel() {
+  const { data } = await supabase
+    .from('api_models')
+    .select('model_name')
+    .eq('api_name', 'RedditAnalytics')
+    .single();
+  
+  return data?.model_name;
+}
+
 // Helper function to check if query terms appear in the title
 const containsQueryTerms = (title: string, query: string): boolean => {
   const queryTerms = query.toLowerCase().split(' ');
@@ -155,10 +167,16 @@ export const fetchMarketingInsights = async (
   try {
     const redditClientId = process.env.NEXT_PUBLIC_REDDIT_CLIENT_ID;
     const redditClientSecret = process.env.NEXT_PUBLIC_REDDIT_CLIENT_SECRET;
-    const groqApiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+    const groqApiKey = process.env.NEXT_PUBLIC_REDDIT_GROQ_API_KEY;
 
     if (!redditClientId || !redditClientSecret || !groqApiKey) {
       throw new Error("API keys are missing. Check environment variables.");
+    }
+
+    // Get the model name from Supabase
+    const modelName = await getRedditAnalyticsModel();
+    if (!modelName) {
+      throw new Error("Model name not found in database");
     }
 
     // Reddit Authentication
@@ -330,13 +348,13 @@ export const fetchMarketingInsights = async (
         "Authorization": `Bearer ${groqApiKey}`,
       },
       body: JSON.stringify({
-        model: "meta-llama/llama-4-maverick-17b-128e-instruct",
+        model: modelName, // Use dynamic model name from database
         messages: [
           { role: "system", content: context },
           { role: "user", content: JSON.stringify(groqInputData) },
         ],
-        temperature: 0.7,
-        max_tokens: 3000,
+        temperature: 0.2,
+        max_tokens: 3500,
         response_format: { type: 'json_object' },
       }),
     });

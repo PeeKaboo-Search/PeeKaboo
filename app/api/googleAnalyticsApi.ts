@@ -1,4 +1,11 @@
 import { useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+);
 
 // Types
 interface GoogleResult {
@@ -101,7 +108,7 @@ const CONFIG = {
   API_KEYS: {
     GOOGLE: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
     SEARCH_ENGINE_ID: process.env.NEXT_PUBLIC_GOOGLE_SEARCH_ENGINE_ID,
-    GROQ: process.env.NEXT_PUBLIC_GROQ_API_KEY
+    GROQ: process.env.NEXT_PUBLIC_GOOGLE_GROQ_API_KEY
   }
 } as const;
 
@@ -180,6 +187,17 @@ const MARKET_RESEARCH_PROMPT = `Give me a JSON Output only. You are a highly ski
   
 Give me 9 topTriggers, 3 trends, 3 consumerInsights, 3 industryInsights, 3  India Specific seasonalTopics, 3 recommendations. `;
 
+// Function to get model name from Supabase
+export async function getGoogleAnalyticsModel() {
+  const { data } = await supabase
+    .from('api_models')
+    .select('model_name')
+    .eq('api_name', 'GoogleAnalytics')
+    .single();
+  
+  return data?.model_name;
+}
+
 export class MarketResearchService {
   private static activeRequests = new Map<string, Promise<MarketResearchResponse>>();
 
@@ -241,6 +259,13 @@ export class MarketResearchService {
     query: string,
     results: GoogleResult[]
   ): Promise<MarketResearchAnalysis> {
+    // Fetch model name from Supabase
+    const modelName = await getGoogleAnalyticsModel();
+    
+    if (!modelName) {
+      throw new Error('Unable to fetch model name from database');
+    }
+
     const response = await this.fetchWithTimeout(
       'https://api.groq.com/openai/v1/chat/completions',
       {
@@ -250,7 +275,7 @@ export class MarketResearchService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
+          model: modelName,
           messages: [
             { role: 'system', content: MARKET_RESEARCH_PROMPT },
             { 

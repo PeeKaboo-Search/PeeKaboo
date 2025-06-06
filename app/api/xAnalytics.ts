@@ -1,4 +1,11 @@
 import { useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 // Twitter API Response Types
 interface TwitterAPITweet {
@@ -86,6 +93,16 @@ interface AnalysisResult {
   error?: string;
 }
 
+export async function getXAnalyticsModel() {
+  const { data } = await supabase
+    .from('api_models')
+    .select('model_name')
+    .eq('api_name', 'XAnalytics')
+    .single();
+  
+  return data?.model_name;
+}
+
 export class TwitterAnalysisService {
   private static readonly CONFIG = {
     TWITTER_API_URL: 'https://twitter-api45.p.rapidapi.com/search.php',
@@ -93,10 +110,9 @@ export class TwitterAnalysisService {
     MAX_TWEETS: 50,
     MAX_TWEETS_FOR_ANALYSIS: 30,
     MAX_CONTENT_LENGTH: 100,
-    GROQ_MODEL: 'meta-llama/llama-4-maverick-17b-128e-instruct',    
     API_KEYS: {
-      RAPID_API: process.env.NEXT_PUBLIC_XRAPID_API_KEY,
-      GROQ: process.env.NEXT_PUBLIC_GROQ_API_KEY
+      RAPID_API: process.env.NEXT_PUBLIC_X_RAPID_API_KEY,
+      GROQ: process.env.NEXT_PUBLIC_X_GROQ_API_KEY
     },
     RETRY: {
       MAX_ATTEMPTS: 3,
@@ -197,6 +213,12 @@ export class TwitterAnalysisService {
         return { success: false, error: 'API keys not configured' };
       }
 
+      // Fetch model name from Supabase
+      const modelName = await getXAnalyticsModel();
+      if (!modelName) {
+        return { success: false, error: 'Failed to fetch model configuration' };
+      }
+
       const searchUrl = new URL(this.CONFIG.TWITTER_API_URL);
       searchUrl.searchParams.append('query', query);
       searchUrl.searchParams.append('count', this.CONFIG.MAX_TWEETS.toString());
@@ -267,7 +289,7 @@ export class TwitterAnalysisService {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: this.CONFIG.GROQ_MODEL,
+            model: modelName, // Use dynamic model name from Supabase
             messages: [
               {
                 role: 'system',
