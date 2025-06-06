@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import { getAllApiModels, getAvailableGroqModels, updateModelName, ApiModel, GroqModel } from '../api/main/models';
 
